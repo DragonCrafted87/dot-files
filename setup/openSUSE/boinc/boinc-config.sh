@@ -21,7 +21,7 @@ fi
 
 # Check for gui_rpc_auth.cfg
 if [ ! -f "$RPC_AUTH_FILE" ]; then
-    echo "Error: $RPC_AUTH_FILE not found. Run 'sudo bash-settings\setup\openSUSE\secondary-setup.sh' to generate it."
+    echo "Error: $RPC_AUTH_FILE not found. Run 'sudo dot-files\setup\openSUSE\secondary-setup.sh' to generate it."
     exit 1
 fi
 

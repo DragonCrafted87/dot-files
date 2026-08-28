@@ -3,7 +3,7 @@
 
 return
 # apk add nano sudo git curl
-# git clone https://github.com/DragonCrafted87/bash-settings.git
+# git clone https://github.com/DragonCrafted87/dot-files.git
 # sudo nano /etc/passwd
 
 mkdir /home/dragon/.ssh/
@@ -17,9 +17,9 @@ sed -n 'H;${x;s/\#PasswordAuthentication yes/PasswordAuthentication no/;p;}' /et
 sed -n 'H;${x;s/\PasswordAuthentication yes/PasswordAuthentication no/;p;}' tmp_sshd_config > tmp_sshd_config
 sudo mv tmp_sshd_config /etc/ssh/sshd_config
 
-ln -s /home/dragon/bash-settings/hw_bashrc.sh .bashrc
-ln -s /home/dragon/bash-settings/bashrc.d/ .bashrc.d
-ln -s /home/dragon/bash-settings/profile .profile
+ln -s /home/dragon/dot-files/hw_bashrc.sh .bashrc
+ln -s /home/dragon/dot-files/bashrc.d/ .bashrc.d
+ln -s /home/dragon/dot-files/profile .profile
 
 sudo sh -c 'echo "dragon ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers'
 sudo rm /root/.bashrc

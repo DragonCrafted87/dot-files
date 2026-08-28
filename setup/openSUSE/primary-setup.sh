@@ -7,11 +7,11 @@
 set -e
 
 # Variables
-REPO_URL="git@github.com:DragonCrafted87/bash-settings.git"
+REPO_URL="git@github.com:DragonCrafted87/dot-files.git"
 GITHUB_USER="DragonCrafted87"
 GITHUB_KEYS_URL="https://github.com/$GITHUB_USER.keys"
 HOME_DIR="/home/dragon"
-REPO_DIR="$HOME_DIR/bash-settings"
+REPO_DIR="$HOME_DIR/dot-files"
 BASHRC_SRC="$REPO_DIR/hw_bashrc.sh"
 BASHRC_DIR_SRC="$REPO_DIR/bashrc.d"
 BASHRC_DEST="$HOME_DIR/.bashrc"
@@ -98,12 +98,12 @@ else
     exit 1
 fi
 
-# Clone or update the bash-settings repository
+# Clone or update the dot-files repository
 if [ -d "$REPO_DIR" ]; then
     echo "Repository already exists. Pulling latest changes..."
     cd "$REPO_DIR" && git pull
 else
-    echo "Cloning bash-settings repository..."
+    echo "Cloning dot-files repository..."
     git clone "$REPO_URL" "$REPO_DIR"
 fi
 

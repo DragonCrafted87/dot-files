@@ -149,27 +149,27 @@ function ffmpeg-video-merge-chapters ()
 function ffmpeg-video-crop-encode ()
 {
     if [ -z "$1" ]; then
-        python -I ~/bash-settings/scripts/ffmpeg.py video-crop-encode
+        python -I ~/dot-files/scripts/ffmpeg.py video-crop-encode
     else
-        python -I ~/bash-settings/scripts/ffmpeg.py video-crop-encode --input_filename="$1"
+        python -I ~/dot-files/scripts/ffmpeg.py video-crop-encode --input_filename="$1"
     fi
 }
 
 function ffmpeg-video-make-dvd ()
 {
     if [ -z "$1" ]; then
-        python -I ~/bash-settings/scripts/ffmpeg.py make-dvd
+        python -I ~/dot-files/scripts/ffmpeg.py make-dvd
     else
-        python -I ~/bash-settings/scripts/ffmpeg.py make-dvd --input_filename="$1"
+        python -I ~/dot-files/scripts/ffmpeg.py make-dvd --input_filename="$1"
     fi
 }
 
 function ffmpeg-audio-split-encode ()
 {
     if [ -z "$1" ]; then
-        python -I ~/bash-settings/scripts/ffmpeg.py audio-split-encode
+        python -I ~/dot-files/scripts/ffmpeg.py audio-split-encode
     else
-        python -I ~/bash-settings/scripts/ffmpeg.py audio-split-encode --input_filename="$1"
+        python -I ~/dot-files/scripts/ffmpeg.py audio-split-encode --input_filename="$1"
     fi
 }
 

@@ -31,7 +31,7 @@
         },
         {
             "args": [
-                "~/bash-settings/scripts/mc_modlist.conf",
+                "~/dot-files/scripts/mc_modlist.conf",
                 "D:/Games/MultiMC/instances/Fabric_Primary/.minecraft",
                 "1.19.3"
             ],

@@ -1,1 +1,1 @@
-# bash-settings
+# dot-files

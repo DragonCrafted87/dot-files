@@ -3,11 +3,11 @@
 
 return
 
-git clone git@github.com:DragonCrafted87/bash-settings.git
+git clone git@github.com:DragonCrafted87/dot-files.git
 rm -rf .bashrc
 rm -rf .bashrc.d
-ln -s /home/dragon/bash-settings/wsl_bashrc.sh .bashrc
-ln -s /home/dragon/bash-settings/bashrc.d/ .bashrc.d
+ln -s /home/dragon/dot-files/wsl_bashrc.sh .bashrc
+ln -s /home/dragon/dot-files/bashrc.d/ .bashrc.d
 
 sudo sh -c 'echo "dragon ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers'
 sudo rm /root/.bashrc

@@ -2,5 +2,5 @@
 
 function podcast-download ()
 {
-    python -m podcast_downloader --config ~/bash-settings/config/podcast-downloader.json
+    python -m podcast_downloader --config ~/dot-files/scripts/config/podcast-downloader.json
 }

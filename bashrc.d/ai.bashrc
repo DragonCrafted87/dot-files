@@ -2,5 +2,5 @@
 
 function ai-dictate ()
 {
-    python -I ~/bash-settings/scripts/dictation.py
+    python -I ~/dot-files/scripts/dictation.py
 }
