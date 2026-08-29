@@ -1,0 +1,10 @@
+# Hosts that run BOINC or the BOINC Manager.
+# One DNS name or IP per line. Copied to remote_hosts.cfg on every client
+# so workstation and laptop managers can query the fleet.
+# Replace these with your real names before the first fleet run.
+
+# workstation.stealthdragonland.net
+# laptop.stealthdragonland.net
+# htpc.stealthdragonland.net
+# castellan.stealthdragonland.net
+# calligraphy-wyrm.stealthdragonland.net

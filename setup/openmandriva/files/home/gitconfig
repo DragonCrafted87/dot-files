@@ -1,0 +1,21 @@
+# Linked to ~/.gitconfig by link-home-files.
+
+[user]
+	name = Scott Gudeman
+	email = 24697493+DragonCrafted87@users.noreply.github.com
+[core]
+	editor = nano
+	autocrlf = false
+	fsmonitor = true
+	longpaths = true
+[push]
+	default = current
+[pull]
+	rebase = false
+[safe]
+	directory = *
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true

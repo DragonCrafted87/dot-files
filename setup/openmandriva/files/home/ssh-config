@@ -1,0 +1,32 @@
+# Linked to ~/.ssh/config by link-home-files.
+# Do not put private keys or IdentityFile passphrases here.
+
+Host 192.168.0.103
+    HostName 192.168.0.103
+    User dragon
+
+Host castellan
+    HostName castellan.stealthdragonland.net
+    User dragon
+
+Host faerie-dragon
+    HostName faerie-dragon.stealthdragonland.net
+    User dragon
+
+Host root-nfs
+    HostName 192.168.0.200
+    User root
+
+Host root-router
+    HostName 192.168.0.155
+    User root
+
+Host 192.168.2.56
+    HostName 192.168.2.56
+    User root
+
+Host *.lan
+    User dragon
+
+Host *.stealthdragonland.net
+    User dragon

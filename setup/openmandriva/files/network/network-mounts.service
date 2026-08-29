@@ -1,0 +1,16 @@
+[Unit]
+Description=Mount CIFS, NFS, and rclone network shares
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/bin/mount-network.sh
+RemainAfterExit=yes
+TimeoutStartSec=60
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=network-mounts
+
+[Install]
+WantedBy=default.target

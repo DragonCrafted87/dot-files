@@ -1,0 +1,13 @@
+<global_preferences>
+    <run_on_batteries>0</run_on_batteries>
+    <run_if_user_active>1</run_if_user_active>
+    <run_gpu_if_user_active>0</run_gpu_if_user_active>
+    <suspend_cpu_usage>25.0</suspend_cpu_usage>
+    <max_ncpus_pct>50.0</max_ncpus_pct>
+    <cpu_usage_limit>100.0</cpu_usage_limit>
+    <ram_max_used_frac>0.30</ram_max_used_frac>
+    <ram_max_used_busy_frac>0.15</ram_max_used_busy_frac>
+    <vm_max_used_frac>0.40</vm_max_used_frac>
+    <idle_time_to_run>5.0</idle_time_to_run>
+    <leave_apps_in_memory>0</leave_apps_in_memory>
+</global_preferences>

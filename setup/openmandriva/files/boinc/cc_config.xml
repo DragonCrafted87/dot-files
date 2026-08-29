@@ -1,0 +1,12 @@
+<cc_config>
+    <options>
+        <allow_remote_gui_rpc>0</allow_remote_gui_rpc>
+        <lower_client_priority>1</lower_client_priority>
+        <exclusive_app>wine</exclusive_app>
+        <exclusive_app>wine64</exclusive_app>
+        <exclusive_app>wineserver</exclusive_app>
+        <exclusive_gpu_app>wine</exclusive_gpu_app>
+        <exclusive_gpu_app>wine64</exclusive_gpu_app>
+        <exclusive_gpu_app>wineserver</exclusive_gpu_app>
+    </options>
+</cc_config>
