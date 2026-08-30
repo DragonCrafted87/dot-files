@@ -4,9 +4,10 @@
 # runs one revolution and then disconnects (issues #9251 / #9313).
 #
 # Seconds per full rotation. Match the look you wanted (~8s).
-SECONDS_PER_TURN="${SECONDS_PER_TURN:-8}"
+SECONDS_PER_TURN="${SECONDS_PER_TURN:-6}"
 
-GRADIENT="rgb(305cde) rgb(560591) rgb(780606) rgb(305cde)"
+#GRADIENT="rgb(305cde) rgb(560591) rgb(780606) rgb(305cde)"
+GRADIENT="rgb(305cde) rgb(560591)"
 
 # ~45 updates/sec is enough at 2px border; cheaper than a 144 Hz compositor loop.
 STEP_DEG=2
