@@ -8,10 +8,5 @@ sleep 0.6
 
 hyprctl dispatch dpms on
 
-# workspace 3 belongs on HDMI
-hyprctl dispatch moveworkspacetomonitor 3 HDMI-A-1
-hyprctl dispatch focusmonitor HDMI-A-1
-hyprctl dispatch workspace 3
-
 # Recreate cursor after the modeset
 hyprctl dispatch movecursor 1 1
