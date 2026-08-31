@@ -10,7 +10,7 @@ set -euo pipefail
 require_user
 
 if ! command -v gh >/dev/null 2>&1; then
-    ensure_packages gh
+    ensure_packages github-cli
 fi
 
 [[ -f "${SSH_KEY_PATH}.pub" ]] || die "missing ${SSH_KEY_PATH}.pub; run configure-ssh-key first"

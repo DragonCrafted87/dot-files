@@ -13,7 +13,7 @@ ensure_packages \
     unzip \
     7zip \
     unrar-free \
-    gh \
+    github-cli \
     openssh-clients \
     openssh-server \
     tmux \
