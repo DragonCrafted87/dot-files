@@ -28,6 +28,20 @@ That copies the secrets list, copies `first-boot.sh`, then runs it over
 
 Same role names as the scripts: `workstation`, `laptop`, `htpc`, `server`.
 
+## Reset without reinstalling
+
+Keeps `/home` and the role's declared packages. Drops other
+user-installed rpms and extra Flatpaks (Plasma leftovers included).
+
+```bash
+./setup/openmandriva/reset-to-role.sh workstation
+RESET_CONFIRM=yes ./setup/openmandriva/reset-to-role.sh workstation
+DOTFILES_DRY_RUN=1 ./setup/openmandriva/reset-to-role.sh laptop
+```
+
+The first run only prints the extras. Add names to
+`files/packages/never-remove.list` if something you want is listed.
+
 Optional overrides:
 
 ```bash

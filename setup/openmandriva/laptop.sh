@@ -20,8 +20,10 @@ run_module install-oh-my-posh
 run_module set-timezone
 run_module enable-rock-repos
 run_module install-base-packages
+run_module configure-boot-display
 run_module remove-plasma-sddm
 run_module install-hyprland-session
+run_module configure-bluetooth-login
 run_module install-desktop-packages
 run_module install-brave
 run_module configure-brave-keyring
