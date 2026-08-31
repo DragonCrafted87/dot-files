@@ -9,7 +9,13 @@ set -euo pipefail
 require_user
 
 ensure_packages kbd
-ensure_packages terminus-fonts || ensure_packages fonts-terminus || true
+if dnf list --available terminus-fonts >/dev/null 2>&1 || rpm -q terminus-fonts >/dev/null 2>&1; then
+    ensure_packages terminus-fonts
+elif dnf list --available fonts-terminus >/dev/null 2>&1 || rpm -q fonts-terminus >/dev/null 2>&1; then
+    ensure_packages fonts-terminus
+else
+    log "no terminus console font package; using kbd sun32"
+fi
 
 set_grub_key() {
     local key="$1"

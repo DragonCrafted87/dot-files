@@ -36,16 +36,22 @@ ensure_packages \
     rclone \
     remmina \
     remmina-plugins-rdp \
+    freerdp \
     solaar \
     piper \
     qalculate-gtk \
     aria2
 
-# Rolling renamed this to okular; Rock 6.0 still uses plasma6-okular.
+# Rock 6.0 ships plasma6-okular (KF6) and a leftover KF5 package still
+# named okular. Installing the old name conflicts with the KF6 files.
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     log "okular package"
-elif dnf list --available okular >/dev/null 2>&1 || rpm -q okular >/dev/null 2>&1; then
-    ensure_packages okular
-else
+elif rpm -q plasma6-okular >/dev/null 2>&1; then
+    log "plasma6-okular already installed"
+elif rpm -q okular >/dev/null 2>&1 && ! rpm -q plasma6-okular-common >/dev/null 2>&1; then
+    log "okular already installed"
+elif dnf list --available plasma6-okular >/dev/null 2>&1; then
     ensure_packages plasma6-okular plasma6-okular-pdf plasma6-okular-common
+else
+    ensure_packages okular
 fi
