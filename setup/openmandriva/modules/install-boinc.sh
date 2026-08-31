@@ -9,12 +9,49 @@ set -euo pipefail
 
 require_user
 
-ensure_packages boinc-client
+# OpenMandriva has no BOINC packages. Download the official x86_64 RPMs
+# and install them with dnf so deps come from Rock, not another distro repo.
+
+boinc_base="${BOINC_RPM_BASE:-https://boinc.berkeley.edu/dl/linux/stable/fc39}"
+install_boinc_rpms() {
+    local want=("$@")
+    local missing=()
+    local pkg
+    for pkg in "${want[@]}"; do
+        if ! rpm -q "$pkg" >/dev/null 2>&1; then
+            missing+=("$pkg")
+        fi
+    done
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        log "boinc rpms already installed: ${want[*]}"
+        return 0
+    fi
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        printf 'dry-run: download %s from %s\n' "${missing[*]}" "$boinc_base"
+        return 0
+    fi
+    local index tmp rpm_file names=()
+    tmp="$(mktemp -d)"
+    index="$(curl -fsSL "${boinc_base}/")"
+    for pkg in "${missing[@]}"; do
+        rpm_file="$(printf '%s\n' "$index" | grep -oE "${pkg}-[0-9][^\"<>]*\\.x86_64\\.rpm" | sort -V | tail -n1)"
+        [[ -n "$rpm_file" ]] || die "no ${pkg} x86_64 rpm listed at ${boinc_base}"
+        log "download ${rpm_file}"
+        curl -fsSL -o "${tmp}/${rpm_file}" "${boinc_base}/${rpm_file}"
+        names+=("${tmp}/${rpm_file}")
+    done
+    log "install ${names[*]##*/}"
+    sudo dnf install -y "${names[@]}"
+    rm -rf "$tmp"
+}
+
+boinc_rpms=(boinc-client)
 case "${OMV_ROLE:-}" in
     workstation | laptop)
-        ensure_packages boinc-manager
+        boinc_rpms+=(boinc-manager)
         ;;
 esac
+install_boinc_rpms "${boinc_rpms[@]}"
 
 boinc_dir="/var/lib/boinc"
 if [[ -d /var/lib/boinc-client ]]; then
