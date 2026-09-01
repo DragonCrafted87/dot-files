@@ -119,8 +119,8 @@ if [[ -f "$secret" ]]; then
         rpc_password="$(tr -d '[:space:]' <"$secret")"
     fi
 fi
-if [[ -z "$rpc_password" && -f "$rpc_file" ]]; then
-    rpc_password="$(tr -d '[:space:]' <"$rpc_file")"
+if [[ -z "$rpc_password" ]] && sudo test -f "$rpc_file"; then
+    rpc_password="$(sudo tr -d '[:space:]' <"$rpc_file")"
 fi
 if [[ -z "$rpc_password" ]]; then
     rpc_password="$(head -c 32 /dev/urandom | tr -dc 'A-Za-z0-9' | head -c 32)"
@@ -137,8 +137,8 @@ if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
     warn "add science_united_user and science_united_password to ${secret}"
 fi
 current_rpc=""
-if [[ -f "$rpc_file" ]]; then
-    current_rpc="$(tr -d '[:space:]' <"$rpc_file")"
+if sudo test -f "$rpc_file"; then
+    current_rpc="$(sudo tr -d '[:space:]' <"$rpc_file")"
 fi
 if [[ "$current_rpc" != "$rpc_password" ]]; then
     printf '%s\n' "$rpc_password" | sudo tee "$rpc_file" >/dev/null
