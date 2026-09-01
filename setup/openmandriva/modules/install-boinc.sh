@@ -162,6 +162,7 @@ fi
 install_boinc_file "$tmp" "${boinc_dir}/remote_hosts.cfg"
 rm -f "$tmp"
 
+install_boinc_file "${src}/find-boinccmd.sh" /usr/local/bin/find-boinccmd.sh 0644
 install_boinc_file "${src}/boinc-config.sh" /usr/local/bin/boinc-config.sh 0755
 install_boinc_file "${src}/boinc-status.sh" /usr/local/bin/boinc-status.sh 0755
 install_boinc_file "${src}/boinc-status-all.sh" /usr/local/bin/boinc-status-all.sh 0755

@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+# shellcheck disable=SC1091
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-"$BOINCCMD".sh"
+
 HOSTS_FILE="${HOSTS_FILE:-/etc/boinc-client/hosts.list}"
 BOINC_DIR="${BOINC_DIR:-/var/lib/boinc}"
 [[ -d /var/lib/boinc-client ]] && BOINC_DIR="/var/lib/boinc-client"
@@ -30,13 +33,13 @@ RPC_PASSWORD="$(tr -d '[:space:]' <"$RPC_AUTH_FILE")"
 while IFS= read -r host || [[ -n "${host:-}" ]]; do
     [[ -z "$host" || "$host" == \#* ]] && continue
     printf '==> %s\n' "$host"
-    if ! boinccmd --host "$host" --passwd "$RPC_PASSWORD" --get_host_info >/dev/null 2>&1; then
+    if ! "$BOINCCMD" --host "$host" --passwd "$RPC_PASSWORD" --get_host_info >/dev/null 2>&1; then
         printf '    unreachable\n'
         continue
     fi
-    boinccmd --host "$host" --passwd "$RPC_PASSWORD" --get_project_status 2>/dev/null \
+    "$BOINCCMD" --host "$host" --passwd "$RPC_PASSWORD" --get_project_status 2>/dev/null \
         | grep "master URL" | sed 's/.*master URL: /    project: /' || printf '    no projects\n'
-    task_count="$(boinccmd --host "$host" --passwd "$RPC_PASSWORD" --get_tasks 2>/dev/null \
+    task_count="$("$BOINCCMD" --host "$host" --passwd "$RPC_PASSWORD" --get_tasks 2>/dev/null \
         | grep -c "name:" || true)"
     printf '    tasks: %s\n' "$task_count"
 done <"$HOSTS_FILE"

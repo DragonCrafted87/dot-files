@@ -22,6 +22,16 @@ if [[ ! -f "$list" ]]; then
     exit 1
 fi
 
+ssh_cmd() {
+    # shellcheck disable=SC2086
+    ssh ${DOTFILES_SSH_OPTS:-} -o ForwardX11=no "$@"
+}
+
+scp_cmd() {
+    # shellcheck disable=SC2086
+    scp ${DOTFILES_SSH_OPTS:-} -o ForwardX11=no "$@"
+}
+
 copied=0
 skipped=0
 while IFS= read -r rel || [[ -n "$rel" ]]; do
@@ -34,10 +44,10 @@ while IFS= read -r rel || [[ -n "$rel" ]]; do
     fi
     remote_dir="$(dirname "$rel")"
     if [[ "$remote_dir" != "." ]]; then
-        ssh "$target" "mkdir -p -- ${remote_dir}"
+        ssh_cmd "$target" "mkdir -p -- ${remote_dir}"
     fi
     printf 'copy %s -> %s:%s\n' "$src" "$target" "$rel"
-    scp -p "$src" "${target}:${rel}"
+    scp_cmd -p "$src" "${target}:${rel}"
     copied=$((copied + 1))
 done <"$list"
 
