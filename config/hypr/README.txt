@@ -8,43 +8,45 @@ Install
 
 2. Copy this tree over:
      cp hyprland.conf ~/.config/hypr/hyprland.conf
-     mkdir -p ~/.config/hypr/conf.d ~/.config/hypr/scripts
+     mkdir -p ~/.config/hypr/conf.d
      cp conf.d/*.conf ~/.config/hypr/conf.d/
-     cp scripts/spin-border.sh ~/.config/hypr/scripts/
-     chmod +x ~/.config/hypr/scripts/spin-border.sh
 
-3. Reload (exec-once lines only run on a new session):
+3. Reload:
      hyprctl reload
-     ~/.config/hypr/scripts/spin-border.sh &
 
-If a sourced file is missing, Hyprland will error on reload.
+If a sourced file is missing, Hyprland will error on reload. Paths are
+absolute-style (~/.config/hypr/...) so it does not matter where you
+edit from.
 
 Layout
 ------
-hyprland.conf                   orchestrator only (source= lines)
-conf.d/env.conf                 environment variables
-conf.d/monitors.conf            display layout
+hyprland.conf                 orchestrator only (source= lines)
+conf.d/env.conf               environment variables
+conf.d/monitors.conf          display layout
 conf.d/programs-autostart.conf  $vars + exec-once
-conf.d/look-and-feel.conf       general / decoration / animations / dwindle / misc
-conf.d/input.conf               keyboard, mouse, gestures
-conf.d/keybinds.conf            binds
-conf.d/window-rules.conf        window rules + xwayland
-scripts/spin-border.sh          0.48 border spin workaround
+conf.d/look-and-feel.conf     general / decoration / animations / dwindle / misc
+conf.d/input.conf             keyboard, mouse, gestures
+conf.d/keybinds.conf          binds
+conf.d/window-rules.conf      window rules + xwayland
 
 Animated border
 ---------------
-Native `animation = borderangle, ..., loop` is broken on Hyprland
-0.47–0.48: the gradient makes one full turn and then freezes. That is
-a compositor bug (#9251 / #9313), not a config typo.
+col.active_border cycles:
+  #305cde (blue) → #560591 (purple) → #780606 (red) → blue
 
-Workaround: scripts/spin-border.sh walks the gradient angle through
-hyprctl. Speed is SECONDS_PER_TURN at the top of the script (default 8).
+animation = borderangle, 1, 80, linear, loop
+  80 = 8 seconds per full rotation (speed is in deciseconds).
 
-When a newer Hyprland actually honors loop again, drop the script and
-switch look-and-feel.conf back to:
+Tune in conf.d/look-and-feel.conf:
+  Faster:  animation = borderangle, 1, 40, linear, loop
+  Slower:  animation = borderangle, 1, 120, linear, loop
+  Off:     animation = borderangle, 0
 
-  animation = borderangle, 1, 80, linear, loop
+Note: style "loop" keeps Hyprland compositing at monitor refresh even
+when idle. Fine on a desktop 144 Hz triple-head; turn it off if GPU
+load or fans bother you.
 
 Lua
 ---
-Not needed. source= has existed for years and works on 0.48.
+Not needed. source= has existed for years and works on 0.48. You can
+keep this layout after you upgrade; Lua is a later optional syntax.
