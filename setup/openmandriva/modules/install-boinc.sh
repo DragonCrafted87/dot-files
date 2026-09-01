@@ -198,7 +198,8 @@ fi
 log "prefs ${role} from ${prefs_src}"
 if [[ -n "$science_united_user" && -n "$science_united_password" ]]; then
     log "attach Science United"
-    sudo BOINC_SECRET="$secret" /usr/local/bin/boinc-config.sh
+    sudo BOINC_SECRET="$secret" /usr/local/bin/boinc-config.sh || \
+        warn "Science United attach failed; retry with sudo /usr/local/bin/boinc-config.sh"
 else
     warn "Science United skipped until ${secret} has the login fields"
 fi

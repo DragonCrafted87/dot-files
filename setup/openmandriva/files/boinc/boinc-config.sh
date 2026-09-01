@@ -83,12 +83,17 @@ if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
 fi
 
 printf 'attaching to Science United as %s\n' "$science_united_user"
-"$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password"
+if ! timeout 45 "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" \
+        --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password"; then
+    printf 'warning: attach timed out or Science United HTTP failed\n' >&2
+    printf '          retry later: sudo /usr/local/bin/boinc-config.sh\n' >&2
+    exit 0
+fi
 
 sleep 2
-if "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
+if timeout 8 "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
     printf 'attached to Science United\n'
 else
-    printf 'warning: attach did not verify; check with boinc-status.sh\n' >&2
-    exit 1
+    printf 'warning: attach did not verify; retry with sudo /usr/local/bin/boinc-config.sh\n' >&2
+    exit 0
 fi
