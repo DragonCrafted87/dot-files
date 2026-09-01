@@ -23,14 +23,17 @@ if ! curl -fsSL --max-time 20 "$url" -o "$tmp"; then
     exit 1
 fi
 
-if ! grep -qE '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256|sk-ssh-ed25519) ' "$tmp"; then
+# Any OpenSSH pubkey: type token, then base64. Covers rsa, ed25519,
+# ecdsa-sha2-nistp256/384/521, and security-key variants.
+key_re='^[A-Za-z0-9._+-]+(@openssh\.com)? [A-Za-z0-9+/=]+'
+if ! grep -qE "$key_re" "$tmp"; then
     printf 'error: %s did not contain any SSH public keys\n' "$url" >&2
     exit 1
 fi
 
 {
     printf '# synced from %s at %s\n' "$url" "$(date --iso-8601=seconds)"
-    grep -E '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256|sk-ssh-ed25519) ' "$tmp"
+    grep -E "$key_re" "$tmp"
 } >"${tmp}.out"
 
 install -m 0600 "${tmp}.out" "$auth"
