@@ -102,7 +102,27 @@ ensure_symlink() {
     fi
 
     if [[ -e "$link" ]]; then
-        die "${link} exists and is not a symlink; move it aside first"
+        local action="${CONFIG_LINK_CLOBBER:-}"
+        if [[ -z "$action" && -t 0 ]]; then
+            printf '%s exists and is not a symlink.\n' "$link"
+            printf '  [m]ove aside  [c]lobber  [s]kip  (default m): '
+            read -r action || true
+        fi
+        case "${action}" in
+            c | C | clobber | yes)
+                log "clobber ${link}"
+                run rm -rf "$link"
+                ;;
+            s | S | skip)
+                warn "skip existing ${link}"
+                return 0
+                ;;
+            *)
+                local backup="${link}.bak.$(date +%F-%H%M%S)"
+                log "move ${link} -> ${backup}"
+                run mv "$link" "$backup"
+                ;;
+        esac
     fi
 
     log "link ${link} -> ${target}"

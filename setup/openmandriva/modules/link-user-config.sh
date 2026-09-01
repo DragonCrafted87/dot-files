@@ -27,9 +27,5 @@ for source_path in "${config_dirs[@]}"; do
     dest_name="$(basename "$source_path")"
     dest_path="${CONFIG_TARGET_DIR}/${dest_name}"
 
-    if [[ -e "$dest_path" && ! -L "$dest_path" ]]; then
-        die "${dest_path} exists and is not a symlink; move it aside first"
-    fi
-
     ensure_symlink "$source_path" "$dest_path"
 done

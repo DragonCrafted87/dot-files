@@ -19,10 +19,6 @@ if [[ -e "${DOTFILES_HOME}/.bashrc" && ! -L "${DOTFILES_HOME}/.bashrc" ]]; then
     log "back up existing ${DOTFILES_HOME}/.bashrc"
     run mv "${DOTFILES_HOME}/.bashrc" "${DOTFILES_HOME}/.bashrc.distro"
 fi
-if [[ -e "${DOTFILES_HOME}/.bashrc.d" && ! -L "${DOTFILES_HOME}/.bashrc.d" ]]; then
-    die "${DOTFILES_HOME}/.bashrc.d exists and is not a symlink"
-fi
-
 ensure_symlink "$bashrc_source" "${DOTFILES_HOME}/.bashrc"
 ensure_symlink "${DOTFILES_DIR}/bashrc.d" "${DOTFILES_HOME}/.bashrc.d"
 ensure_dir "${DOTFILES_HOME}/bin"
