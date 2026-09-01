@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-"$BOINCCMD".sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-boinccmd.sh"
 
 BOINC_DIR="${BOINC_DIR:-/var/lib/boinc}"
 [[ -d /var/lib/boinc-client ]] && BOINC_DIR="/var/lib/boinc-client"

@@ -42,7 +42,7 @@ load_secret_file() {
 }
 
 if [[ "$(id -u)" -ne 0 ]]; then
-    printf 'error: run with sudo so %s is readable\n' "$RPC_AUTH_FILE" >&2
+    printf 'error: run this with sudo so %s is readable\n' "$RPC_AUTH_FILE" >&2
     exit 1
 fi
 
@@ -51,14 +51,14 @@ if ! systemctl is-active --quiet boinc-client; then
     exit 1
 fi
 
-if [[ ! -f "$RPC_AUTH_FILE" ]]; then
+if ! sudo test -f "$RPC_AUTH_FILE"; then
     printf 'error: %s is missing; re-run the role install-boinc module\n' "$RPC_AUTH_FILE" >&2
     exit 1
 fi
 
 load_secret_file "$SECRET" || true
 if [[ -z "$rpc_password" ]]; then
-    rpc_password="$(tr -d '[:space:]' <"$RPC_AUTH_FILE")"
+    rpc_password="$(sudo cat "$RPC_AUTH_FILE" | tr -d '[:space:]')"
 fi
 [[ -n "$rpc_password" ]] || { printf 'error: empty RPC password\n' >&2; exit 1; }
 
@@ -68,13 +68,13 @@ if ! wait_for_boinc_rpc; then
     exit 1
 fi
 
-if boinc_cmd --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
+if "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
     printf 'already attached to Science United\n'
     if [[ "${BOINC_REPLACE:-0}" != "1" ]]; then
         exit 0
     fi
     printf 'detaching existing Science United account manager\n'
-    boinc_cmd --passwd "$rpc_password" --acct_mgr detach
+    "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr detach
 fi
 
 if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
@@ -83,10 +83,10 @@ if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
 fi
 
 printf 'attaching to Science United as %s\n' "$science_united_user"
-boinc_cmd --passwd "$rpc_password" --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password"
+"$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password"
 
 sleep 2
-if boinc_cmd --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
+if "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
     printf 'attached to Science United\n'
 else
     printf 'warning: attach did not verify; check with boinc-status.sh\n' >&2

@@ -39,16 +39,13 @@ BOINC_HOST="${BOINC_HOST:-127.0.0.1}"
 export PATH BOINCCMD BOINC_HOST
 
 boinc_cmd() {
-    "$BOINCCMD" --host "$BOINC_HOST" "$@"
+    timeout 5 "$BOINCCMD" --host "$BOINC_HOST" "$@"
 }
 
 wait_for_boinc_rpc() {
     local i
-    for i in $(seq 1 20); do
-        if boinc_cmd --passwd "" --get_host_info >/dev/null 2>&1; then
-            return 0
-        fi
-        if boinc_cmd --passwd "x" --get_host_info 2>&1 | grep -qiE 'unauthorized|invalid password|incorrect password|GUI RPC'; then
+    for i in $(seq 1 15); do
+        if timeout 1 bash -c "echo >/dev/tcp/${BOINC_HOST}/31416" 2>/dev/null; then
             return 0
         fi
         sleep 1
