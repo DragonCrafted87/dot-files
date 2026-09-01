@@ -62,13 +62,19 @@ if [[ -z "$rpc_password" ]]; then
 fi
 [[ -n "$rpc_password" ]] || { printf 'error: empty RPC password\n' >&2; exit 1; }
 
-if "$BOINCCMD" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
+if ! wait_for_boinc_rpc; then
+    printf 'error: boinc GUI RPC is not listening on %s:31416\n' "$BOINC_HOST" >&2
+    systemctl --no-pager --full status boinc-client.service >&2 || true
+    exit 1
+fi
+
+if boinc_cmd --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
     printf 'already attached to Science United\n'
     if [[ "${BOINC_REPLACE:-0}" != "1" ]]; then
         exit 0
     fi
     printf 'detaching existing Science United account manager\n'
-    "$BOINCCMD" --passwd "$rpc_password" --acct_mgr detach
+    boinc_cmd --passwd "$rpc_password" --acct_mgr detach
 fi
 
 if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
@@ -77,10 +83,10 @@ if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
 fi
 
 printf 'attaching to Science United as %s\n' "$science_united_user"
-"$BOINCCMD" --passwd "$rpc_password" --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password"
+boinc_cmd --passwd "$rpc_password" --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password"
 
 sleep 2
-if "$BOINCCMD" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
+if boinc_cmd --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
     printf 'attached to Science United\n'
 else
     printf 'warning: attach did not verify; check with boinc-status.sh\n' >&2

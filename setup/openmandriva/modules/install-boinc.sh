@@ -11,6 +11,10 @@ require_user
 
 # OpenMandriva has no BOINC packages. Download the official x86_64 RPMs
 # and install them with dnf so deps come from Rock, not another distro repo.
+if [[ -f /etc/yum.repos.d/boinc-stable.repo ]]; then
+    log "remove leftover BOINC distro repo"
+    run sudo rm -f /etc/yum.repos.d/boinc-stable.repo
+fi
 
 boinc_base="${BOINC_RPM_BASE:-https://boinc.berkeley.edu/dl/linux/stable/fc39}"
 install_boinc_rpms() {
@@ -180,6 +184,7 @@ enable_service boinc-client.service
 if [[ "$boinc_changed" -eq 1 ]] || ! systemctl is-active --quiet boinc-client.service; then
     log "restart boinc-client to load repo files"
     run sudo systemctl restart boinc-client.service || run sudo systemctl start boinc-client.service
+    sleep 2
 fi
 
 if command -v firewall-cmd >/dev/null && systemctl is-active --quiet firewalld; then

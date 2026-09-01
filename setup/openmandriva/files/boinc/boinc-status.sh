@@ -30,10 +30,10 @@ fi
 RPC_PASSWORD="$(tr -d '[:space:]' <"$RPC_AUTH_FILE")"
 
 printf 'account manager:\n'
-"$BOINCCMD" --passwd "$RPC_PASSWORD" --acct_mgr info 2>/dev/null | sed 's/^/  /' || printf '  unavailable\n'
+boinc_cmd --passwd "$RPC_PASSWORD" --acct_mgr info 2>/dev/null | sed 's/^/  /' || printf '  unavailable\n'
 
 printf 'projects:\n'
-if PROJECT_STATUS="$("$BOINCCMD" --passwd "$RPC_PASSWORD" --get_project_status 2>/dev/null)"; then
+if PROJECT_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_project_status 2>/dev/null)"; then
     if [[ -z "$PROJECT_STATUS" ]] || printf '%s\n' "$PROJECT_STATUS" | grep -q "no projects"; then
         printf '  none attached\n'
     else
@@ -44,7 +44,7 @@ else
 fi
 
 printf 'tasks:\n'
-if TASK_STATUS="$("$BOINCCMD" --passwd "$RPC_PASSWORD" --get_tasks 2>/dev/null)"; then
+if TASK_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_tasks 2>/dev/null)"; then
     if [[ -z "$TASK_STATUS" ]] || printf '%s\n' "$TASK_STATUS" | grep -q "no active tasks"; then
         printf '  none active\n'
     else
