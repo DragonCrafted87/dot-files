@@ -40,8 +40,14 @@ install_boinc_rpms() {
         curl -fsSL -o "${tmp}/${rpm_file}" "${boinc_base}/${rpm_file}"
         names+=("${tmp}/${rpm_file}")
     done
+    # Fedora RPMs require capabilities named libatomic and libXScrnSaver.
+    # Rock ships the same libraries under different package names.
+    ensure_packages lib64atomic1 lib64xscrnsaver1
     log "install ${names[*]##*/}"
-    sudo dnf install -y "${names[@]}"
+    if ! sudo dnf install -y "${names[@]}"; then
+        warn "dnf refused Fedora Provides; install RPMs with --nodeps"
+        sudo rpm -Uvh --nodeps "${names[@]}"
+    fi
     rm -rf "$tmp"
 }
 
