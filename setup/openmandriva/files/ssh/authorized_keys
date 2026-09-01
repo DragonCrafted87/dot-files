@@ -1,0 +1,2 @@
+# Admin public keys that should be able to SSH into every role.
+# One OpenSSH public key per line. Safe to commit.

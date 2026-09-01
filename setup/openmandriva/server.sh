@@ -10,6 +10,7 @@ ensure_hostname "${DOTFILES_HOSTNAME:-}"
 record_role server
 
 run_module configure-ssh-key
+run_module configure-authorized-keys
 run_module register-github-ssh-key
 run_module link-dotfiles
 run_module link-home-files

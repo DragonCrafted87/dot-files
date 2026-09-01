@@ -69,6 +69,29 @@ ssh -fN \
     "$target"
 ssh -o ControlPath="$sock" -O check "$target"
 
+printf '==> install SSH public keys on %s\n' "$target"
+remote 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'
+install_remote_key() {
+    local key="$1"
+    key="$(printf '%s' "$key" | tr -d '\r')"
+    [[ -z "$key" || "$key" == \#* ]] && return 0
+    remote "grep -Fqx $(printf '%q' "$key") ~/.ssh/authorized_keys || printf '%s\n' $(printf '%q' "$key") >> ~/.ssh/authorized_keys"
+}
+if [[ -f "${HOME}/.ssh/id_ed25519.pub" ]]; then
+    install_remote_key "$(cat "${HOME}/.ssh/id_ed25519.pub")"
+fi
+if [[ -f "${HOME}/.ssh/authorized_keys" ]]; then
+    while IFS= read -r line || [[ -n "${line:-}" ]]; do
+        install_remote_key "$line"
+    done <"${HOME}/.ssh/authorized_keys"
+fi
+repo_keys="${here}/files/ssh/authorized_keys"
+if [[ -f "$repo_keys" ]]; then
+    while IFS= read -r line || [[ -n "${line:-}" ]]; do
+        install_remote_key "$line"
+    done <"$repo_keys"
+fi
+
 printf '==> copy secrets\n'
 copied=0
 skipped=0
