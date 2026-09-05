@@ -44,31 +44,25 @@
             },
             {
                 "closeOnExit": "graceful",
-                "commandline": "\"%PROGRAMFILES%\\git\\usr\\bin\\bash.exe\" -i -l",
+                "commandline": "%PROGRAMFILES%\\Git\\usr\\bin\\bash.exe -i -l",
                 "guid": "{c9d8ab36-1661-48d3-9e95-bc74a691007f}",
                 "icon": "%PROGRAMFILES%\\Git\\mingw64\\share\\git\\git-for-windows.ico",
                 "name": "Git Bash",
                 "padding": "0, 0, 0, 0",
                 "snapOnInput": true,
-                "startingDirectory": "%HOME%"
+                "startingDirectory": "%USERPROFILE%"
             },
             {
                 "guid": "{ccea7837-6898-5b7f-916d-60b4d7f2dfcb}",
-                "hidden": false,
+                "hidden": true,
                 "name": "Developer Command Prompt for VS 2022",
                 "source": "Windows.Terminal.VisualStudio"
             },
             {
                 "guid": "{f6d2c4f4-3994-5c88-86f5-ca12dd1c8de5}",
-                "hidden": false,
+                "hidden": true,
                 "name": "Developer PowerShell for VS 2022",
                 "source": "Windows.Terminal.VisualStudio"
-            },
-            {
-                "guid": "{51855cb2-8cce-5362-8f54-464b92b32386}",
-                "hidden": false,
-                "name": "Ubuntu",
-                "source": "CanonicalGroupLimited.Ubuntu_79rhkp1fndgsc"
             }
         ]
     },
