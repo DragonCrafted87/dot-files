@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 for file in ~/.bashrc.d/*.bashrc;
 do

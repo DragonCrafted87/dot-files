@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Copied into every new repo by git init.templateDir (~/.config/git/template).
 # Does nothing unless this repo has a pre-commit config.
 
