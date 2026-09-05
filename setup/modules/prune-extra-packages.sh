@@ -9,10 +9,8 @@ set -euo pipefail
 require_user
 
 role="${OMV_ROLE:-}"
-[[ -n "$role" ]] || die "OMV_ROLE is unset; run reset-to-role.sh"
-
-role_script="${SETUP_DIR}/${role}.sh"
-[[ -f "$role_script" ]] || die "missing ${role_script}"
+[[ -n "$role" ]] || die "OMV_ROLE is unset; run: ./setup/role.sh <role> reset"
+valid_role "$role" || die "unknown role ${role}"
 
 collect_role_packages() {
     local module path
@@ -40,7 +38,7 @@ collect_role_packages() {
                 if ($0 !~ /\\$/) more = 0
             }
         ' "$path"
-    done < <(awk '/run_module / { print $2 }' "$role_script")
+    done < <(role_modules "$role")
 }
 
 collect_role_flatpaks() {
@@ -51,7 +49,7 @@ collect_role_flatpaks() {
         awk '
             $1 == "ensure_flatpak" { print $2 }
         ' "$path"
-    done < <(awk '/run_module / { print $2 }' "$role_script")
+    done < <(role_modules "$role")
 }
 
 mapfile -t declared < <(collect_role_packages | sort -u)
