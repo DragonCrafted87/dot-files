@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Workstation Python tooling that used to live in python-setup, plus a
-# reusable pre-commit container and a git init template so new repos get
-# the hook without a manual `pre-commit install`.
+# Workstation Python tooling plus a reusable pre-commit container.
+# The git init template lives in config/git/template and is linked into
+# ~/.config/git by link-user-config.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -10,8 +10,6 @@ set -euo pipefail
 require_user
 
 WRAPPER="${DOTFILES_HOME}/bin/pre-commit"
-TEMPLATE_SRC="${REPO_ROOT}/git-template"
-TEMPLATE_LINK="${DOTFILES_HOME}/.config/git/template"
 IMAGE_NAME="dotfiles-pre-commit"
 DOCKERFILE="${SETUP_FILES_DIR}/pre-commit/Dockerfile"
 CACHE_DIR="${DOTFILES_HOME}/.cache/pre-commit-docker"
@@ -45,7 +43,6 @@ else
 fi
 
 [[ -f "$DOCKERFILE" ]] || die "missing ${DOCKERFILE}"
-[[ -d "$TEMPLATE_SRC" ]] || die "missing ${TEMPLATE_SRC}"
 
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     log "build ${IMAGE_NAME}"
@@ -55,7 +52,3 @@ else
 fi
 
 run install -m 0755 "${SETUP_FILES_DIR}/pre-commit/pre-commit" "$WRAPPER"
-ensure_dir "$(dirname "$TEMPLATE_LINK")"
-ensure_symlink "$TEMPLATE_SRC" "$TEMPLATE_LINK"
-
-log "git init.templateDir -> ${TEMPLATE_LINK}"
