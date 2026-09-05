@@ -70,7 +70,7 @@ role. `laptop` includes `@workstation` and then laptop-only modules.
 
 | Role          | Extra modules                                                                            |
 | ------------- | ---------------------------------------------------------------------------------------- |
-| `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, BOINC Manager |
+| `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, ScummVM/QFG, BOINC Manager |
 | `laptop`      | workstation plus `configure-laptop` (power-profiles-daemon)                              |
 | `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client                                         |
 | `server`      | CLI baseline, k3s, BOINC client; no GUI session                                          |
@@ -113,6 +113,29 @@ ones. Re-run that script after plugging in a USB Blu-ray drive.
 ```bash
 ~/dot-files/setup/modules/install-makemkv.sh
 ~/bin/sync-makemkv-desktops.sh
+```
+
+## ScummVM / Quest for Glory
+
+`install-scummvm-qfg` is on workstation (and therefore laptop). It
+installs the distro `scummvm` package, links the binary under
+`~/games/scummvm`, copies Quest for Glory data out of the Steam
+collection, and writes Desktop plus applications-menu launchers.
+
+Expected Steam path:
+
+```text
+~/games/steam-library/steamapps/common/Quest for Glory Collection/
+```
+
+Override with `STEAM_QFG`. Game data lands in `~/games/quest-for-glory/`
+(DOSBox binaries are not copied). Isolated config and saves live in
+`~/games/scummvm/`. Icons come from the official scummvm-icons repo.
+QFG5 is copied when present; a launcher is created only if that ScummVM
+build lists the game.
+
+```bash
+~/dot-files/setup/modules/install-scummvm-qfg.sh
 ```
 
 ## BOINC
