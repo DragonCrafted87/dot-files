@@ -14,9 +14,8 @@ case "${OMV_ROLE:-}" in
     workstation)
         ensure_flatpak com.discordapp.Discord
         ensure_flatpak com.github.Matoking.protontricks
-        ;;
-    laptop)
-        ensure_flatpak com.discordapp.Discord
+        ensure_flatpak com.obsproject.Studio
+        ensure_flatpak com.obsproject.Studio.Plugin.BackgroundRemoval
         ;;
     *)
         log "no extra flatpaks for role ${OMV_ROLE:-unknown}"
