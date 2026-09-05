@@ -9,14 +9,4 @@ do
     source "$file"
 done
 
-function update-dot-files ()
-{
-    saved_working_dir="$PWD"
-    cd ~/dot-files || return
-    git pull
-    # shellcheck disable=SC1090
-    source ~/.bashrc
-    cd "$saved_working_dir" || return
-}
-
-eval "$(oh-my-posh init bash --config /home/dragon/dot-files/omp.yaml)"
+eval "$(oh-my-posh init bash --config "${DOTFILES_ROOT:-$HOME/dot-files}/omp.yaml")"

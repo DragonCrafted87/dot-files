@@ -39,11 +39,26 @@ if ! is_windows; then
     [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 fi
 
-temp=$(realpath "${BASH_SOURCE[0]}")
-temp=$(dirname "$temp")
-temp=$(realpath "${temp}/..")
-export PATH_BASH_SETTINGS="$temp"
-echo "$PATH_BASH_SETTINGS"
+# Repo root as seen by this sourced file. Works even if the clone is not
+# at ~/dot-files, as long as bashrc.d lives inside the repo.
+_dotfiles_from_source() {
+    local here
+    here="$(realpath "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")"
+    here="$(dirname "$here")"
+    realpath "${here}/.." 2>/dev/null || printf '%s' "$(cd "${here}/.." && pwd)"
+}
+
+DOTFILES_ROOT="${DOTFILES_ROOT:-$(_dotfiles_from_source)}"
+export DOTFILES_ROOT
+export PATH_BASH_SETTINGS="$DOTFILES_ROOT"
+
+_dotfiles_state_dir="${HOME}/.config/dot-files"
+mkdir -p "$_dotfiles_state_dir" 2>/dev/null || true
+if [[ -n "$DOTFILES_ROOT" && -d "$DOTFILES_ROOT" ]]; then
+    printf '%s\n' "$DOTFILES_ROOT" >"${_dotfiles_state_dir}/root" 2>/dev/null || true
+fi
+unset -f _dotfiles_from_source
+unset _dotfiles_state_dir
 
 export GOPATH=$HOME/go
 
@@ -52,7 +67,7 @@ BASE_PATH=$PATH
 PATH=$HOME/bin
 PATH=$PATH:$HOME/.local/bin
 PATH=$PATH:$HOME/scripts
-PATH=$PATH:$HOME/dot-files/scripts
+PATH=$PATH:$DOTFILES_ROOT/scripts
 PATH=$PATH:$HOME/bin/ffmpeg/bin
 PATH=$PATH:$HOME/bin/mkvtoolnix
 if ! is_windows; then

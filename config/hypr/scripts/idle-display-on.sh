@@ -1,12 +1,13 @@
 #!/bin/sh
 # Wake outputs by re-applying the saved host/profile layout.
-# New hostnames and profiles only need to be added to display-profile.sh.
+# HDMI can take several seconds after DPMS/disable before Hyprland will
+# accept workspace moves, so give the panel a moment before apply.
 
 PROFILE="${HOME}/.config/hypr/scripts/display-profile.sh"
 
 hyprctl dispatch dpms on
 
-sleep 0.6
+sleep 2
 
 if [ -x "$PROFILE" ]; then
     "$PROFILE" apply
