@@ -2,13 +2,6 @@
 
 DEPTH_TO_SEARCH=3
 
-alias pre-commit-check='MSYS_NO_PATHCONV=1 \
-    docker run \
-    --rm \
-    --name "$NAME" \
-    --env FULL_CHECK=True \
-    --volume "$(pwd)":/src \
-    ghcr.io/dragoncrafted87/alpine-common-pre-commit-hooks'
 alias pre-commit-update='pre-commit autoupdate'
 
 function git-delete-tags ()
@@ -105,7 +98,7 @@ function git-clean-branches() {
     # Get all local branches except current, dev, and release branches
     local branches_to_delete=$(git branch |
         grep -vE '^\*|^\+|dev|release/' |
-        sed 's/^[[:space:]]*//')
+    sed 's/^[[:space:]]*//')
 
     if [ -z "$branches_to_delete" ]; then
         echo "No unused branches found to delete"

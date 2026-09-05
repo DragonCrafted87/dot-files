@@ -108,4 +108,4 @@ repos:
   rev: v10.2.0
   hooks:
   - id: cspell
-    exclude: (^\.gitignore|^\.pre-commit-config\.yaml|^\.cspell/|^omp\.yaml$|^scripts/|^windows/|^config/|^setup/)
+    exclude: (^\.gitignore|^\.pre-commit-config\.yaml|^\.cspell/|^omp\.yaml$|^scripts/|^windows/|^config/|^setup/|^.cspell.json)
