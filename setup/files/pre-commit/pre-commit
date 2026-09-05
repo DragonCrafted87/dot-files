@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Host wrapper: run pre-commit in the shared cache container.
+# Cache lives at ~/.cache/pre-commit-docker so every repo reuses hook envs.
+# Wipe that directory (or run pre-commit-reset-cache) if it gets huge.
+
+set -euo pipefail
+
+IMAGE="${PRE_COMMIT_IMAGE:-dotfiles-pre-commit}"
+CACHE_DIR="${PRE_COMMIT_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/pre-commit-docker}"
+
+repo_root() {
+    git rev-parse --show-toplevel 2>/dev/null || pwd
+}
+
+if ! command -v docker >/dev/null 2>&1; then
+    printf 'docker is required for pre-commit\n' >&2
+    exit 1
+fi
+
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    printf 'image %s is missing; run update-role or:\n' "$IMAGE" >&2
+    printf '  docker build -t %s ~/dot-files/setup/files/pre-commit\n' "$IMAGE" >&2
+    exit 1
+fi
+
+mkdir -p "$CACHE_DIR"
+REPO="$(repo_root)"
+
+# Map the repo and the shared hook cache. Hooks that download node/python
+# environments land in CACHE_DIR and are reused across clones.
+exec docker run --rm -i \
+    -v "$REPO":/src \
+    -v "$CACHE_DIR":/cache \
+    -e PRE_COMMIT_HOME=/cache \
+    -e HOME=/tmp \
+    -w /src \
+    --network host \
+    "$IMAGE" "$@"

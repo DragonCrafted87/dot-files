@@ -1,0 +1,17 @@
+#!/bin/sh
+# Copied into every new repo by git init.templateDir.
+# Does nothing unless this repo has a pre-commit config.
+
+if [ ! -f .pre-commit-config.yaml ] && [ ! -f .pre-commit-config.yml ]; then
+    exit 0
+fi
+
+if ! command -v pre-commit >/dev/null 2>&1; then
+    echo 'pre-commit wrapper is not on PATH; skip hook' >&2
+    exit 0
+fi
+
+CONFIG=.pre-commit-config.yaml
+[ -f .pre-commit-config.yml ] && CONFIG=.pre-commit-config.yml
+
+exec pre-commit hook-impl --config="$CONFIG" --hook-type=pre-commit --hook-dir "$(dirname "$0")" -- "$@"
