@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 OMP_INSTALL_DIR="$HOME/bin"
 

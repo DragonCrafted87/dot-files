@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 HISTCONTROL='ignoredups:ignorespace:erasedups'
 HISTSIZE=1000
