@@ -10,11 +10,11 @@ re-run apply, so `keyword monitor` cannot loop the compositor.
 
 ## Profiles (runewyrm)
 
-| Profile | Monitors | Audio |
-| --- | --- | --- |
-| `desk` | DP-2 + DP-3 + HDMI-A-1 | restore last / desk sink |
-| `theater` | same DPs; HDMI uses the TV preferred mode | default sink to HDMI / TV |
-| `workshare` | DP-2 and DP-3 disabled; HDMI stays | restore desk sink |
+| Profile     | Monitors                                  | Audio                     |
+| ----------- | ----------------------------------------- | ------------------------- |
+| `desk`      | DP-2 + DP-3 + HDMI-A-1                    | restore last / desk sink  |
+| `theater`   | same DPs; HDMI uses the TV preferred mode | default sink to HDMI / TV |
+| `workshare` | DP-2 and DP-3 disabled; HDMI stays        | restore desk sink         |
 
 Every other hostname only gets `monitor=,preferred,highrr,auto`.
 

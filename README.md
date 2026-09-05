@@ -6,18 +6,18 @@ packages and link configs. Re-running a role is the upgrade path.
 
 ## Layout
 
-| Path | What it is |
-| --- | --- |
-| `hw_bashrc.sh` | Linux interactive bash entry. Sourced as `~/.bashrc`. |
-| `git_bashrc.sh` | Git Bash for Windows entry. |
-| `root_bashrc.sh` | Root shell on Linux boxes. |
-| `profile` | Login-shell `~/.profile` (PATH + source bashrc). |
-| `bashrc.d/` | Function and alias snippets sourced by those entries. |
-| `omp.yaml` | Oh My Posh theme. |
-| `config/` | Trees linked into `~/.config/<name>` by the role. |
-| `setup/` | OpenMandriva role installer. See `setup/README.md`. |
-| `windows/` | Winget lists and work/personal PowerShell. See `windows/README.md`. |
-| `scripts/` | One-off Python helpers (ffmpeg, dictation, Minecraft mods). |
+| Path             | What it is                                                          |
+| ---------------- | ------------------------------------------------------------------- |
+| `hw_bashrc.sh`   | Linux interactive bash entry. Sourced as `~/.bashrc`.               |
+| `git_bashrc.sh`  | Git Bash for Windows entry.                                         |
+| `root_bashrc.sh` | Root shell on Linux boxes.                                          |
+| `profile`        | Login-shell `~/.profile` (PATH + source bashrc).                    |
+| `bashrc.d/`      | Function and alias snippets sourced by those entries.               |
+| `omp.yaml`       | Oh My Posh theme.                                                   |
+| `config/`        | Trees linked into `~/.config/<name>` by the role.                   |
+| `setup/`         | OpenMandriva role installer. See `setup/README.md`.                 |
+| `windows/`       | Winget lists and work/personal PowerShell. See `windows/README.md`. |
+| `scripts/`       | One-off Python helpers (ffmpeg, dictation, Minecraft mods).         |
 
 ## Linux machine
 
