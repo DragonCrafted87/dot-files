@@ -281,7 +281,7 @@ def main():
             file_download(download_link, args.minecraft_folder)
 
     pprint("All Installed Mods")
-    pprint(sorted(glob(f"{str(PurePath(mods_folder,'*'))}")))
+    pprint(sorted(glob(f"{str(PurePath(mods_folder, '*'))}")))
 
 
 if __name__ == "__main__":
