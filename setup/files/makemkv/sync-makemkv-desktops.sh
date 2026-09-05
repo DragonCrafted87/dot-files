@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Refresh ~/Desktop launchers so only currently attached optical drives
-# have a MakeMKV shortcut. Safe to run from login autostart and by hand.
+# have a MakeMKV shortcut. Also installs copies under
+# ~/.local/share/applications and refreshes the XDG desktop database so
+# quickshell / other menus see them immediately.
 
 set -euo pipefail
 
@@ -10,6 +12,7 @@ if [[ -z "$DESKTOP_DIR" ]] && command -v xdg-user-dir >/dev/null 2>&1; then
     DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
 fi
 DESKTOP_DIR="${DESKTOP_DIR:-$HOME/Desktop}"
+APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 
 optical_nodes() {
     local node real seen=""
@@ -53,14 +56,10 @@ slug_for() {
     printf '%s' "$(basename "$dev")"
 }
 
-mkdir -p "$DESKTOP_DIR"
-
-wanted=""
-while IFS= read -r dev; do
-    [[ -n "$dev" ]] || continue
-    slug="$(slug_for "$dev")"
-    dest="${DESKTOP_DIR}/MakeMKV-${slug}.desktop"
-    label="$(drive_label "$dev")"
+write_launcher() {
+    local dest="$1"
+    local dev="$2"
+    local label="$3"
     cat >"$dest" <<EOF
 [Desktop Entry]
 Type=Application
@@ -75,14 +74,54 @@ StartupNotify=true
 ${MARKER}=${dev}
 EOF
     chmod 0755 "$dest"
-    wanted="$wanted $dest"
+}
+
+prune_stale() {
+    local dir="$1"
+    local wanted="$2"
+    local file
+    shopt -s nullglob
+    for file in "$dir"/MakeMKV-*.desktop; do
+        grep -q "^${MARKER}=" "$file" 2>/dev/null || continue
+        case " $wanted " in
+            *" $file "*) continue ;;
+        esac
+        rm -f "$file"
+    done
+}
+
+refresh_desktop_cache() {
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database "$APPS_DIR" >/dev/null 2>&1 || true
+    fi
+    if command -v xdg-desktop-menu >/dev/null 2>&1; then
+        xdg-desktop-menu forceupdate >/dev/null 2>&1 || true
+    fi
+    if command -v desktop-file-validate >/dev/null 2>&1; then
+        local f
+        shopt -s nullglob
+        for f in "$APPS_DIR"/MakeMKV-*.desktop; do
+            desktop-file-validate "$f" >/dev/null 2>&1 || true
+        done
+    fi
+}
+
+mkdir -p "$DESKTOP_DIR" "$APPS_DIR"
+
+wanted_desktop=""
+wanted_apps=""
+while IFS= read -r dev; do
+    [[ -n "$dev" ]] || continue
+    slug="$(slug_for "$dev")"
+    label="$(drive_label "$dev")"
+    dest_desktop="${DESKTOP_DIR}/MakeMKV-${slug}.desktop"
+    dest_apps="${APPS_DIR}/MakeMKV-${slug}.desktop"
+    write_launcher "$dest_desktop" "$dev" "$label"
+    write_launcher "$dest_apps" "$dev" "$label"
+    wanted_desktop="$wanted_desktop $dest_desktop"
+    wanted_apps="$wanted_apps $dest_apps"
 done < <(optical_nodes)
 
-shopt -s nullglob
-for file in "$DESKTOP_DIR"/MakeMKV-*.desktop; do
-    grep -q "^${MARKER}=" "$file" 2>/dev/null || continue
-    case " $wanted " in
-        *" $file "*) continue ;;
-    esac
-    rm -f "$file"
-done
+prune_stale "$DESKTOP_DIR" "$wanted_desktop"
+prune_stale "$APPS_DIR" "$wanted_apps"
+refresh_desktop_cache
