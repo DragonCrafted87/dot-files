@@ -26,5 +26,5 @@ enable_user_service network-mounts.service
 
 if [[ ! -f "${DOTFILES_HOME}/.smbcredentials" || ! -f "${DOTFILES_HOME}/.config/rclone/rclone.conf" ]]; then
     warn "smb/rclone secrets are not on this machine yet"
-    warn "from the old box: ${OPENMANDRIVA_SETUP_DIR}/transfer-secrets.sh ${DOTFILES_USER}@$(hostname -s)"
+    warn "from the old box: ${SETUP_DIR}/transfer-secrets.sh ${DOTFILES_USER}@$(hostname -s)"
 fi

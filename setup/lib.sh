@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared helpers for setup/openmandriva modules and role scripts.
+# Shared helpers for setup modules and role scripts.
 # Safe to source more than once.
 
 # shellcheck disable=SC2034
@@ -12,8 +12,8 @@ DOTFILES_LIB_LOADED=1
 set -euo pipefail
 
 dotfiles_here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OPENMANDRIVA_SETUP_DIR="${OPENMANDRIVA_SETUP_DIR:-$dotfiles_here}"
-REPO_ROOT="$(cd "${OPENMANDRIVA_SETUP_DIR}/../.." && pwd)"
+SETUP_DIR="${SETUP_DIR:-$dotfiles_here}"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 DOTFILES_USER="${DOTFILES_USER:-dragon}"
 DOTFILES_HOME="${DOTFILES_HOME:-/home/${DOTFILES_USER}}"
@@ -25,7 +25,7 @@ DOTFILES_TIMEZONE="${DOTFILES_TIMEZONE:-America/Chicago}"
 OMP_INSTALL_DIR="${OMP_INSTALL_DIR:-${DOTFILES_HOME}/bin}"
 CONFIG_SOURCE_DIR="${CONFIG_SOURCE_DIR:-${REPO_ROOT}/config}"
 CONFIG_TARGET_DIR="${CONFIG_TARGET_DIR:-${DOTFILES_HOME}/.config}"
-SETUP_FILES_DIR="${SETUP_FILES_DIR:-${OPENMANDRIVA_SETUP_DIR}/files}"
+SETUP_FILES_DIR="${SETUP_FILES_DIR:-${SETUP_DIR}/files}"
 
 log() {
     printf '==> %s\n' "$*"
@@ -320,7 +320,7 @@ ensure_systemd_dropin() {
 
 run_module() {
     local module="$1"
-    local path="${OPENMANDRIVA_SETUP_DIR}/modules/${module}.sh"
+    local path="${SETUP_DIR}/modules/${module}.sh"
     [[ -f "$path" ]] || die "missing module: ${path}"
     log "module ${module}"
     # shellcheck disable=SC1090

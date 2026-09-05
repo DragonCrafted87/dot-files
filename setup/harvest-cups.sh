@@ -2,7 +2,7 @@
 # Copy the live CUPS queue from this machine into the repo so other
 # workstation/laptop installs can reuse it.
 #
-#   sudo ./setup/openmandriva/harvest-cups.sh
+#   sudo ./setup/harvest-cups.sh
 
 set -euo pipefail
 

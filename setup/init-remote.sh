@@ -3,7 +3,7 @@
 # generates a key on the new box, registers that key with the local gh
 # session, clones the repo, then runs the role.
 #
-#   ./setup/openmandriva/init-remote.sh dragon@newbox.lan laptop
+#   ./setup/init-remote.sh dragon@newbox.lan laptop
 
 set -euo pipefail
 

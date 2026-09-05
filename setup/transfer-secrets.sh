@@ -2,7 +2,7 @@
 # Copy sensitive files from this machine onto a new box over SSH.
 # Run from the working computer after the new host has a user and sshd.
 #
-#   ./setup/openmandriva/transfer-secrets.sh dragon@newbox.lan
+#   ./setup/transfer-secrets.sh dragon@newbox.lan
 #
 # Edit files/secrets.list to add more paths.
 

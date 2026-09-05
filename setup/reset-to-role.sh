@@ -2,9 +2,9 @@
 # Keep files, restore the role's package set, drop experimental extras.
 # Does not reinstall the OS or touch /home except what the role already links.
 #
-#   ./setup/openmandriva/reset-to-role.sh workstation
-#   DOTFILES_DRY_RUN=1 ./setup/openmandriva/reset-to-role.sh laptop
-#   RESET_CONFIRM=yes ./setup/openmandriva/reset-to-role.sh server
+#   ./setup/reset-to-role.sh workstation
+#   DOTFILES_DRY_RUN=1 ./setup/reset-to-role.sh laptop
+#   RESET_CONFIRM=yes ./setup/reset-to-role.sh server
 
 set -euo pipefail
 

@@ -19,7 +19,7 @@ if [[ "$(id -u)" -ne 0 ]]; then
 fi
 
 if [[ ! -f "$HOSTS_FILE" ]]; then
-    printf 'error: %s is missing; edit setup/openmandriva/files/boinc/hosts.list\n' "$HOSTS_FILE" >&2
+    printf 'error: %s is missing; edit setup/files/boinc/hosts.list\n' "$HOSTS_FILE" >&2
     exit 1
 fi
 

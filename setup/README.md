@@ -1,4 +1,4 @@
-# OpenMandriva setup
+# setup
 
 Small role scripts at this directory root. Each one calls modules under
 `modules/`. Re-running a role is the intended upgrade path.
@@ -9,7 +9,7 @@ From a computer that already works, against a fresh box that has a user
 and sshd:
 
 ```bash
-./setup/openmandriva/init-remote.sh dragon@newbox.lan workstation
+./setup/init-remote.sh dragon@newbox.lan workstation
 ```
 
 That copies the secrets list, copies `first-boot.sh`, then runs it over
@@ -34,9 +34,9 @@ Keeps `/home` and the role's declared packages. Drops other
 user-installed rpms and extra Flatpaks (Plasma leftovers included).
 
 ```bash
-./setup/openmandriva/reset-to-role.sh workstation
-RESET_CONFIRM=yes ./setup/openmandriva/reset-to-role.sh workstation
-DOTFILES_DRY_RUN=1 ./setup/openmandriva/reset-to-role.sh laptop
+./setup/reset-to-role.sh workstation
+RESET_CONFIRM=yes ./setup/reset-to-role.sh workstation
+DOTFILES_DRY_RUN=1 ./setup/reset-to-role.sh laptop
 ```
 
 The first run only prints the extras. Add names to
@@ -45,14 +45,14 @@ The first run only prints the extras. Add names to
 Optional overrides:
 
 ```bash
-DOTFILES_HOSTNAME=study.lan ~/dot-files/setup/openmandriva/laptop.sh
-DOTFILES_DRY_RUN=1 ~/dot-files/setup/openmandriva/server.sh
+DOTFILES_HOSTNAME=study.lan ~/dot-files/setup/laptop.sh
+DOTFILES_DRY_RUN=1 ~/dot-files/setup/server.sh
 ```
 
 A single module can be run on its own:
 
 ```bash
-~/dot-files/setup/openmandriva/modules/link-user-config.sh
+~/dot-files/setup/modules/link-user-config.sh
 ```
 
 ## Roles
@@ -73,11 +73,11 @@ usually `x86_64` even on Zen). The opposite arch is disabled.
 Harvest printer queues on the current workstation, then commit them:
 
 ```bash
-sudo ~/dot-files/setup/openmandriva/harvest-cups.sh
+sudo ~/dot-files/setup/harvest-cups.sh
 ```
 
 That copies `/etc/cups/printers.conf` and `/etc/cups/ppd/` into
-`setup/openmandriva/files/cups/`. Workstation and laptop replay those
+`setup/files/cups/`. Workstation and laptop replay those
 files.
 
 ## BOINC
@@ -108,7 +108,7 @@ suspend when other CPU is busy.
 Docker image manager is a standalone placeholder, not part of every server:
 
 ```bash
-~/dot-files/setup/openmandriva/modules/install-docker-image-manager.sh
+~/dot-files/setup/modules/install-docker-image-manager.sh
 ```
 
 ## Config links

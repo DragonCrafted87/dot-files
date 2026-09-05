@@ -2,7 +2,7 @@
 # Placeholder for the still-undecided Docker image manager on one server
 # (Portainer, Harbor, etc.). Run this module by hand on that box later.
 #
-#   ~/dot-files/setup/openmandriva/modules/install-docker-image-manager.sh
+#   ~/dot-files/setup/modules/install-docker-image-manager.sh
 
 set -euo pipefail
 # shellcheck disable=SC1091

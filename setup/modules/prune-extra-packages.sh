@@ -11,7 +11,7 @@ require_user
 role="${OMV_ROLE:-}"
 [[ -n "$role" ]] || die "OMV_ROLE is unset; run reset-to-role.sh"
 
-role_script="${OPENMANDRIVA_SETUP_DIR}/${role}.sh"
+role_script="${SETUP_DIR}/${role}.sh"
 [[ -f "$role_script" ]] || die "missing ${role_script}"
 
 collect_role_packages() {
@@ -20,7 +20,7 @@ collect_role_packages() {
     declare -gA KEEP_FLATPAKS=()
 
     while IFS= read -r module; do
-        path="${OPENMANDRIVA_SETUP_DIR}/modules/${module}.sh"
+        path="${SETUP_DIR}/modules/${module}.sh"
         [[ -f "$path" ]] || continue
         # Names that follow ensure_packages on the same or later lines
         # until a line that is not a package token.
@@ -46,7 +46,7 @@ collect_role_packages() {
 collect_role_flatpaks() {
     local module path
     while IFS= read -r module; do
-        path="${OPENMANDRIVA_SETUP_DIR}/modules/${module}.sh"
+        path="${SETUP_DIR}/modules/${module}.sh"
         [[ -f "$path" ]] || continue
         awk '
             $1 == "ensure_flatpak" { print $2 }
