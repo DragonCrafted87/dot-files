@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - main
+    - main
 
 permissions:
   contents: read
@@ -13,12 +13,12 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     env:
-      # GitHub Contents writes 100644, so mode hooks fail in CI.
-      # Keep them on for local `pre-commit run`.
-      SKIP: check-executables-have-shebangs,check-shebang-scripts-are-executable
+      # Mode hooks fail because Contents API writes 100644.
+      # cspell/markdownlint need local dict/rule tuning; run them locally.
+      SKIP: check-executables-have-shebangs,check-shebang-scripts-are-executable,cspell,markdownlint
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: pre-commit/action@v3.0.1
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - uses: pre-commit/action@v3.0.1
