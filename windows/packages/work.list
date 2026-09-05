@@ -1,0 +1,3 @@
+# Extra packages for a work developer box.
+# Common packages are always included; add work-only IDs here.
+Microsoft.VisualStudioCode
