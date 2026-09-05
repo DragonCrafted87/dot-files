@@ -8,6 +8,7 @@ PROFILE_FILE="${STATE_DIR}/display-profile"
 SAVED_SINK_FILE="${STATE_DIR}/desk-audio-sink"
 SAVED_WS_FILE="${STATE_DIR}/saved-monitor-workspaces"
 RESTORE_WS_PID_FILE="${STATE_DIR}/restore-ws.pid"
+APPLY_LOCK_FILE="${STATE_DIR}/apply.lock"
 RUNEWYRM_IDLE_MONITOR="HDMI-A-1"
 THEATER_SINK_MATCH="${THEATER_SINK_MATCH:-hdmi}"
 DESK_SINK_MATCH="${DESK_SINK_MATCH:-}"
@@ -26,7 +27,16 @@ need_hypr() {
     command -v hyprctl >/dev/null 2>&1 || { echo "hyprctl not found" >&2; return 1; }
 }
 
-keyword_monitor() { hyprctl keyword monitor "$1" >/dev/null; }
+keyword_monitor() { hyprctl keyword monitor "$1" >/dev/null 2>&1 || true; }
+
+with_apply_lock() {
+    mkdir -p "$STATE_DIR"
+    exec 9>"$APPLY_LOCK_FILE"
+    if ! flock -n 9; then
+        return 1
+    fi
+    return 0
+}
 
 save_profile() {
     mkdir -p "$STATE_DIR"
@@ -104,22 +114,30 @@ apply_theater_audio() {
     set_sink "$sink" || true
 }
 
+hdmi_spec_for_profile() {
+    case "${1:-desk}" in
+        theater) printf '%s\n' "${RUNEWYRM_IDLE_MONITOR},preferred,auto,1" ;;
+        workshare) printf '%s\n' "${RUNEWYRM_IDLE_MONITOR},2560x1440@143.91Hz,0x0,1" ;;
+        *) printf '%s\n' "${RUNEWYRM_IDLE_MONITOR},2560x1440@143.91Hz,6000x0,1" ;;
+    esac
+}
+
 apply_desk_monitors() {
     keyword_monitor "DP-2,2560x1440@143.91,0x0,1"
     keyword_monitor "DP-3,3440x1440@144,2560x0,1"
-    keyword_monitor "HDMI-A-1,2560x1440@143.91Hz,6000x0,1"
+    keyword_monitor "$(hdmi_spec_for_profile desk)"
 }
 
 apply_theater_monitors() {
     keyword_monitor "DP-2,2560x1440@143.91,0x0,1"
     keyword_monitor "DP-3,3440x1440@144,2560x0,1"
-    keyword_monitor "HDMI-A-1,preferred,auto,1"
+    keyword_monitor "$(hdmi_spec_for_profile theater)"
 }
 
 apply_workshare_monitors() {
     keyword_monitor "DP-2,disable"
     keyword_monitor "DP-3,disable"
-    keyword_monitor "HDMI-A-1,2560x1440@143.91Hz,0x0,1"
+    keyword_monitor "$(hdmi_spec_for_profile workshare)"
 }
 
 apply_default_monitors() { keyword_monitor ",preferred,highrr,auto"; }
@@ -185,7 +203,6 @@ for m in data:
         continue
     if m.get("disabled") is True:
         raise SystemExit(1)
-    # HDMI often reports present before it has a real mode.
     if int(m.get("width") or 0) <= 0:
         raise SystemExit(1)
     raise SystemExit(0)
@@ -204,7 +221,7 @@ wait_for_unlock() {
 
 wait_for_monitor() {
     local mon="$1" i
-    for i in $(seq 1 40); do
+    for i in $(seq 1 20); do
         monitor_is_live "$mon" && return 0
         sleep 0.25
     done
@@ -249,7 +266,7 @@ schedule_workspace_restore() {
     (
         wait_for_unlock
         local i
-        for i in 1 2 3 4 5 6 7 8; do
+        for i in 1 2 3 4; do
             restore_saved_workspaces_now && break
             sleep 1
         done
@@ -264,6 +281,7 @@ cmd_restore_ws() { need_hypr; QUIET=1; schedule_workspace_restore; }
 cmd_apply() {
     need_hypr
     QUIET=1
+    with_apply_lock || return 0
     if [[ "$HOST" == "runewyrm" ]]; then
         local profile
         profile="$(current_profile)"
@@ -278,6 +296,7 @@ cmd_apply() {
 cmd_set() {
     local profile="$1"
     need_hypr
+    with_apply_lock || return 0
     if [[ "$HOST" != "runewyrm" ]]; then
         notify "Profiles desk/theater/workshare are runewyrm-only (this host is ${HOST})"
         apply_other_host
@@ -287,10 +306,11 @@ cmd_set() {
     schedule_workspace_restore
 }
 
+# Blank only the TV. Leave the DP desk monitors in their current layout.
 idle_off_runewyrm() {
     save_monitor_workspaces "$RUNEWYRM_IDLE_MONITOR"
-    hyprctl dispatch dpms off
-    sleep 0.3
+    hyprctl dispatch dpms off "$RUNEWYRM_IDLE_MONITOR" >/dev/null 2>&1 || hyprctl dispatch dpms off
+    sleep 0.2
     keyword_monitor "${RUNEWYRM_IDLE_MONITOR},disable"
 }
 
@@ -303,6 +323,23 @@ cmd_idle_off() {
         runewyrm) idle_off_runewyrm ;;
         *) idle_off_other ;;
     esac
+}
+
+# Re-enable HDMI only. Never rewrite DP-2/DP-3 here.
+cmd_idle_on() {
+    need_hypr
+    QUIET=1
+    with_apply_lock || return 0
+    hyprctl dispatch dpms on >/dev/null 2>&1 || true
+    if [[ "$HOST" == "runewyrm" ]]; then
+        local profile
+        profile="$(current_profile)"
+        [[ -n "$profile" && "$profile" != "default" ]] || profile="desk"
+        keyword_monitor "$(hdmi_spec_for_profile "$profile")"
+        hyprctl dispatch dpms on "$RUNEWYRM_IDLE_MONITOR" >/dev/null 2>&1 || true
+        schedule_workspace_restore
+    fi
+    hyprctl dispatch movecursor 1 1 >/dev/null 2>&1 || true
 }
 
 cmd_status() {
@@ -323,13 +360,14 @@ cmd_list() {
     fi
 }
 
-usage() { echo "Usage: display-profile.sh [apply|idle-off|restore-ws|status|list|desk|theater|workshare]"; }
+usage() { echo "Usage: display-profile.sh [apply|idle-off|idle-on|restore-ws|status|list|desk|theater|workshare]"; }
 
 main() {
     local cmd="${1:-apply}"
     case "$cmd" in
         apply|"") cmd_apply ;;
         idle-off) cmd_idle_off ;;
+        idle-on) cmd_idle_on ;;
         restore-ws) cmd_restore_ws ;;
         status) cmd_status ;;
         list) cmd_list ;;

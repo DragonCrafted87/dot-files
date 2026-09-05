@@ -12,6 +12,10 @@ permissions:
 jobs:
   pre-commit:
     runs-on: ubuntu-latest
+    env:
+      # GitHub Contents writes 100644, so mode hooks fail in CI.
+      # Keep them on for local `pre-commit run`.
+      SKIP: check-executables-have-shebangs,check-shebang-scripts-are-executable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
