@@ -334,3 +334,47 @@ record_role() {
     ensure_dir "${CONFIG_TARGET_DIR}/dot-files"
     ensure_file_contents "${CONFIG_TARGET_DIR}/dot-files/role" "$role"
 }
+
+valid_role() {
+    case "${1:-}" in
+        workstation | laptop | htpc | server) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Print modules for a roles.conf section. @name includes another section.
+_role_section() {
+    local conf="$1"
+    local section="$2"
+    local line current=""
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+        if [[ "$line" == \[*\] ]]; then
+            current="${line#[}"
+            current="${current%]}"
+            continue
+        fi
+        [[ "$current" == "$section" ]] || continue
+        if [[ "$line" == @* ]]; then
+            _role_section "$conf" "${line#@}"
+        else
+            printf '%s\n' "$line"
+        fi
+    done <"$conf"
+}
+
+# Module lists live in setup/roles.conf so they are easy to find later.
+role_modules() {
+    local role="$1"
+    local conf="${SETUP_DIR}/roles.conf"
+
+    valid_role "$role" || die "unknown role ${role}"
+    [[ -f "$conf" ]] || die "missing ${conf}"
+
+    _role_section "$conf" common
+    _role_section "$conf" "$role"
+}

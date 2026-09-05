@@ -23,7 +23,7 @@ ensure_packages \
 cups_src="${SETUP_FILES_DIR}/cups"
 if [[ ! -f "${cups_src}/printers.conf" ]]; then
     warn "no harvested printer config at ${cups_src}/printers.conf"
-    warn "on the current workstation run: ${SETUP_DIR}/harvest-cups.sh"
+    warn "on the current workstation run: ${SETUP_DIR}/utility/harvest-cups.sh"
     enable_service cups.socket
     enable_service cups.service
     exit 0

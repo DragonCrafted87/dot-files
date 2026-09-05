@@ -2,14 +2,15 @@
 # Copy sensitive files from this machine onto a new box over SSH.
 # Run from the working computer after the new host has a user and sshd.
 #
-#   ./setup/transfer-secrets.sh dragon@newbox.lan
+#   ./setup/utility/transfer-secrets.sh dragon@newbox.lan
 #
 # Edit files/secrets.list to add more paths.
 
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-list="${here}/files/secrets.list"
+setup_dir="$(cd "${here}/.." && pwd)"
+list="${setup_dir}/files/secrets.list"
 target="${1:-}"
 
 if [[ -z "$target" ]]; then
@@ -53,4 +54,4 @@ done <"$list"
 
 printf '==> copied %s, skipped %s\n' "$copied" "$skipped"
 printf '    on the new box, re-run the role script or:\n'
-printf '      %s/modules/harden-secrets.sh\n' "$here"
+printf '      %s/modules/harden-secrets.sh\n' "$setup_dir"

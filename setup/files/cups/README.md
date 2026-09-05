@@ -9,7 +9,7 @@ Printer queues live in:
 On the current workstation:
 
 ```bash
-sudo ~/dot-files/setup/harvest-cups.sh
+sudo ~/dot-files/setup/utility/harvest-cups.sh
 ```
 
 Commit whatever that writes here. The office/printing module copies it

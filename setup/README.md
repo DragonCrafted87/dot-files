@@ -1,7 +1,20 @@
 # setup
 
-Small role scripts at this directory root. Each one calls modules under
-`modules/`. Re-running a role is the intended upgrade path.
+One control script at this directory root applies a machine role by
+calling modules under `modules/`. Re-running a role is the intended
+upgrade path. What each role runs is listed in `roles.conf`.
+
+```bash
+~/dot-files/setup/role.sh workstation
+~/dot-files/setup/role.sh laptop
+~/dot-files/setup/role.sh htpc
+~/dot-files/setup/role.sh server
+```
+
+```bash
+~/dot-files/setup/role.sh --hostname study.lan laptop
+~/dot-files/setup/role.sh --dry-run server
+```
 
 ## First boot
 
@@ -12,21 +25,22 @@ and sshd:
 ./setup/init-remote.sh dragon@newbox.lan workstation
 ```
 
-That copies the secrets list, copies `first-boot.sh`, then runs it over
-`ssh -t` so the `gh` device login can be finished in the browser here.
+`init-remote.sh` opens one SSH master and then:
 
-`first-boot.sh` will:
-
-1. Install `git`, `curl`, and `gh`
-2. Generate `~/.ssh/id_ed25519` if it is missing
-3. Print the public key
-4. Run `gh auth login --web` so you can finish the device login on the
-   working computer
-5. Upload the new key to GitHub
+1. Installs this computer's SSH public keys on the new box
+2. Copies the secrets list onto the new box
+3. Installs `git` and `curl` on the new box
+4. Generates `~/.ssh/id_ed25519` on the new box if it is missing
+5. Prints the public key and registers it with GitHub using `gh` on
+   this computer
 6. `git clone git@github.com:DragonCrafted87/dot-files.git ~/dot-files`
-7. Exec the chosen role script
 
-Same role names as the scripts: `workstation`, `laptop`, `htpc`, `server`.
+Same role names as `role.sh`: `workstation`, `laptop`, `htpc`, `server`.
+After the clone, SSH in and run the role:
+
+```bash
+~/dot-files/setup/role.sh workstation
+```
 
 ## Reset without reinstalling
 
@@ -34,20 +48,14 @@ Keeps `/home` and the role's declared packages. Drops other
 user-installed rpms and extra Flatpaks (Plasma leftovers included).
 
 ```bash
-./setup/reset-to-role.sh workstation
-RESET_CONFIRM=yes ./setup/reset-to-role.sh workstation
-DOTFILES_DRY_RUN=1 ./setup/reset-to-role.sh laptop
+./setup/role.sh --reset workstation
+./setup/role.sh --reset --force workstation
+./setup/role.sh --dry-run --reset laptop
 ```
 
-The first run only prints the extras. Add names to
-`files/packages/never-remove.list` if something you want is listed.
-
-Optional overrides:
-
-```bash
-DOTFILES_HOSTNAME=study.lan ~/dot-files/setup/laptop.sh
-DOTFILES_DRY_RUN=1 ~/dot-files/setup/server.sh
-```
+The first run only prints the extras. Add `--force` to actually remove
+them. Add names to `files/packages/never-remove.list` if something you
+want is listed.
 
 A single module can be run on its own:
 
@@ -57,12 +65,15 @@ A single module can be run on its own:
 
 ## Roles
 
-| Script | Extra modules |
+Edit `roles.conf` to change the module lists. `[common]` runs for every
+role. `laptop` includes `@workstation` and then laptop-only modules.
+
+| Role | Extra modules |
 | --- | --- |
-| `workstation.sh` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, BOINC Manager |
-| `laptop.sh` | same minus Steam, plus power-profiles-daemon, BOINC Manager |
-| `htpc.sh` | Hyprland, desktop apps, Brave, k3s, BOINC client |
-| `server.sh` | CLI baseline, k3s, BOINC client; no GUI session |
+| `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, BOINC Manager |
+| `laptop` | workstation plus `configure-laptop` (power-profiles-daemon) |
+| `htpc` | Hyprland, desktop apps, Brave, k3s, BOINC client |
+| `server` | CLI baseline, k3s, BOINC client; no GUI session |
 
 The chosen role is written to `~/.config/dot-files/role`.
 
@@ -73,12 +84,18 @@ usually `x86_64` even on Zen). The opposite arch is disabled.
 Harvest printer queues on the current workstation, then commit them:
 
 ```bash
-sudo ~/dot-files/setup/harvest-cups.sh
+sudo ~/dot-files/setup/utility/harvest-cups.sh
 ```
 
 That copies `/etc/cups/printers.conf` and `/etc/cups/ppd/` into
 `setup/files/cups/`. Workstation and laptop replay those
 files.
+
+Copy secrets onto a new box without going through `init-remote.sh`:
+
+```bash
+~/dot-files/setup/utility/transfer-secrets.sh dragon@newbox.lan
+```
 
 ## BOINC
 
@@ -89,7 +106,7 @@ each client allows GUI RPC from the others. Role prefs live in
 hosts, prefs, and helper scripts and restarts the client only if they
 changed. `~/.config/dot-files/boinc-rpc.password` holds
 `rpc_password`, `science_united_user`, and `science_united_password`.
-`transfer-secrets.sh` copies that file. The role attaches Science United
+`utility/transfer-secrets.sh` copies that file. The role attaches Science United
 unattended once those fields are set.
 
 ```bash

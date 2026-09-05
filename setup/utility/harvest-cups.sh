@@ -2,12 +2,13 @@
 # Copy the live CUPS queue from this machine into the repo so other
 # workstation/laptop installs can reuse it.
 #
-#   sudo ./setup/harvest-cups.sh
+#   sudo ./setup/utility/harvest-cups.sh
 
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-dest="${here}/files/cups"
+setup_dir="$(cd "${here}/.." && pwd)"
+dest="${setup_dir}/files/cups"
 
 if [[ "$(id -u)" -ne 0 ]]; then
     printf 'error: run with sudo so /etc/cups/printers.conf is readable\n' >&2
