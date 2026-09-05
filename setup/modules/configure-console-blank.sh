@@ -119,12 +119,16 @@ set_ly_lua_key() {
 # --- kernel / live console ----------------------------------------------
 ensure_grub_cmdline_arg "consoleblank=${BLANK_SECONDS}"
 
-if [[ -w /sys/module/kernel/parameters/consoleblank || -f /sys/module/kernel/parameters/consoleblank ]]; then
+if [[ -f /sys/module/kernel/parameters/consoleblank ]]; then
     current_blank="$(cat /sys/module/kernel/parameters/consoleblank 2>/dev/null || echo "")"
     if [[ "$current_blank" != "$BLANK_SECONDS" ]]; then
         log "consoleblank=${BLANK_SECONDS} (live)"
         if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-            printf '%s\n' "$BLANK_SECONDS" | sudo tee /sys/module/kernel/parameters/consoleblank >/dev/null
+            # Some kernels expose this file but reject writes. Persistent
+            # blanking still comes from GRUB + the getty drop-in.
+            if ! printf '%s\n' "$BLANK_SECONDS" | sudo tee /sys/module/kernel/parameters/consoleblank >/dev/null; then
+                warn "kernel rejected live consoleblank write; GRUB value applies on next boot"
+            fi
         fi
     fi
 fi
