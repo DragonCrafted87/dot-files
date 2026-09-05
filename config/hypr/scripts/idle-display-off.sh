@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Blank outputs through the host/profile script so new machines do not need
 # another HDMI special case here.
 
