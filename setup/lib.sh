@@ -334,3 +334,101 @@ record_role() {
     ensure_dir "${CONFIG_TARGET_DIR}/dot-files"
     ensure_file_contents "${CONFIG_TARGET_DIR}/dot-files/role" "$role"
 }
+
+valid_role() {
+    case "${1:-}" in
+        workstation | laptop | htpc | server) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Module lists for each role. Keep order; prune-extra-packages reads this.
+role_modules() {
+    local role="$1"
+    valid_role "$role" || die "unknown role ${role}"
+
+    cat <<'EOF'
+configure-ssh-key
+configure-authorized-keys
+register-github-ssh-key
+link-dotfiles
+link-home-files
+harden-secrets
+configure-sudoers
+link-root-shell
+install-oh-my-posh
+set-timezone
+enable-rock-repos
+install-base-packages
+configure-boot-display
+EOF
+
+    case "$role" in
+        workstation)
+            cat <<'EOF'
+remove-plasma-sddm
+install-hyprland-session
+configure-console-blank
+configure-bluetooth-login
+install-desktop-packages
+install-brave
+configure-brave-keyring
+install-workstation-packages
+install-office-printing
+install-gaming-packages
+install-flatpak-apps
+enable-session-units
+install-network-mounts
+install-boinc
+harden-secrets
+link-user-config
+EOF
+            ;;
+        laptop)
+            cat <<'EOF'
+remove-plasma-sddm
+install-hyprland-session
+configure-console-blank
+configure-bluetooth-login
+install-desktop-packages
+install-brave
+configure-brave-keyring
+install-workstation-packages
+install-office-printing
+install-flatpak-apps
+enable-session-units
+install-network-mounts
+install-boinc
+harden-secrets
+link-user-config
+configure-laptop
+EOF
+            ;;
+        htpc)
+            cat <<'EOF'
+remove-plasma-sddm
+install-hyprland-session
+configure-console-blank
+configure-bluetooth-login
+install-desktop-packages
+install-brave
+configure-brave-keyring
+enable-session-units
+install-k3s
+install-boinc
+link-user-config
+configure-htpc
+EOF
+            ;;
+        server)
+            cat <<'EOF'
+configure-console-blank
+remove-plasma-sddm
+install-k3s
+install-boinc
+link-user-config
+configure-server
+EOF
+            ;;
+    esac
+}
