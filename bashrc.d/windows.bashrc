@@ -11,33 +11,18 @@ USER=$(whoami)
 
 WINGET_PACKAGE_LIST=( \
         "7zip.7zip" \
-        "BellSoft.LibericaJDK.17.Full" \
         "Brave.Brave" \
         "CrystalDewWorld.CrystalDiskInfo" \
         "CrystalDewWorld.CrystalDiskMark" \
-        "Discord.Discord" \
-        "Docker.DockerDesktop" \
-        "EpicGames.EpicGamesLauncher" \
-        "Facebook.Messenger" \
         "File-New-Project.EarTrumpet" \
         "Foxit.FoxitReader" \
-        "GIMP.GIMP" \
-        "GOG.Galaxy" \
-        "GuinpinSoft.MakeMKV" \
-        "Inkscape.Inkscape" \
         "JAMSoftware.TreeSize.Free" \
-        "KDE.Kdenlive" \
         "Klocman.BulkCrapUninstaller" \
         "Logitech.GHUB" \
-        "Meta.Oculus" \
         "Microsoft.VisualStudioCode" \
         "OBSProject.OBSStudio" \
-        "OpenJS.NodeJS.LTS" \
         "Piriform.Speccy" \
-        "Python.Python.3.11" \
-        "Valve.Steam" \
-        "VideoLAN.VLC" \
-        "agalwood.Motrix" \
+        "Python.Python.3.12"
     )
 
 WINGET_INSTALL_LIST=( \
