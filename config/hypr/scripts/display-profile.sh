@@ -183,7 +183,12 @@ except Exception:
 for m in data:
     if m.get("name") != mon:
         continue
-    raise SystemExit(1 if m.get("disabled") is True else 0)
+    if m.get("disabled") is True:
+        raise SystemExit(1)
+    # HDMI often reports present before it has a real mode.
+    if int(m.get("width") or 0) <= 0:
+        raise SystemExit(1)
+    raise SystemExit(0)
 raise SystemExit(1)
 ' "$mon" 2>/dev/null
 }
@@ -199,11 +204,20 @@ wait_for_unlock() {
 
 wait_for_monitor() {
     local mon="$1" i
-    for i in 1 2 3 4 5 6 7 8 9 10; do
+    for i in $(seq 1 40); do
         monitor_is_live "$mon" && return 0
         sleep 0.25
     done
     return 1
+}
+
+workspaces_restored() {
+    local mon="$1"
+    local wanted actual
+    wanted="$(awk -F= '/^workspace=/{print $2}' "$SAVED_WS_FILE" | sort)"
+    [[ -n "$wanted" ]] || return 0
+    actual="$(workspaces_on_monitor "$mon" | sort)"
+    [[ "$wanted" == "$actual" ]]
 }
 
 restore_saved_workspaces_now() {
@@ -211,12 +225,16 @@ restore_saved_workspaces_now() {
     local mon ws
     mon="$(awk -F= '/^monitor=/{print $2; exit}' "$SAVED_WS_FILE")"
     [[ -n "$mon" ]] || return 0
-    wait_for_monitor "$mon" || return 0
+    wait_for_monitor "$mon" || return 1
     while IFS= read -r ws; do
         [[ -n "$ws" ]] || continue
         hyprctl dispatch moveworkspacetomonitor "$ws" "$mon" >/dev/null 2>&1 || true
     done < <(awk -F= '/^workspace=/{print $2}' "$SAVED_WS_FILE")
-    rm -f "$SAVED_WS_FILE"
+    if workspaces_restored "$mon"; then
+        rm -f "$SAVED_WS_FILE"
+        return 0
+    fi
+    return 1
 }
 
 schedule_workspace_restore() {
@@ -228,17 +246,17 @@ schedule_workspace_restore() {
             return 0
         fi
     fi
-    if command -v pidof >/dev/null 2>&1 && pidof hyprlock >/dev/null 2>&1; then
-        (
-            wait_for_unlock
-            restore_saved_workspaces_now
-            rm -f "$RESTORE_WS_PID_FILE"
-        ) &
-        mkdir -p "$STATE_DIR"
-        echo $! >"$RESTORE_WS_PID_FILE"
-    else
-        restore_saved_workspaces_now
-    fi
+    (
+        wait_for_unlock
+        local i
+        for i in 1 2 3 4 5 6 7 8; do
+            restore_saved_workspaces_now && break
+            sleep 1
+        done
+        rm -f "$RESTORE_WS_PID_FILE"
+    ) &
+    mkdir -p "$STATE_DIR"
+    echo $! >"$RESTORE_WS_PID_FILE"
 }
 
 cmd_restore_ws() { need_hypr; QUIET=1; schedule_workspace_restore; }

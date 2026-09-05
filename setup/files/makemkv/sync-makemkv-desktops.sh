@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Install one MakeMKV launcher and drop any leftover per-drive shortcuts.
-# Also enable Preferences > IO > Ask for single drive mode so the GUI
-# prompts for a drive when more than one optical device is attached.
+# Install one MakeMKV launcher and write preferred settings.
 
 set -euo pipefail
 
@@ -13,6 +11,12 @@ fi
 DESKTOP_DIR="${DESKTOP_DIR:-$HOME/Desktop}"
 APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 SETTINGS="${HOME}/.MakeMKV/settings.conf"
+DEST_DIR="${MAKEMKV_DEST_DIR:-/home/dragon/Network/Storage/Media/new-unsorted}"
+# Video always; every English audio and subtitle track; covers; no MVC 3D.
+SELECTION='-sel:all,+sel:video,+sel:(audio&eng),+sel:(subtitle&eng),+sel:attachment,-sel:mvcvideo'
+# NAME2/CMNT2: fully cleaned (spaces become underscores; MakeMKV has no hyphen cleanse).
+# Date only when present (yyyy-mm-dd). Source id when present. Hyphen separators.
+FILENAME='{NAME2}{-:CMNT2}{-:DY}{-:DM}{-:DD}{-:SN}{title:+DFLT}'
 
 write_launcher() {
     local dest="$1"
@@ -39,24 +43,35 @@ prune_old_drive_launchers() {
     for file in "$dir"/MakeMKV-*.desktop "$dir"/MakeMKV.desktop; do
         [[ -f "$file" ]] || continue
         if grep -qE "^(X-DotFiles-MakeMKV-Drive=|${MARKER}=)" "$file" 2>/dev/null; then
-            # Keep the single canonical launcher written below.
             [[ "$(basename "$file")" == "MakeMKV.desktop" ]] && continue
             rm -f "$file"
         fi
     done
 }
 
-enable_single_drive_mode() {
+set_makemkv_pref() {
+    local key="$1"
+    local value="$2"
     mkdir -p "$(dirname "$SETTINGS")"
-    if [[ ! -f "$SETTINGS" ]]; then
-        printf 'io_SingleDrive = "1"\n' >"$SETTINGS"
-        return
-    fi
-    if grep -q '^io_SingleDrive' "$SETTINGS"; then
-        sed -i 's/^io_SingleDrive.*/io_SingleDrive = "1"/' "$SETTINGS"
+    touch "$SETTINGS"
+    if grep -q "^${key}[[:space:]]*=" "$SETTINGS"; then
+        # Escape replacement for sed: keep quotes in the file value.
+        local escaped
+        escaped="$(printf '%s' "$value" | sed -e 's/[\\/&]/\\&/g')"
+        sed -i "s|^${key}[[:space:]]*=.*|${key} = \"${escaped}\"|" "$SETTINGS"
     else
-        printf '\nio_SingleDrive = "1"\n' >>"$SETTINGS"
+        printf '%s = "%s"\n' "$key" "$value" >>"$SETTINGS"
     fi
+}
+
+write_makemkv_prefs() {
+    set_makemkv_pref io_SingleDrive "1"
+    set_makemkv_pref app_ExpertMode "1"
+    set_makemkv_pref app_PreferredLanguage "eng"
+    set_makemkv_pref app_DestinationType "2"
+    set_makemkv_pref app_DestinationDir "$DEST_DIR"
+    set_makemkv_pref app_DefaultSelectionString "$SELECTION"
+    set_makemkv_pref app_DefaultOutputFileName "$FILENAME"
 }
 
 refresh_desktop_cache() {
@@ -73,5 +88,5 @@ prune_old_drive_launchers "$DESKTOP_DIR"
 prune_old_drive_launchers "$APPS_DIR"
 write_launcher "${DESKTOP_DIR}/MakeMKV.desktop"
 write_launcher "${APPS_DIR}/MakeMKV.desktop"
-enable_single_drive_mode
+write_makemkv_prefs
 refresh_desktop_cache
