@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Build MakeMKV with the OpenMandriva LLVM toolchain and keep one Desktop
-# launcher per attached optical drive. Skip the whole module when this
-# machine has no DVD/Blu-ray device.
+# Build MakeMKV with the OpenMandriva LLVM toolchain, enable Ask for
+# single drive mode, and install one Desktop launcher. Skip the whole
+# module when this machine has no DVD/Blu-ray device.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -149,18 +149,12 @@ sync_src="${SETUP_FILES_DIR}/makemkv/sync-makemkv-desktops.sh"
 [[ -f "$sync_src" ]] || die "missing ${sync_src}"
 
 ensure_dir "${DOTFILES_HOME}/bin"
-ensure_dir "${DOTFILES_HOME}/.config/autostart"
 run install -m 0755 "$sync_src" "${DOTFILES_HOME}/bin/sync-makemkv-desktops.sh"
-ensure_file_contents "${DOTFILES_HOME}/.config/autostart/makemkv-sync-desktops.desktop" \
-"[Desktop Entry]
-Type=Application
-Version=1.0
-Name=Sync MakeMKV drive launchers
-Comment=Keep Desktop MakeMKV shortcuts matched to attached optical drives
-Exec=${DOTFILES_HOME}/bin/sync-makemkv-desktops.sh
-Terminal=false
-X-GNOME-Autostart-enabled=true
-Hidden=false"
+
+# Login autostart is no longer needed: one launcher, not per-drive files.
+if [[ -f "${DOTFILES_HOME}/.config/autostart/makemkv-sync-desktops.desktop" ]]; then
+    run rm -f "${DOTFILES_HOME}/.config/autostart/makemkv-sync-desktops.desktop"
+fi
 
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
     "${DOTFILES_HOME}/bin/sync-makemkv-desktops.sh"
