@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Role shorthand. Saved role: ~/.config/dot-files/role
+# Role shorthand and repo helpers.
+# Saved role: ~/.config/dot-files/role
 # Repo location: $DOTFILES_ROOT, else ~/.config/dot-files/root, else ~/dot-files
 
 dotfiles-root() {
@@ -25,6 +26,27 @@ dotfiles-root() {
         return 0
     fi
     return 1
+}
+
+update-dot-files() {
+    local repo cwd
+    repo="$(dotfiles-root)" || {
+        printf 'cannot find the dot-files repo\n' >&2
+        printf 'source bashrc from inside the clone once, or clone to ~/dot-files\n' >&2
+        return 1
+    }
+    cwd="$PWD"
+    if ! cd "$repo"; then
+        printf 'cannot cd to %s\n' "$repo" >&2
+        return 1
+    fi
+    printf 'update-dot-files: %s\n' "$repo"
+    git pull
+    local rc=$?
+    # shellcheck disable=SC1090
+    source ~/.bashrc
+    cd "$cwd" || true
+    return "$rc"
 }
 
 update-role() {
