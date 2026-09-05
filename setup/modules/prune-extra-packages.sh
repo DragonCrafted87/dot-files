@@ -9,7 +9,7 @@ set -euo pipefail
 require_user
 
 role="${OMV_ROLE:-}"
-[[ -n "$role" ]] || die "OMV_ROLE is unset; run: ./setup/role.sh <role> reset"
+[[ -n "$role" ]] || die "OMV_ROLE is unset; run: ./setup/role.sh --reset <role>"
 valid_role "$role" || die "unknown role ${role}"
 
 collect_role_packages() {
@@ -92,7 +92,7 @@ if [[ "${#to_remove[@]}" -gt 0 ]]; then
     elif [[ "${RESET_CONFIRM:-}" == "yes" ]]; then
         run sudo dnf remove -y "${to_remove[@]}"
     else
-        warn "not removing rpms; re-run with RESET_CONFIRM=yes"
+        warn "not removing rpms; re-run with --reset --force"
     fi
 else
     log "no extra user-installed rpms"
@@ -121,7 +121,7 @@ if command -v flatpak >/dev/null 2>&1; then
         elif [[ "${RESET_CONFIRM:-}" == "yes" ]]; then
             run sudo flatpak uninstall -y "${fp_remove[@]}"
         else
-            warn "not removing flatpaks; re-run with RESET_CONFIRM=yes"
+            warn "not removing flatpaks; re-run with --reset --force"
         fi
     else
         log "no extra flatpaks"
