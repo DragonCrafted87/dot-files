@@ -17,6 +17,12 @@ if [[ -f /etc/yum.repos.d/boinc-stable.repo ]]; then
 fi
 
 boinc_base="${BOINC_RPM_BASE:-https://boinc.berkeley.edu/dl/linux/stable/fc39}"
+
+curl_boinc() {
+    curl --retry 5 --retry-all-errors --retry-delay 3 \
+        --connect-timeout 15 --max-time 45 "$@"
+}
+
 install_boinc_rpms() {
     local want=("$@")
     local missing=()
@@ -36,21 +42,36 @@ install_boinc_rpms() {
     fi
     local index tmp rpm_file names=()
     tmp="$(mktemp -d)"
-    index="$(curl -fsSL "${boinc_base}/")"
+    if ! index="$(curl_boinc -fsSL "${boinc_base}/")"; then
+        warn "could not reach ${boinc_base}; skip rpm download this run"
+        rm -rf "$tmp"
+        return 0
+    fi
     for pkg in "${missing[@]}"; do
         rpm_file="$(printf '%s\n' "$index" | grep -oE "${pkg}-[0-9][^\"<>]*\\.x86_64\\.rpm" | sort -V | tail -n1)"
-        [[ -n "$rpm_file" ]] || die "no ${pkg} x86_64 rpm listed at ${boinc_base}"
+        if [[ -z "$rpm_file" ]]; then
+            warn "no ${pkg} x86_64 rpm listed at ${boinc_base}"
+            continue
+        fi
         log "download ${rpm_file}"
-        curl -fsSL -o "${tmp}/${rpm_file}" "${boinc_base}/${rpm_file}"
+        if ! curl_boinc -fsSL -o "${tmp}/${rpm_file}" "${boinc_base}/${rpm_file}"; then
+            warn "download failed for ${rpm_file}"
+            continue
+        fi
         names+=("${tmp}/${rpm_file}")
     done
+    if [[ "${#names[@]}" -eq 0 ]]; then
+        warn "no BOINC rpms downloaded; configure what is already installed"
+        rm -rf "$tmp"
+        return 0
+    fi
     # Fedora RPMs require capabilities named libatomic and libXScrnSaver.
     # Rock ships the same libraries under different package names.
     ensure_packages lib64atomic1 lib64xscrnsaver1
     log "install ${names[*]##*/}"
     if ! sudo dnf install -y "${names[@]}"; then
         warn "dnf refused Fedora Provides; install RPMs with --nodeps"
-        sudo rpm -Uvh --nodeps "${names[@]}"
+        sudo rpm -Uvh --nodeps "${names[@]}" || warn "rpm install failed"
     fi
     rm -rf "$tmp"
 }
@@ -62,6 +83,11 @@ case "${OMV_ROLE:-}" in
         ;;
 esac
 install_boinc_rpms "${boinc_rpms[@]}"
+
+if ! command -v boinc_client >/dev/null 2>&1 && ! rpm -q boinc-client >/dev/null 2>&1; then
+    warn "boinc-client is not installed; skip service and Science United attach"
+    exit 0
+fi
 
 boinc_dir="/var/lib/boinc"
 if [[ -d /var/lib/boinc-client ]]; then
