@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Host wrapper: run pre-commit in the shared cache container.
 # Cache lives at ~/.cache/pre-commit-docker so every repo reuses hook envs.
-# Wipe that directory (or run pre-commit-reset-cache) if it gets huge.
+# Wipe that directory (or run pre-commit-reset-cache) if it gets too big.
 
 set -euo pipefail
 
@@ -26,13 +26,32 @@ fi
 mkdir -p "$CACHE_DIR"
 REPO="$(repo_root)"
 
-# Map the repo and the shared hook cache. Hooks that download node/python
-# environments land in CACHE_DIR and are reused across clones.
+if [[ ! -d "$REPO/.git" && ! -f "$REPO/.git" ]]; then
+    printf 'not a git repo: %s\n' "$REPO" >&2
+    exit 1
+fi
+
+# Host uid so hook-written files are not root-owned. Git 2.35+ also
+# refuses a bind-mount owned by another user unless safe.directory is set.
+uid="$(id -u)"
+gid="$(id -g)"
+
+cmd=()
+if [[ "$#" -eq 0 ]]; then
+    cmd=(run)
+else
+    cmd=("$@")
+fi
+
 exec docker run --rm -i \
+    -u "${uid}:${gid}" \
     -v "$REPO":/src \
     -v "$CACHE_DIR":/cache \
     -e PRE_COMMIT_HOME=/cache \
     -e HOME=/tmp \
+    -e GIT_CONFIG_COUNT=1 \
+    -e GIT_CONFIG_KEY_0=safe.directory \
+    -e GIT_CONFIG_VALUE_0=/src \
     -w /src \
     --network host \
-    "$IMAGE" "$@"
+    "$IMAGE" "${cmd[@]}"
