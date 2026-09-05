@@ -10,25 +10,22 @@ esac
 USER=$(whoami)
 
 EXPLORER_CACHE_DIR="${LOCALAPPDATA:-/c/Users/${USER}/AppData/Local}/Microsoft/Windows/Explorer"
+WINDOWS_PACKAGES_SCRIPT="${PATH_BASH_SETTINGS:-$HOME/dot-files}/windows/install-packages.ps1"
 
-WINGET_PACKAGE_LIST=( \
-        "7zip.7zip" \
-        "Brave.Brave" \
-        "CrystalDewWorld.CrystalDiskInfo" \
-        "CrystalDewWorld.CrystalDiskMark" \
-        "File-New-Project.EarTrumpet" \
-        "Foxit.FoxitReader" \
-        "JAMSoftware.TreeSize.Free" \
-        "Klocman.BulkCrapUninstaller" \
-        "Logitech.GHUB" \
-        "Microsoft.VisualStudioCode" \
-        "OBSProject.OBSStudio" \
-        "Piriform.Speccy" \
-        "Python.Python.3.12"
-    )
+windows-packages-winpath() {
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -w "$WINDOWS_PACKAGES_SCRIPT"
+    else
+        printf '%s\n' "$WINDOWS_PACKAGES_SCRIPT"
+    fi
+}
 
-WINGET_INSTALL_LIST=( \
-    )
+windows-packages() {
+    local role="${1:-personal}"
+    shift || true
+    MSYS_NO_PATHCONV=1 powershell.exe -NoProfile -ExecutionPolicy Bypass \
+        -File "$(windows-packages-winpath)" -Role "$role" "$@"
+}
 
 function msys-shutdown ()
 {
@@ -57,18 +54,12 @@ function windows-clear-thumbnail-cache ()
 
 function winget-upgrade-packages ()
 {
-    for i in "${WINGET_PACKAGE_LIST[@]}"
-    do
-        winget upgrade "$i" -e --source winget
-    done
+    windows-packages "${1:-personal}" -Upgrade
 }
 
 function winget-install-packages ()
 {
-    for i in "${WINGET_INSTALL_LIST[@]}"
-    do
-        winget install "$i" -e --source winget
-    done
+    windows-packages "${1:-personal}"
 }
 
 function worldographer ()

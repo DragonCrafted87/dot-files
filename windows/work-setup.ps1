@@ -1,6 +1,7 @@
 # Generic work-developer Windows box.
-# Run from a normal (non-admin) PowerShell after Git is available, or let
-# this script install Git + Windows Terminal via winget.
+# Run from a normal (non-admin) PowerShell. Git is bootstrapped first so
+# the repo (and package lists) can be cloned, then install-packages.ps1
+# applies the work list idempotently.
 #
 #   powershell -ExecutionPolicy Bypass -File .\windows\work-setup.ps1
 #
@@ -8,6 +9,7 @@
 # initial-admin-setup.ps1 and are not used here.
 
 $ErrorActionPreference = "Stop"
+$Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 function Test-IsAdmin {
     $id = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -15,23 +17,28 @@ function Test-IsAdmin {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Install-WingetPackage([string]$Id) {
-    Write-Host "==> winget install $Id"
-    winget install --id $Id -e --accept-source-agreements --accept-package-agreements
-}
-
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     Write-Error "winget is required. Install App Installer from the Microsoft Store first."
 }
 
-Install-WingetPackage "Microsoft.WindowsTerminal"
-Install-WingetPackage "Git.Git"
-Install-WingetPackage "JanDeDobbeleer.OhMyPosh"
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Host "==> bootstrap Git.Git so the repo can be cloned"
+    winget install --id Git.Git -e --accept-source-agreements --accept-package-agreements --disable-interactivity
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+        [System.Environment]::GetEnvironmentVariable("Path", "User")
+}
 
 $repo = Join-Path $HOME "dot-files"
 if (-not (Test-Path (Join-Path $repo ".git"))) {
     Write-Host "==> clone dot-files into $repo"
     git clone "https://github.com/DragonCrafted87/dot-files.git" $repo
+}
+
+$install = Join-Path $repo "windows\install-packages.ps1"
+if (Test-Path $install) {
+    & $install -Role work
+} else {
+    & (Join-Path $Here "install-packages.ps1") -Role work
 }
 
 $settingsSrc = Join-Path $repo "windows\terminal-settings.json"
