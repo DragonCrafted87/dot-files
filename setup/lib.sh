@@ -342,93 +342,39 @@ valid_role() {
     esac
 }
 
-# Module lists for each role. Keep order; prune-extra-packages reads this.
+# Print modules for a roles.conf section. @name includes another section.
+_role_section() {
+    local conf="$1"
+    local section="$2"
+    local line current=""
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+        if [[ "$line" == \[*\] ]]; then
+            current="${line#[}"
+            current="${current%]}"
+            continue
+        fi
+        [[ "$current" == "$section" ]] || continue
+        if [[ "$line" == @* ]]; then
+            _role_section "$conf" "${line#@}"
+        else
+            printf '%s\n' "$line"
+        fi
+    done <"$conf"
+}
+
+# Module lists live in setup/roles.conf so they are easy to find later.
 role_modules() {
     local role="$1"
+    local conf="${SETUP_DIR}/roles.conf"
+
     valid_role "$role" || die "unknown role ${role}"
+    [[ -f "$conf" ]] || die "missing ${conf}"
 
-    cat <<'EOF'
-configure-ssh-key
-configure-authorized-keys
-register-github-ssh-key
-link-dotfiles
-link-home-files
-harden-secrets
-configure-sudoers
-link-root-shell
-install-oh-my-posh
-set-timezone
-enable-rock-repos
-install-base-packages
-configure-boot-display
-EOF
-
-    case "$role" in
-        workstation)
-            cat <<'EOF'
-remove-plasma-sddm
-install-hyprland-session
-configure-console-blank
-configure-bluetooth-login
-install-desktop-packages
-install-brave
-configure-brave-keyring
-install-workstation-packages
-install-office-printing
-install-gaming-packages
-install-flatpak-apps
-enable-session-units
-install-network-mounts
-install-boinc
-harden-secrets
-link-user-config
-EOF
-            ;;
-        laptop)
-            cat <<'EOF'
-remove-plasma-sddm
-install-hyprland-session
-configure-console-blank
-configure-bluetooth-login
-install-desktop-packages
-install-brave
-configure-brave-keyring
-install-workstation-packages
-install-office-printing
-install-flatpak-apps
-enable-session-units
-install-network-mounts
-install-boinc
-harden-secrets
-link-user-config
-configure-laptop
-EOF
-            ;;
-        htpc)
-            cat <<'EOF'
-remove-plasma-sddm
-install-hyprland-session
-configure-console-blank
-configure-bluetooth-login
-install-desktop-packages
-install-brave
-configure-brave-keyring
-enable-session-units
-install-k3s
-install-boinc
-link-user-config
-configure-htpc
-EOF
-            ;;
-        server)
-            cat <<'EOF'
-configure-console-blank
-remove-plasma-sddm
-install-k3s
-install-boinc
-link-user-config
-configure-server
-EOF
-            ;;
-    esac
+    _role_section "$conf" common
+    _role_section "$conf" "$role"
 }
