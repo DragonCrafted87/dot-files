@@ -1,7 +1,8 @@
 # setup
 
 One control script at this directory root applies a machine role by
-calling modules under `modules/`. Re-running a role is the intended
+calling modules under `modules/`.
+Re-running a role is the intended
 upgrade path. What each role runs is listed in `roles.conf`.
 
 ```bash
@@ -70,7 +71,7 @@ role. `laptop` includes `@workstation` and then laptop-only modules.
 
 | Role          | Extra modules                                                                            |
 | ------------- | ---------------------------------------------------------------------------------------- |
-| `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, ScummVM/QFG, BOINC Manager |
+| `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, BOINC Manager |
 | `laptop`      | workstation plus `configure-laptop` (power-profiles-daemon)                              |
 | `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client                                         |
 | `server`      | CLI baseline, k3s, BOINC client; no GUI session                                          |
@@ -88,7 +89,8 @@ sudo ~/dot-files/setup/utility/harvest-cups.sh
 ```
 
 That copies `/etc/cups/printers.conf` and `/etc/cups/ppd/` into
-`setup/files/cups/`. Workstation and laptop replay those
+`setup/files/cups/`.
+Workstation and laptop replay those
 files.
 
 Copy secrets onto a new box without going through `init-remote.sh`:
@@ -117,7 +119,7 @@ ones. Re-run that script after plugging in a USB Blu-ray drive.
 
 ## ScummVM / Quest for Glory
 
-`install-scummvm-qfg` is on workstation (and therefore laptop). It
+`install-scummvm-qfg` is an optional module (not part of any role). It
 installs the distro `scummvm` package, links the binary under
 `~/games/scummvm`, copies Quest for Glory data out of the Steam
 collection, and writes Desktop plus applications-menu launchers.
