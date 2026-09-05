@@ -7,10 +7,14 @@ of that same Tango Dark / Lucida setup.
 Winget IDs live in `packages/*.list`. `install-packages.ps1` is the
 idempotent installer, same idea as the Linux role modules.
 
+The last role used is written to `~/.config/dot-files/windows-role` so a
+bare `winget-install-packages` / `winget-upgrade-packages` cannot silently
+fall back to the other list.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\install-packages.ps1 work
 powershell -ExecutionPolicy Bypass -File .\windows\install-packages.ps1 personal
-powershell -ExecutionPolicy Bypass -File .\windows\install-packages.ps1 work -Upgrade
+powershell -ExecutionPolicy Bypass -File .\windows\install-packages.ps1 -Upgrade
 ```
 
 ## Work developer box
@@ -23,13 +27,16 @@ powershell -ExecutionPolicy Bypass -File .\windows\work-setup.ps1
 
 Bootstraps Git if needed, clones this repo, runs the work package list
 (Windows Terminal, Git, Oh My Posh, VS Code), copies Terminal settings,
-and points Git Bash `~/.bashrc` / `~/.bash_profile` at `git_bashrc.sh`.
+points Git Bash `~/.bashrc` / `~/.bash_profile` at `git_bashrc.sh`, and
+saves the `work` role.
 
 From Git Bash later:
 
 ```bash
-winget-install-packages work
-winget-upgrade-packages work
+windows-role              # print the saved role
+winget-install-packages   # uses the saved role
+winget-upgrade-packages   # uses the saved role
+windows-role personal     # only if you really mean to switch this machine
 ```
 
 ## Personal machine extras

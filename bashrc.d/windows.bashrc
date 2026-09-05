@@ -11,6 +11,7 @@ USER=$(whoami)
 
 EXPLORER_CACHE_DIR="${LOCALAPPDATA:-/c/Users/${USER}/AppData/Local}/Microsoft/Windows/Explorer"
 WINDOWS_PACKAGES_SCRIPT="${PATH_BASH_SETTINGS:-$HOME/dot-files}/windows/install-packages.ps1"
+WINDOWS_ROLE_FILE="${HOME}/.config/dot-files/windows-role"
 
 windows-packages-winpath() {
     if command -v cygpath >/dev/null 2>&1; then
@@ -20,9 +21,43 @@ windows-packages-winpath() {
     fi
 }
 
+windows-role() {
+    if [[ -n "${1:-}" ]]; then
+        case "$1" in
+            work|personal)
+                mkdir -p "$(dirname "$WINDOWS_ROLE_FILE")"
+                printf '%s\n' "$1" > "$WINDOWS_ROLE_FILE"
+                printf 'saved windows role %s -> %s\n' "$1" "$WINDOWS_ROLE_FILE"
+                ;;
+            *)
+                printf 'windows role must be work or personal\n' >&2
+                return 1
+                ;;
+        esac
+        return 0
+    fi
+    if [[ -f "$WINDOWS_ROLE_FILE" ]]; then
+        tr -d '[:space:]' < "$WINDOWS_ROLE_FILE"
+        return 0
+    fi
+    printf 'no windows role saved at %s\n' "$WINDOWS_ROLE_FILE" >&2
+    printf 'set one with: windows-role work   or   windows-role personal\n' >&2
+    return 1
+}
+
 windows-packages() {
-    local role="${1:-personal}"
-    shift || true
+    local role=""
+    if [[ "${1:-}" == work || "${1:-}" == personal ]]; then
+        role="$1"
+        shift
+    elif [[ -n "${1:-}" && "${1:-}" != -* ]]; then
+        printf 'windows role must be work or personal\n' >&2
+        return 1
+    fi
+    if [[ -z "$role" ]]; then
+        role=$(windows-role) || return 1
+    fi
+    printf 'using windows role %s\n' "$role"
     MSYS_NO_PATHCONV=1 powershell.exe -NoProfile -ExecutionPolicy Bypass \
         -File "$(windows-packages-winpath)" -Role "$role" "$@"
 }
@@ -54,12 +89,12 @@ function windows-clear-thumbnail-cache ()
 
 function winget-upgrade-packages ()
 {
-    windows-packages "${1:-personal}" -Upgrade
+    windows-packages "$@" -Upgrade
 }
 
 function winget-install-packages ()
 {
-    windows-packages "${1:-personal}"
+    windows-packages "$@"
 }
 
 function worldographer ()
