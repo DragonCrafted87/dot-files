@@ -2,13 +2,18 @@
 
 One control script at this directory root applies a machine role by
 calling modules under `modules/`. Re-running a role is the intended
-upgrade path.
+upgrade path. What each role runs is listed in `roles.conf`.
 
 ```bash
 ~/dot-files/setup/role.sh workstation
 ~/dot-files/setup/role.sh laptop
 ~/dot-files/setup/role.sh htpc
 ~/dot-files/setup/role.sh server
+```
+
+```bash
+~/dot-files/setup/role.sh --hostname study.lan laptop
+~/dot-files/setup/role.sh --dry-run server
 ```
 
 ## First boot
@@ -43,20 +48,14 @@ Keeps `/home` and the role's declared packages. Drops other
 user-installed rpms and extra Flatpaks (Plasma leftovers included).
 
 ```bash
-./setup/role.sh workstation reset
-RESET_CONFIRM=yes ./setup/role.sh workstation reset
-DOTFILES_DRY_RUN=1 ./setup/role.sh laptop reset
+./setup/role.sh --reset workstation
+./setup/role.sh --reset --force workstation
+./setup/role.sh --dry-run --reset laptop
 ```
 
-The first run only prints the extras. Add names to
-`files/packages/never-remove.list` if something you want is listed.
-
-Optional overrides:
-
-```bash
-DOTFILES_HOSTNAME=study.lan ~/dot-files/setup/role.sh laptop
-DOTFILES_DRY_RUN=1 ~/dot-files/setup/role.sh server
-```
+The first run only prints the extras. Add `--force` to actually remove
+them. Add names to `files/packages/never-remove.list` if something you
+want is listed.
 
 A single module can be run on its own:
 
@@ -66,10 +65,13 @@ A single module can be run on its own:
 
 ## Roles
 
+Edit `roles.conf` to change the module lists. `[common]` runs for every
+role. `laptop` includes `@workstation` and then laptop-only modules.
+
 | Role | Extra modules |
 | --- | --- |
 | `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, BOINC Manager |
-| `laptop` | same minus Steam, plus power-profiles-daemon, BOINC Manager |
+| `laptop` | workstation plus `configure-laptop` (power-profiles-daemon) |
 | `htpc` | Hyprland, desktop apps, Brave, k3s, BOINC client |
 | `server` | CLI baseline, k3s, BOINC client; no GUI session |
 
