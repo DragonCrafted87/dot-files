@@ -85,8 +85,17 @@ function git-convert-master-to-main ()
 
 function git-update-pre-commit-hook ()
 {
-    root_dir=$(git rev-parse --show-toplevel)
-    cp ~/.git-template/hooks/pre-commit "$root_dir"/.git/hooks/pre-commit
+    local root_dir template hook
+    root_dir="$(git rev-parse --show-toplevel)" || return 1
+    template="$(git config --get init.templatedir 2>/dev/null || true)"
+    template="${template/#\~/$HOME}"
+    [[ -n "$template" ]] || template="${HOME}/.config/git/template"
+    hook="${template}/hooks/pre-commit"
+    if [[ ! -f "$hook" ]]; then
+        printf 'missing template hook: %s\n' "$hook" >&2
+        return 1
+    fi
+    install -m 0755 "$hook" "${root_dir}/.git/hooks/pre-commit"
 }
 
 function git-clean-branches() {
