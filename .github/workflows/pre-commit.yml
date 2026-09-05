@@ -13,10 +13,10 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     env:
-      # Local `pre-commit run` still runs the full set.
-      # CI skips hooks that need +x bits, a pylint 4 rc upgrade, or
-      # dictionary/markdown churn on existing docs.
-      SKIP: check-executables-have-shebangs,check-shebang-scripts-are-executable,cspell,markdownlint,mdformat,pylint
+            # Local `pre-commit run` still runs the full set.
+            # CI skips hooks that need +x bits, a pylint 4 rc upgrade, or
+            # dictionary/markdown churn on existing docs.
+      SKIP: check-executables-have-shebangs,check-shebang-scripts-are-executable
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
