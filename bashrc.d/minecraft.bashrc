@@ -62,6 +62,15 @@ function mc-redstone-delete-pod ()
 
 function mc-update-mods ()
 {
+    case "$OSTYPE" in
+        win*|msys*|cygwin*)
+            ;;
+        *)
+            printf 'mc-update-mods expects the Windows MultiMC path\n' >&2
+            return 1
+            ;;
+    esac
+
     if [ -z "$1" ]; then
         MINECRAFT_VERSION='1.19.4'
     else

@@ -19,7 +19,9 @@ export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quo
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
-alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+if command -v notify-send >/dev/null 2>&1; then
+    alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+fi
 alias clear='clear; clear; clear '
 
 alias which='command -v '
@@ -28,7 +30,11 @@ alias replacecpp='find ${PWD} -name "*.cpp" | xargs perl -pi -e '
 alias replaceh='find ${PWD} -name "*.h" | xargs perl -pi -e '
 
 alias ps-parents='ps axo stat,ppid,pid,comm | grep -w defunct'
-alias pwsh='powershell'
+if command -v powershell.exe >/dev/null 2>&1; then
+    alias pwsh='powershell.exe'
+elif command -v powershell >/dev/null 2>&1; then
+    alias pwsh='powershell'
+fi
 
 function base_find ()
 {
@@ -84,14 +90,4 @@ function fpy ()
 function fui ()
 {
     base_find 'find ${PWD} -name "*.ui"' "$1"
-}
-
-function worldographer ()
-{
-    /c/Program\ Files/BellSoft/LibericaJDK-17-Full/bin/java.exe \
-        --module-path "/c/Program\ Files/BellSoft/LibericaJDK-17-Full/jmods" \
-        --add-modules javafx.controls,javafx.web,javafx.swing,javafx.graphics,javafx.fxml \
-        -Xms12G \
-        -Xmx12G \
-        -jar "/d/git-home/bin/worldographer/worldographer-1.68.jar"
 }

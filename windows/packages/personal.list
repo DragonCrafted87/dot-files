@@ -1,0 +1,15 @@
+# Extra packages for the personal Windows box.
+# Common packages are always included; add home-only IDs here.
+7zip.7zip
+Brave.Brave
+CrystalDewWorld.CrystalDiskInfo
+CrystalDewWorld.CrystalDiskMark
+File-New-Project.EarTrumpet
+Foxit.FoxitReader
+JAMSoftware.TreeSize.Free
+Klocman.BulkCrapUninstaller
+Logitech.GHUB
+Microsoft.VisualStudioCode
+OBSProject.OBSStudio
+Piriform.Speccy
+Python.Python.3.12

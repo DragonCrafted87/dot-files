@@ -24,10 +24,10 @@ function k8s-copy-cifs-secret-to-namespace ()
 
 function k8s-apply-all ()
 {
-    kubectl.exe apply -f . --recursive
+    kubectl apply -f . --recursive
 }
 
 function k8s-delete-all ()
 {
-    kubectl.exe delete -f . --recursive
+    kubectl delete -f . --recursive
 }
