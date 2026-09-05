@@ -134,6 +134,3 @@ fi
 
 printf '==> clone %s\n' "$repo_url"
 remote "if [[ ! -d ~/dot-files/.git ]]; then git clone $(printf '%q' "$repo_url") ~/dot-files; fi"
-
-printf '==> run %s role\n' "$role"
-remote -t "bash ~/dot-files/setup/openmandriva/${role}.sh"

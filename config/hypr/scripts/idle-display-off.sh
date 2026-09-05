@@ -1,8 +1,13 @@
+
 #!/bin/sh
+# Blank outputs through the host/profile script so new machines do not need
+# another HDMI special case here.
 
-# Blank first, then yank HDMI out of the layout so a hotplug cannot wake it.
-hyprctl dispatch dpms off
+PROFILE="${HOME}/.config/hypr/scripts/display-profile.sh"
 
-sleep 0.3
-
-hyprctl keyword monitor "HDMI-A-1,disable"
+if [ -x "$PROFILE" ]; then
+    "$PROFILE" idle-off
+else
+    echo "display-profile.sh missing; falling back to dpms off" >&2
+    hyprctl dispatch dpms off
+fi

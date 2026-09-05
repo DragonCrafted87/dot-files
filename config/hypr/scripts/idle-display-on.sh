@@ -1,12 +1,17 @@
 #!/bin/sh
+# Wake outputs by re-applying the saved host/profile layout.
+# New hostnames and profiles only need to be added to display-profile.sh.
 
-# Re-enable with an explicit mode if you know it — more reliable than preferred,auto,1
-# Example: hyprctl keyword monitor "HDMI-A-1,2560x1440@144,0x0,1"
-hyprctl keyword monitor "HDMI-A-1,2560x1440@143.91Hz,6000x0,1"
-
-sleep 0.6
+PROFILE="${HOME}/.config/hypr/scripts/display-profile.sh"
 
 hyprctl dispatch dpms on
 
-# Recreate cursor after the modeset
+sleep 0.6
+
+if [ -x "$PROFILE" ]; then
+    "$PROFILE" apply
+else
+    echo "display-profile.sh missing; falling back to dpms on" >&2
+fi
+
 hyprctl dispatch movecursor 1 1
