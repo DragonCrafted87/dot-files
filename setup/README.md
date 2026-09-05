@@ -70,7 +70,7 @@ role. `laptop` includes `@workstation` and then laptop-only modules.
 
 | Role | Extra modules |
 | --- | --- |
-| `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, BOINC Manager |
+| `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, BOINC Manager |
 | `laptop` | workstation plus `configure-laptop` (power-profiles-daemon) |
 | `htpc` | Hyprland, desktop apps, Brave, k3s, BOINC client |
 | `server` | CLI baseline, k3s, BOINC client; no GUI session |
@@ -95,6 +95,24 @@ Copy secrets onto a new box without going through `init-remote.sh`:
 
 ```bash
 ~/dot-files/setup/utility/transfer-secrets.sh dragon@newbox.lan
+```
+
+## MakeMKV
+
+`install-makemkv` is on workstation (and therefore laptop). It exits
+immediately if no optical drive is present (`/dev/sr*` with
+`ID_CDROM=1`). Otherwise it builds MakeMKV 1.18.4 from the official
+oss+bin tarballs using `clang`/`clang++` and `lld`, against distro
+ffmpeg/Qt5 devel packages. Override the version with
+`MAKEMKV_VERSION=1.18.4`.
+
+Login autostart runs `~/bin/sync-makemkv-desktops.sh`, which writes one
+`~/Desktop/MakeMKV-srN.desktop` per attached drive and deletes stale
+ones. Re-run that script after plugging in a USB Blu-ray drive.
+
+```bash
+~/dot-files/setup/modules/install-makemkv.sh
+~/bin/sync-makemkv-desktops.sh
 ```
 
 ## BOINC
