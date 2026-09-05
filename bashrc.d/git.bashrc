@@ -2,13 +2,6 @@
 
 DEPTH_TO_SEARCH=3
 
-alias pre-commit-check='MSYS_NO_PATHCONV=1 \
-    docker run \
-    --rm \
-    --name "$NAME" \
-    --env FULL_CHECK=True \
-    --volume "$(pwd)":/src \
-    ghcr.io/dragoncrafted87/alpine-common-pre-commit-hooks'
 alias pre-commit-update='pre-commit autoupdate'
 
 function git-delete-tags ()
@@ -85,8 +78,17 @@ function git-convert-master-to-main ()
 
 function git-update-pre-commit-hook ()
 {
-    root_dir=$(git rev-parse --show-toplevel)
-    cp ~/.git-template/hooks/pre-commit "$root_dir"/.git/hooks/pre-commit
+    local root_dir template hook
+    root_dir="$(git rev-parse --show-toplevel)" || return 1
+    template="$(git config --get init.templatedir 2>/dev/null || true)"
+    template="${template/#\~/$HOME}"
+    [[ -n "$template" ]] || template="${HOME}/.config/git/template"
+    hook="${template}/hooks/pre-commit"
+    if [[ ! -f "$hook" ]]; then
+        printf 'missing template hook: %s\n' "$hook" >&2
+        return 1
+    fi
+    install -m 0755 "$hook" "${root_dir}/.git/hooks/pre-commit"
 }
 
 function git-clean-branches() {
@@ -96,7 +98,7 @@ function git-clean-branches() {
     # Get all local branches except current, dev, and release branches
     local branches_to_delete=$(git branch |
         grep -vE '^\*|^\+|dev|release/' |
-        sed 's/^[[:space:]]*//')
+    sed 's/^[[:space:]]*//')
 
     if [ -z "$branches_to_delete" ]; then
         echo "No unused branches found to delete"

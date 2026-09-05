@@ -8,6 +8,8 @@
 	autocrlf = false
 	fsmonitor = true
 	longpaths = true
+[init]
+	templatedir = ~/.config/git/template
 [push]
 	default = current
 [pull]

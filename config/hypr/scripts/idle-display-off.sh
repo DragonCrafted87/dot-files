@@ -1,4 +1,3 @@
-
 #!/bin/sh
 # Blank outputs through the host/profile script so new machines do not need
 # another HDMI special case here.

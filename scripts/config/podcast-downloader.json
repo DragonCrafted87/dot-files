@@ -2,10 +2,10 @@
     "if_directory_empty": "download_all_from_feed",
     "podcasts": [
         {
+            "file_name_template": "%publish_date:$Y-$m-$d%-%title%.%file_extension%",
             "name": "The Catechism in a Year (with Fr. Mike Schmitz)",
-            "rss_link": "https://feeds.fireside.fm/catechisminayear/rss",
             "path": "d:/temp/podcasts/catechism-in-a-year",
-            "file_name_template": "%publish_date:$Y-$m-$d%-%title%.%file_extension%"
+            "rss_link": "https://feeds.fireside.fm/catechisminayear/rss"
         }
     ]
 }

@@ -28,12 +28,12 @@ and sshd:
 `init-remote.sh` opens one SSH master and then:
 
 1. Installs this computer's SSH public keys on the new box
-2. Copies the secrets list onto the new box
-3. Installs `git` and `curl` on the new box
-4. Generates `~/.ssh/id_ed25519` on the new box if it is missing
-5. Prints the public key and registers it with GitHub using `gh` on
+1. Copies the secrets list onto the new box
+1. Installs `git` and `curl` on the new box
+1. Generates `~/.ssh/id_ed25519` on the new box if it is missing
+1. Prints the public key and registers it with GitHub using `gh` on
    this computer
-6. `git clone git@github.com:DragonCrafted87/dot-files.git ~/dot-files`
+1. `git clone git@github.com:DragonCrafted87/dot-files.git ~/dot-files`
 
 Same role names as `role.sh`: `workstation`, `laptop`, `htpc`, `server`.
 After the clone, SSH in and run the role:
@@ -68,12 +68,12 @@ A single module can be run on its own:
 Edit `roles.conf` to change the module lists. `[common]` runs for every
 role. `laptop` includes `@workstation` and then laptop-only modules.
 
-| Role | Extra modules |
-| --- | --- |
+| Role          | Extra modules                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------- |
 | `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, BOINC Manager |
-| `laptop` | workstation plus `configure-laptop` (power-profiles-daemon) |
-| `htpc` | Hyprland, desktop apps, Brave, k3s, BOINC client |
-| `server` | CLI baseline, k3s, BOINC client; no GUI session |
+| `laptop`      | workstation plus `configure-laptop` (power-profiles-daemon)                              |
+| `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client                                         |
+| `server`      | CLI baseline, k3s, BOINC client; no GUI session                                          |
 
 The chosen role is written to `~/.config/dot-files/role`.
 

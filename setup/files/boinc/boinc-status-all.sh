@@ -5,8 +5,8 @@
 
 set -euo pipefail
 
-# shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-"$BOINCCMD".sh"
+# shellcheck source=find-boinccmd.sh disable=SC1091
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-boinccmd.sh"
 
 HOSTS_FILE="${HOSTS_FILE:-/etc/boinc-client/hosts.list}"
 BOINC_DIR="${BOINC_DIR:-/var/lib/boinc}"

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # shellcheck shell=bash
 # Resolve boinccmd after the official Fedora RPM install.
 
@@ -43,8 +44,8 @@ boinc_cmd() {
 }
 
 wait_for_boinc_rpc() {
-    local i
-    for i in $(seq 1 15); do
+    local _i
+    for _i in $(seq 1 15); do
         if timeout 1 bash -c "echo >/dev/tcp/${BOINC_HOST}/31416" 2>/dev/null; then
             return 0
         fi

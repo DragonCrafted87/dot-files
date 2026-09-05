@@ -1,5 +1,8 @@
 extends: default
 
+ignore: |
+  omp.yaml
+
 rules:
   indentation:
     spaces: 2
@@ -9,3 +12,8 @@ rules:
     present: false
   hyphens:
     max-spaces-after: 1
+  line-length:
+    max: 120
+    allow-non-breakable-inline-mappings: true
+  truthy:
+    check-keys: false

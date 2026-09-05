@@ -1,9 +1,8 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
+  rev: v6.0.0
   hooks:
   - id: check-added-large-files
-  - id: check-byte-order-marker
   - id: check-case-conflict
   - id: check-merge-conflict
   - id: detect-private-key
@@ -11,7 +10,7 @@ repos:
   - id: file-contents-sorter
     args:
     - --unique
-    files: ^.gitignore|.dict
+    files: (^\.gitignore|\.dict$)
   - id: fix-byte-order-marker
   - id: forbid-new-submodules
   - id: forbid-submodules
@@ -19,46 +18,38 @@ repos:
     args:
     - --fix=lf
   - id: trailing-whitespace
-  # SHELL
   - id: check-executables-have-shebangs
   - id: check-shebang-scripts-are-executable
   - id: check-symlinks
   - id: destroyed-symlinks
-  # PYTHON
   - id: check-builtin-literals
   - id: check-docstring-first
   - id: debug-statements
-  - id: fix-encoding-pragma
   - id: requirements-txt-fixer
-  # JSON
   - id: check-json
   - id: pretty-format-json
     args:
     - --autofix
     - --indent
     - '4'
-  # TOML
   - id: check-toml
-  # XML
   - id: check-xml
-  # YAML
   - id: check-yaml
-# YAML
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.11.0
+  rev: v2.16.0
   hooks:
   - id: pretty-format-yaml
+    exclude: (^omp\.yaml$)
     args:
     - --autofix
     - --indent
     - '2'
 - repo: https://github.com/adrienverge/yamllint
-  rev: v1.32.0
+  rev: v1.38.0
   hooks:
   - id: yamllint
-# MARKDOWN
 - repo: https://github.com/executablebooks/mdformat
-  rev: 0.7.17
+  rev: 1.0.0
   hooks:
   - id: mdformat
     args:
@@ -68,17 +59,16 @@ repos:
     - mdformat-gfm
     - mdformat-black
 - repo: https://github.com/igorshubovych/markdownlint-cli
-  rev: v0.37.0
+  rev: v0.49.1
   hooks:
   - id: markdownlint
-# PYTHON
 - repo: https://github.com/psf/black
-  rev: 23.10.0
+  rev: 26.5.1
   hooks:
   - id: black
     language_version: python3
 - repo: https://github.com/pycqa/isort
-  rev: 5.12.0
+  rev: 9.0.1
   hooks:
   - id: isort
     args:
@@ -87,19 +77,21 @@ repos:
     - --filter-files
     - --force-single-line-imports
 - repo: https://github.com/pycqa/flake8
-  rev: 6.1.0
+  rev: 7.3.0
   hooks:
   - id: flake8
     args:
     - --extend-ignore=E203
-    - --max-line-length=88
+    - --max-line-length=120
 - repo: https://github.com/PyCQA/pylint
-  rev: v3.0.1
+  rev: v4.0.8
   hooks:
   - id: pylint
-# SHELL
+    files: \.py$
+    args:
+    - --disable=import-error,too-many-locals,too-many-branches,too-many-statements,too-many-nested-blocks,no-else-return
 - repo: https://github.com/lovesegfault/beautysh
-  rev: v6.2.1
+  rev: v6.4.3
   hooks:
   - id: beautysh
     types: [bash, shell]
@@ -107,12 +99,13 @@ repos:
     - --indent-size
     - '4'
 - repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.9.0.6
+  rev: v0.11.0.1-1
   hooks:
   - id: shellcheck
-# Spell Checker
+    args:
+    - --severity=error
 - repo: https://github.com/streetsidesoftware/cspell-cli
-  rev: v7.3.2
+  rev: v10.2.0
   hooks:
   - id: cspell
-    exclude: ^.gitignore|^.pre-commit-config.yaml|^.cspell
+    exclude: (^\.gitignore|^\.pre-commit-config\.yaml|^\.cspell/|^omp\.yaml$|^scripts/|^windows/|^config/|^setup/|^.cspell.json)

@@ -4,29 +4,17 @@ alias pylint=pylint_runner
 
 case "$OSTYPE" in
     win*|msys*)
-        # alias python=/usr/bin/python.exe
-        # alias pip='python -m pip'
         ;;
-
     *)
         ;;
 esac
 
-function python-setup ()
-{
-    python -m pip install --upgrade pip
+# pre-commit runs in the dotfiles-pre-commit container.
+# Cache: ~/.cache/pre-commit-docker
 
-    pip install wheel
-
-    pip install \
-        poetry \
-        pre-commit \
-        python-dateutil \
-        requests
-
-
-# setuptools pyaudio SpeechRecognition --extra-index-url https://download.pytorch.org/whl/cu116  torch numpy
-
-# pip install numpy speechrecognition pywhispercpp
-# GGML_VULKAN=1 pip install git+https://github.com/absadiki/pywhispercpp
+pre-commit-reset-cache() {
+    local cache="${PRE_COMMIT_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/pre-commit-docker}"
+    printf 'remove %s\n' "$cache"
+    rm -rf "$cache"
+    mkdir -p "$cache"
 }

@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Host wrapper: run pre-commit in the shared cache container.
+# Cache lives at ~/.cache/pre-commit-docker so every repo reuses hook envs.
+# Wipe that directory (or run pre-commit-reset-cache) if it gets too big.
+
+set -euo pipefail
+
+IMAGE="${PRE_COMMIT_IMAGE:-dotfiles-pre-commit}"
+CACHE_DIR="${PRE_COMMIT_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/pre-commit-docker}"
+
+repo_root() {
+    git rev-parse --show-toplevel 2>/dev/null || pwd
+}
+
+if ! command -v docker >/dev/null 2>&1; then
+    printf 'docker is required for pre-commit\n' >&2
+    exit 1
+fi
+
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    printf 'image %s is missing; run update-role or:\n' "$IMAGE" >&2
+    printf '  docker build -t %s ~/dot-files/setup/files/pre-commit\n' "$IMAGE" >&2
+    exit 1
+fi
+
+mkdir -p "$CACHE_DIR"
+REPO="$(repo_root)"
+
+if [[ ! -d "$REPO/.git" && ! -f "$REPO/.git" ]]; then
+    printf 'not a git repo: %s\n' "$REPO" >&2
+    exit 1
+fi
+
+# Host uid so hook-written files are not root-owned. Git 2.35+ also
+# refuses a bind-mount owned by another user unless safe.directory is set.
+uid="$(id -u)"
+gid="$(id -g)"
+
+cmd=()
+if [[ "$#" -eq 0 ]]; then
+    cmd=(run)
+else
+    cmd=("$@")
+fi
+
+exec docker run --rm -i \
+    -u "${uid}:${gid}" \
+    -v "$REPO":/src \
+    -v "$CACHE_DIR":/cache \
+    -e PRE_COMMIT_HOME=/cache \
+    -e HOME=/tmp \
+    -e GIT_CONFIG_COUNT=1 \
+    -e GIT_CONFIG_KEY_0=safe.directory \
+    -e GIT_CONFIG_VALUE_0=/src \
+    -w /src \
+    --network host \
+    "$IMAGE" "${cmd[@]}"

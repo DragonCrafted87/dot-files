@@ -7,11 +7,11 @@ profiles on that host.
 
 ## Profiles (runewyrm)
 
-| Profile    | Monitors                                      | Audio                         |
-|------------|-----------------------------------------------|-------------------------------|
-| `desk`     | DP-2 + DP-3 + HDMI-A-1, current 3-head layout | restore last / desk sink      |
-| `theater`  | same DPs; HDMI-A-1 uses the TV's preferred mode | default sink → HDMI / TV   |
-| `workshare`| DP-2 and DP-3 **disabled**; HDMI stays        | restore desk sink             |
+| Profile     | Monitors                                        | Audio                    |
+| ----------- | ----------------------------------------------- | ------------------------ |
+| `desk`      | DP-2 + DP-3 + HDMI-A-1, current 3-head layout   | restore last / desk sink |
+| `theater`   | same DPs; HDMI-A-1 uses the TV's preferred mode | default sink → HDMI / TV |
+| `workshare` | DP-2 and DP-3 **disabled**; HDMI stays          | restore desk sink        |
 
 Every other hostname only gets `monitor=,preferred,highrr,auto`.
 
@@ -110,7 +110,7 @@ Switch back with `desk` before you expect the DP panels on this machine again.
   fits the desk layout.
 - Idle wrappers only call the profile script:
   `idle-display-off.sh` → `display-profile.sh idle-off`
-  `idle-display-on.sh`  → `display-profile.sh apply`, then `dpms on`.
+  `idle-display-on.sh` → `display-profile.sh apply`, then `dpms on`.
   On runewyrm, idle-off records every workspace on HDMI-A-1, blanks
   outputs, then disables HDMI-A-1 so a hotplug cannot wake the session.
   After HDMI is back, those workspaces are moved onto it again. If
