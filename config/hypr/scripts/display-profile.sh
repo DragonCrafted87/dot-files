@@ -10,6 +10,7 @@ SAVED_WS_FILE="${STATE_DIR}/saved-monitor-workspaces"
 RESTORE_WS_PID_FILE="${STATE_DIR}/restore-ws.pid"
 APPLY_LOCK_FILE="${STATE_DIR}/apply.lock"
 RUNEWYRM_IDLE_MONITOR="HDMI-A-1"
+RUNEWYRM_DP_MONITORS=(DP-2 DP-3)
 THEATER_SINK_MATCH="${THEATER_SINK_MATCH:-hdmi}"
 DESK_SINK_MATCH="${DESK_SINK_MATCH:-}"
 QUIET=0
@@ -28,6 +29,16 @@ need_hypr() {
 }
 
 keyword_monitor() { hyprctl keyword monitor "$1" >/dev/null 2>&1 || true; }
+
+dpms() {
+    local action="$1"
+    local mon="${2:-}"
+    if [[ -n "$mon" ]]; then
+        hyprctl dispatch dpms "$action" "$mon" >/dev/null 2>&1 || true
+    else
+        hyprctl dispatch dpms "$action" >/dev/null 2>&1 || true
+    fi
+}
 
 with_apply_lock() {
     mkdir -p "$STATE_DIR"
@@ -306,15 +317,31 @@ cmd_set() {
     schedule_workspace_restore
 }
 
-# Blank only the TV. Leave the DP desk monitors in their current layout.
+desk_dp_in_use() {
+    local profile
+    profile="$(current_profile)"
+    [[ "$profile" != "workshare" ]]
+}
+
+dpms_desk_ports() {
+    local action="$1" mon
+    desk_dp_in_use || return 0
+    for mon in "${RUNEWYRM_DP_MONITORS[@]}"; do
+        dpms "$action" "$mon"
+    done
+}
+
+# Blank every panel that should be on. HDMI is then disabled so the TV
+# drops the link. DP layout keywords are not rewritten.
 idle_off_runewyrm() {
     save_monitor_workspaces "$RUNEWYRM_IDLE_MONITOR"
-    hyprctl dispatch dpms off "$RUNEWYRM_IDLE_MONITOR" >/dev/null 2>&1 || hyprctl dispatch dpms off
+    dpms off "$RUNEWYRM_IDLE_MONITOR"
+    dpms_desk_ports off
     sleep 0.2
     keyword_monitor "${RUNEWYRM_IDLE_MONITOR},disable"
 }
 
-idle_off_other() { hyprctl dispatch dpms off; }
+idle_off_other() { dpms off; }
 
 cmd_idle_off() {
     need_hypr
@@ -325,18 +352,20 @@ cmd_idle_off() {
     esac
 }
 
-# Re-enable HDMI only. Never rewrite DP-2/DP-3 here.
+# Wake DP with dpms only. Re-enable HDMI for the saved profile. Never
+# keyword-disable DP here (that is what left the desk dark).
 cmd_idle_on() {
     need_hypr
     QUIET=1
     with_apply_lock || return 0
-    hyprctl dispatch dpms on >/dev/null 2>&1 || true
+    dpms on
+    dpms_desk_ports on
     if [[ "$HOST" == "runewyrm" ]]; then
         local profile
         profile="$(current_profile)"
         [[ -n "$profile" && "$profile" != "default" ]] || profile="desk"
         keyword_monitor "$(hdmi_spec_for_profile "$profile")"
-        hyprctl dispatch dpms on "$RUNEWYRM_IDLE_MONITOR" >/dev/null 2>&1 || true
+        dpms on "$RUNEWYRM_IDLE_MONITOR"
         schedule_workspace_restore
     fi
     hyprctl dispatch movecursor 1 1 >/dev/null 2>&1 || true
