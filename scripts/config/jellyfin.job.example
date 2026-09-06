@@ -1,6 +1,5 @@
 # Copy to the rip directory as jellyfin.job, fill in titles, then:
-#   ffmpeg-jellyfin-plan
-#   ffmpeg-jellyfin-apply
+#   ffmpeg-jellyfin-sort
 #
 # TV
 kind: tv
