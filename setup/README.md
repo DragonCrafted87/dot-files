@@ -1,7 +1,8 @@
 # setup
 
 One control script at this directory root applies a machine role by
-calling modules under `modules/`. Re-running a role is the intended
+calling modules under `modules/`.
+Re-running a role is the intended
 upgrade path. What each role runs is listed in `roles.conf`.
 
 ```bash
@@ -88,7 +89,8 @@ sudo ~/dot-files/setup/utility/harvest-cups.sh
 ```
 
 That copies `/etc/cups/printers.conf` and `/etc/cups/ppd/` into
-`setup/files/cups/`. Workstation and laptop replay those
+`setup/files/cups/`.
+Workstation and laptop replay those
 files.
 
 Copy secrets onto a new box without going through `init-remote.sh`:
@@ -113,6 +115,29 @@ ones. Re-run that script after plugging in a USB Blu-ray drive.
 ```bash
 ~/dot-files/setup/modules/install-makemkv.sh
 ~/bin/sync-makemkv-desktops.sh
+```
+
+## ScummVM / Quest for Glory
+
+`install-scummvm-quest-for-glory` is an optional module (not part of any
+role). It installs the distro `scummvm` package, links the binary under
+`~/games/scummvm`, copies Quest for Glory data out of the Steam
+collection, and writes Desktop plus applications-menu launchers.
+
+Expected Steam path:
+
+```text
+~/games/steam-library/steamapps/common/Quest for Glory Collection/
+```
+
+Override with `STEAM_QFG`. Game data lands in `~/games/quest-for-glory/`
+(DOSBox binaries are not copied). Isolated config and saves live in
+`~/games/scummvm/`. Icons come from the official scummvm-icons repo.
+QFG5 is copied when present; a launcher is created only if that ScummVM
+build lists the game.
+
+```bash
+~/dot-files/setup/modules/install-scummvm-quest-for-glory.sh
 ```
 
 ## BOINC
