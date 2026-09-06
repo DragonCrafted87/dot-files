@@ -98,7 +98,11 @@ def cmd_video_split_by_chapters(args):
 
 
 def cmd_video_merge_chapters(args):
-    if not args.base or args.chapters_per_episode is None or args.total_chapters is None:
+    if (
+        not args.base
+        or args.chapters_per_episode is None
+        or args.total_chapters is None
+    ):
         raise SystemExit(
             "video-merge-chapters needs --base, --chapters-per-episode, --total-chapters"
         )
