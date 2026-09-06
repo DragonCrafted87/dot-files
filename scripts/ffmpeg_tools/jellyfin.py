@@ -175,23 +175,38 @@ def planned_moves(job, search_dir=None):
 def print_plan(moves):
     if not moves:
         print("no moves planned")
-        return
+        return False
+    missing = False
     for source, dest in moves:
-        marker = "" if source.exists() else "  MISSING SOURCE"
-        print(f"{source} -> {dest}{marker}")
+        if source.exists():
+            print(f"{source} -> {dest}")
+        else:
+            missing = True
+            print(f"{source} -> {dest}  MISSING SOURCE")
+    return not missing
 
 
-def apply_moves(moves, dry_run=True):
-    print_plan(moves)
-    if dry_run:
-        print("dry-run; pass --apply to move")
-        return
+def apply_moves(moves):
     for source, dest in moves:
         if not source.exists():
             raise FileNotFoundError(source)
         dest.parent.mkdir(parents=True, exist_ok=True)
         print(f"mv {source} -> {dest}")
         move(str(source), str(dest))
+
+
+def confirm_and_apply(moves):
+    ok = print_plan(moves)
+    if not moves:
+        return
+    if not ok:
+        print("abort: missing source files")
+        return
+    answer = input("Move these files? [y/N] ").strip().lower()
+    if answer not in ("y", "yes"):
+        print("cancelled")
+        return
+    apply_moves(moves)
 
 
 def write_template(kind, search_dir=None, job_path=DEFAULT_JOB_NAME, title=""):
