@@ -113,7 +113,7 @@ function ffmpeg-audio-convert ()
 
 # Write jellyfin.job from mkvs in cropped/ (or cwd). Fill in titles, then sort.
 #   ffmpeg-jellyfin-init tv
-#   ffmpeg-jellyfin-init movie "Solo Mio (2026) {imdb-tt32306991}"
+#   ffmpeg-jellyfin-init movie "Solo Mia (2026) {imdb-tt32306991}"
 function ffmpeg-jellyfin-init ()
 {
     if [[ $# -lt 1 ]]; then

@@ -177,7 +177,9 @@ def main():
         "--search-dir", default=".", help="Root for audio-convert / jellyfin sources"
     )
     parser.add_argument("--job", default=DEFAULT_JOB_NAME, help="Jellyfin job file")
-    parser.add_argument("--kind", choices=("tv", "movie"), help="jellyfin-init library kind")
+    parser.add_argument(
+        "--kind", choices=("tv", "movie"), help="jellyfin-init library kind"
+    )
     parser.add_argument("--title", help="jellyfin-init title / show tag")
     args = parser.parse_args()
     print(args)
