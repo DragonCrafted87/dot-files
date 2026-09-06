@@ -27,8 +27,8 @@ powershell -ExecutionPolicy Bypass -File .\windows\work-setup.ps1
 
 Bootstraps Git if needed, clones this repo, runs the work package list
 (Windows Terminal, Git, Oh My Posh, VS Code), copies Terminal settings,
-points Git Bash `~/.bashrc` / `~/.bash_profile` at `git_bashrc.sh`, and
-saves the `work` role.
+points Git Bash `~/.bashrc` / `~/.bash_profile` at
+`shell/git-bash.bashrc`, and saves the `work` role.
 
 From Git Bash later:
 
