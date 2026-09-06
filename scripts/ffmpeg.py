@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 # Thin CLI. Implementation lives in scripts/ffmpeg_tools/.
 
-import sys
 from argparse import ArgumentParser
-from pathlib import Path
-
-SCRIPTS_DIR = Path(__file__).resolve().parent
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
 
 from ffmpeg_tools.audio_audible import audio_split_encode
 from ffmpeg_tools.audio_audible import encode_all_audio_files
