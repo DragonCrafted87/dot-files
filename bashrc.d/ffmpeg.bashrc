@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+_ffmpeg_py() {
+    python -I "${DOTFILES_ROOT:-$HOME/dot-files}/scripts/ffmpeg.py" "$@"
+}
+
 function ffmpeg-concatenate-videos ()
 {
     file_list_file=$(mktemp ./ffmpeg_file_list.XXXXXXXXX)
@@ -34,14 +38,6 @@ function ffmpeg-video-split-by-timestamps ()
         echo "Missing file argument!"
         exit 1
     fi
-
-    #    video_codec="$(ffprobe -loglevel error -select_streams v:0 -show_entries stream=codec_name -of default=nk=1:nw=1 "$1.mkv")"
-    #    audio_codec="$(ffprobe -loglevel error -select_streams a:0 -show_entries stream=codec_name -of default=nk=1:nw=1 "$1.mkv")"
-    #    subtitle_codec="$(ffprobe -loglevel error -select_streams s:0 -show_entries stream=codec_name -of default=nk=1:nw=1 "$1.mkv")"
-
-    #    video_codec="h264"
-    #    audio_codec="flac"
-    #    subtitle_codec="$(ffprobe -loglevel error -select_streams s:0 -show_entries stream=codec_name -of default=nk=1:nw=1 "$1.mkv")"
 
     video_codec="copy"
     audio_codec="copy"
@@ -146,27 +142,27 @@ function ffmpeg-video-merge-chapters ()
 function ffmpeg-video-crop-encode ()
 {
     if [ -z "$1" ]; then
-        python -I ~/dot-files/scripts/ffmpeg.py video-crop-encode
+        _ffmpeg_py video-crop-encode
     else
-        python -I ~/dot-files/scripts/ffmpeg.py video-crop-encode --input_filename="$1"
+        _ffmpeg_py video-crop-encode --input_filenames "$1"
     fi
 }
 
 function ffmpeg-video-make-dvd ()
 {
     if [ -z "$1" ]; then
-        python -I ~/dot-files/scripts/ffmpeg.py make-dvd
+        _ffmpeg_py make-dvd
     else
-        python -I ~/dot-files/scripts/ffmpeg.py make-dvd --input_filename="$1"
+        _ffmpeg_py make-dvd --input_filenames "$1"
     fi
 }
 
 function ffmpeg-audio-split-encode ()
 {
     if [ -z "$1" ]; then
-        python -I ~/dot-files/scripts/ffmpeg.py audio-split-encode
+        _ffmpeg_py audio-split-encode
     else
-        python -I ~/dot-files/scripts/ffmpeg.py audio-split-encode --input_filename="$1"
+        _ffmpeg_py audio-split-encode --input_filenames "$1"
     fi
 }
 
@@ -174,37 +170,28 @@ function ffmpeg-audio-convert ()
 {
     local search_dir="${1:-.}"  # Default to current directory if no argument provided
 
-    # Check if ffmpeg is installed
     if ! command -v ffmpeg &> /dev/null
     then
         echo "ffmpeg could not be found. Please install ffmpeg first."
         return 1
     fi
 
-    # Find all audio files and store them in an array
     mapfile -t audio_files < <(find "$search_dir" -type f \( -iname "*.mp3" -o -iname "*.wav" -o -iname "*.aac" -o -iname "*.m4a" -o -iname "*.ogg" \))
 
     for file in "${audio_files[@]}"; do
-        # Get the directory path and filename without extension
         dir_path=$(dirname "$file")
         base_name=$(basename "$file")
         new_name="${base_name%.*}.flac"
 
-        # Convert the file to FLAC
         ffmpeg -i "$file" -c:a flac -compression_level 12 -map_metadata 0 "$dir_path/$new_name"
 
-        # Check if conversion was successful
         if [ $? -eq 0 ]; then
             echo "Converted $file to $dir_path/$new_name"
 
-            # Preserve Windows file metadata
-            touch -r "$file" "$new_name"  # Copies modification times
-            cp -a "$file" "$new_name"     # Copies all file attributes (permissions, timestamps)
+            touch -r "$file" "$new_name"
+            cp -a "$file" "$new_name"
 
-            # Create an archives directory if it doesn't exist
             mkdir -p "archives/$dir_path"
-
-            # Move the original file to the archives directory
             mv --verbose "$file" "archives/$dir_path"
             echo "Moved original file to archives/$dir_path"
         else
