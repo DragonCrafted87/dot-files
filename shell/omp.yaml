@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json
+
+console_title_template: '{{if .Root}} :: root{{end}} {{.HostName}} {{.Folder}}'
+blocks:
+    - type: prompt
+      alignment: left
+      segments:
+        - properties:
+            cache_duration: none
+          template: '<#C4A000>{{ .UserName }}</><#D3D7CF>@</><#C4A000>{{ .HostName }}</>:'
+          type: session
+          style: plain
+        - properties:
+            cache_duration: none
+            folder_separator_icon: /
+            style: agnoster_full
+          template: <#06989A>{{ .Path }} </>
+          type: path
+          style: plain
+        - properties:
+            branch_icon: ""
+            cache_duration: none
+            display_status: true
+            fetch_status: true
+          template: '{{ if (.Working.Changed) }}<#CC0000>{{ else if (gt .StashCount 0) }}<#FCE94F>{{ else if (.Staging.Changed) }}<#34E2E2>{{ else }}<#4E9A06>{{ end }}{{ .HEAD }}</> {{ if .Staging.Changed }}<#98c379>{{ .Staging.String }}</>{{ end}} {{ if .Working.Changed }}<#d16971>{{ .Working.String }}</>{{ end }}'
+          type: git
+          style: plain
+    - type: prompt
+      alignment: right
+      segments:
+        - properties:
+            cache_duration: none
+            time_format: 2006-01-02 15:04
+          template: <#555753>{{ .CurrentDate | date .Format }}          </>
+          type: time
+          style: plain
+        - properties:
+            always_enabled: false
+            cache_duration: none
+          template: <#EF2929>{{ if ne .Code 0 }}Exit Code {{ .Code }} {{ .Meaning }}     {{ end }}</>
+          type: exit
+          style: diamond
+        - properties:
+            cache_duration: none
+            command: awk '{u=$2+$4; t=$2+$4+$5; if (NR==1){u1=u; t1=t;} else print ($2+$4-u1) * 100 / (t-t1); }' <(grep 'cpu ' /proc/stat) <(sleep 1;grep 'cpu ' /proc/stat)
+            shell: bash
+          template: <#555753>CPU:</> {{ if (gt (float64 .Output ) 90.0) }}<#CC0000>{{ else if (gt (float64 .Output ) 70.0) }}<#C4A000>{{ else }}<#4E9A06>{{ end }}{{ (round (float64 .Output) 2) }}% </>
+          type: command
+          style: plain
+        - properties:
+            cache_duration: none
+          template: <#555753>RAM:</>{{ if (gt .PhysicalPercentUsed 90.0) }}<#CC0000>{{ else if (gt .PhysicalPercentUsed 70.0) }}<#C4A000>{{ else }}<#4E9A06>{{ end }} {{ (round .PhysicalPercentUsed 2) }}% {{ (div ((sub .PhysicalTotalMemory .PhysicalFreeMemory)|float64) 1000000000.0) }}/{{ (div .PhysicalTotalMemory 1000000000.0) }}GB </>
+          type: sysinfo
+          style: diamond
+    - type: prompt
+      alignment: left
+      segments:
+        - properties:
+            always_enabled: true
+            cache_duration: none
+          template: <#D3D7CF>> </>
+          type: exit
+          style: plain
+      newline: true
+version: 3
