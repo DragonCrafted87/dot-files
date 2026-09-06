@@ -34,6 +34,7 @@ paren
 parseable
 pgc
 pygtk
+pylintrc
 rcfile
 regexes
 rgx
