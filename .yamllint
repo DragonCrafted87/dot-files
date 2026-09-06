@@ -2,6 +2,7 @@ extends: default
 
 ignore: |
   omp.yaml
+  shell/omp.yaml
 
 rules:
   indentation:

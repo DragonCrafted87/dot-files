@@ -8,4 +8,4 @@ do
     source "$file"
 done
 
-eval "$(oh-my-posh init bash --config "${DOTFILES_ROOT:-$HOME/dot-files}/omp.yaml")"
+eval "$(oh-my-posh init bash --config "${DOTFILES_ROOT:-$HOME/dot-files}/shell/omp.yaml")"

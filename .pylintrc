@@ -1,0 +1,44 @@
+[MASTER]
+extension-pkg-whitelist=
+ignore=CVS
+ignore-patterns=
+jobs=0
+limit-inference-results=100
+load-plugins=
+persistent=yes
+suggestion-mode=yes
+unsafe-load-any-extension=no
+
+[MESSAGES CONTROL]
+confidence=
+disable=missing-module-docstring,
+        missing-class-docstring,
+        missing-function-docstring,
+        too-few-public-methods,
+        bare-except,
+        import-error,
+        too-many-locals,
+        too-many-branches,
+        too-many-statements,
+        too-many-nested-blocks,
+        no-else-return
+enable=c-extension-no-member
+
+[REPORTS]
+evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
+output-format=text
+reports=no
+score=yes
+
+[FORMAT]
+max-line-length=120
+indent-string='    '
+indent-after-paren=4
+
+[BASIC]
+good-names=_
+no-docstring-rgx=^_
+
+[EXCEPTIONS]
+overgeneral-exceptions=BaseException,
+                       Exception
