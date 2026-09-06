@@ -61,8 +61,8 @@ consumed by the modules.
 
 1. ~~Kill `snippets.sh` or park it under `scripts/scratch/`.~~
 1. ~~Point root `update-dot-files` at the bashrc.d function.~~
-1. ~~Optional `shell/` folder for the three bashrc entrypoints + `profile`
-   + `omp.yaml`.~~ Dropped `profile` (unused; PATH is in bashrc.d).
+1. \~~Optional `shell/` folder for the three bashrc entrypoints + `profile`
+   - `omp.yaml`.\~~ Dropped `profile` (unused; PATH is in bashrc.d).
 1. List-driven dnf packages, matching winget lists.
 1. Single source for monitor layouts so `monitors.d` and
    `display-profile.sh` cannot disagree.
