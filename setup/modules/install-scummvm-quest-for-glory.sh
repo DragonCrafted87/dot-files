@@ -201,27 +201,37 @@ platform=pc
 EOF
 }
 
-refresh_desktop_cache() {
+# An empty ~/.local/share/icons/hicolor/index.theme plus a tiny
+# icon-theme.cache shadows /usr/share/icons/hicolor and turns most
+# app icons into the missing-texture placeholder.
+repair_hicolor_shadow() {
     local hicolor_root="${DATA_HOME}/icons/hicolor"
-    log "refresh desktop and icon caches"
+    local theme="${hicolor_root}/index.theme"
+    local cache="${hicolor_root}/icon-theme.cache"
+    [[ -d "$hicolor_root" ]] || return 0
+    if [[ -f "$theme" ]] && [[ ! -s "$theme" ]]; then
+        log "remove empty user hicolor index.theme"
+        rm -f "$theme"
+    fi
+    if [[ -f "$cache" ]]; then
+        log "remove user hicolor icon-theme.cache"
+        rm -f "$cache"
+    fi
+}
+
+refresh_desktop_cache() {
+    log "refresh desktop cache"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         return 0
     fi
-    touch "$APPS_DIR" "$hicolor_root" 2>/dev/null || true
+    repair_hicolor_shadow
+    touch "$APPS_DIR" 2>/dev/null || true
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "$APPS_DIR" >/dev/null 2>&1 || true
-    fi
-    if command -v gtk-update-icon-cache >/dev/null 2>&1 && [[ -d "$hicolor_root" ]]; then
-        touch "${hicolor_root}/index.theme" 2>/dev/null || true
-        gtk-update-icon-cache -f -t "$hicolor_root" >/dev/null 2>&1 || true
     fi
     if command -v xdg-desktop-menu >/dev/null 2>&1; then
         xdg-desktop-menu forceupdate >/dev/null 2>&1 || true
     fi
-    if command -v update-mime-database >/dev/null 2>&1 && [[ -d "${DATA_HOME}/mime" ]]; then
-        update-mime-database "${DATA_HOME}/mime" >/dev/null 2>&1 || true
-    fi
-    # Nudge Quickshell DesktopEntries watchers.
     if command -v qs >/dev/null 2>&1; then
         qs ipc call startmenu reload >/dev/null 2>&1 || true
     fi
@@ -317,7 +327,6 @@ copy_numbered 2 qfg2 qfg2 "Quest for Glory II: Trial by Fire" sci-qfg2.png
 copy_numbered 3 qfg3 qfg3 "Quest for Glory III: Wages of War" sci-qfg3.png
 copy_numbered 4 qfg4 qfg4 "Quest for Glory IV: Shadows of Darkness" sci-qfg4.png
 
-# QFG5 is SCI32 / Windows; register only if ScummVM lists it.
 qfg5_root=""
 for cand in "${STEAM_QFG}/QG5" "${STEAM_QFG}/qg5" "${STEAM_QFG}/QG5-" "${STEAM_QFG}/QFG5"; do
     if [[ -d "$cand" ]]; then
@@ -342,8 +351,6 @@ else
 fi
 
 [[ "$copied" -gt 0 ]] || die "copied no Quest for Glory data from ${STEAM_QFG}"
-
-# --- launchers ----------------------------------------------------------
 
 write_one() {
     local slug="$1"
