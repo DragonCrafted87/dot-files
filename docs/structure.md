@@ -10,7 +10,7 @@ Three eras sit next to each other. `setup/` is the coherent piece:
 `config/` auto-linking by directory name is the right rule.
 
 The crowded repo root is the rest: `hw_bashrc.sh`, `git_bashrc.sh`,
-`root_bashrc.sh`, `profile`, `omp.yaml`, `pylintrc`, `snippets.sh` live
+~~`root_bashrc.sh`~~, `profile`, `omp.yaml`, `pylintrc`, `snippets.sh` live
 beside `setup/` and `config/`.
 
 ## Possible later moves (not started)
@@ -46,16 +46,16 @@ scattered through module scripts. Same pattern would be
 `setup/files/packages/{common,workstation,laptop,htpc,server}.list`
 consumed by the modules.
 
-## Duplicate update helper
+## ~~Duplicate update helper~~
 
-`root_bashrc.sh` still has `update-dot-files` that `cd`s to
+~~`root_bashrc.sh` still has `update-dot-files` that `cd`s to
 `~/dot-files`. User bash already has the smarter one in
-`bashrc.d/setup.bashrc`. Root should call the same helper.
+`bashrc.d/setup.bashrc`. Root should call the same helper.~~
 
 ## Suggested order
 
-1. Kill `snippets.sh` or park it under `scripts/scratch/`.
-1. Point root `update-dot-files` at the bashrc.d function.
+1. ~~Kill `snippets.sh` or park it under `scripts/scratch/`.~~
+1. ~~Point root `update-dot-files` at the bashrc.d function.~~
 1. Optional `shell/` folder for the three bashrc entrypoints + `profile`
    - `omp.yaml`.
 1. List-driven dnf packages, matching winget lists.

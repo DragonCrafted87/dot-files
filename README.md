@@ -8,19 +8,18 @@ Layout ideas that are **not done yet** live in `docs/structure.md`.
 
 ## Layout
 
-| Path             | What it is                                                          |
-| ---------------- | ------------------------------------------------------------------- |
-| `hw_bashrc.sh`   | Linux interactive bash entry. Sourced as `~/.bashrc`.               |
-| `git_bashrc.sh`  | Git Bash for Windows entry.                                         |
-| `root_bashrc.sh` | Root shell on Linux boxes.                                          |
-| `profile`        | Login-shell `~/.profile` (PATH + source bashrc).                    |
-| `bashrc.d/`      | Function and alias snippets sourced by those entries.               |
-| `omp.yaml`       | Oh My Posh theme.                                                   |
-| `config/`        | Trees linked into `~/.config/<name>` by the role.                   |
-| `setup/`         | OpenMandriva role installer. See `setup/README.md`.                 |
-| `windows/`       | Winget lists and work/personal PowerShell. See `windows/README.md`. |
-| `scripts/`       | One-off Python helpers (ffmpeg, dictation, Minecraft mods).         |
-| `docs/`          | Notes that are not run by a role.                                   |
+| Path            | What it is                                                          |
+| --------------- | ------------------------------------------------------------------- |
+| `hw_bashrc.sh`  | Linux interactive bash entry. Sourced as `~/.bashrc`.               |
+| `git_bashrc.sh` | Git Bash for Windows entry.                                         |
+| `profile`       | Login-shell `~/.profile` (PATH + source bashrc).                    |
+| `bashrc.d/`     | Function and alias snippets sourced by those entries.               |
+| `omp.yaml`      | Oh My Posh theme.                                                   |
+| `config/`       | Trees linked into `~/.config/<name>` by the role.                   |
+| `setup/`        | OpenMandriva role installer. See `setup/README.md`.                 |
+| `windows/`      | Winget lists and work/personal PowerShell. See `windows/README.md`. |
+| `scripts/`      | One-off Python helpers (ffmpeg, dictation, Minecraft mods).         |
+| `docs/`         | Notes that are not run by a role.                                   |
 
 ## Linux machine
 
