@@ -1,7 +1,6 @@
 """Split a video by timestamps or by chapter end times."""
 
 from os.path import basename
-from subprocess import CalledProcessError
 
 from .pool import encoding_executor
 from .pool import wait_jobs
