@@ -119,8 +119,8 @@ ones. Re-run that script after plugging in a USB Blu-ray drive.
 
 ## ScummVM / Quest for Glory
 
-`install-scummvm-qfg` is an optional module (not part of any role). It
-installs the distro `scummvm` package, links the binary under
+`install-scummvm-quest-for-glory` is an optional module (not part of any
+role). It installs the distro `scummvm` package, links the binary under
 `~/games/scummvm`, copies Quest for Glory data out of the Steam
 collection, and writes Desktop plus applications-menu launchers.
 
@@ -137,7 +137,7 @@ QFG5 is copied when present; a launcher is created only if that ScummVM
 build lists the game.
 
 ```bash
-~/dot-files/setup/modules/install-scummvm-qfg.sh
+~/dot-files/setup/modules/install-scummvm-quest-for-glory.sh
 ```
 
 ## BOINC
