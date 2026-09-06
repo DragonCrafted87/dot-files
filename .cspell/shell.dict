@@ -1,9 +1,11 @@
 Authy
+BOINC
 ENV
 Foxit
 GHUB
 GOPATH
 Guinpin
+Hypr
 Inkscape
 KDE
 KUBECONFIG
@@ -24,6 +26,7 @@ armv
 autoupdate
 awk
 axo
+boinc
 checkwinsize
 cifs
 containerd
@@ -31,6 +34,7 @@ cygwin
 daemonsets
 dircolors
 distro
+dnf
 dpkg
 dragondata
 dragonmaster
@@ -49,6 +53,7 @@ getconf
 goom
 greyhole
 histappend
+hyprctl
 iconcache
 ignoredups
 ignorespace
@@ -66,6 +71,7 @@ lah
 lesspipe
 libpam
 loglevel
+makemkv
 maxdepth
 mcrcon
 medialivingroom
@@ -73,6 +79,7 @@ microk
 mkvtoolnix
 mnt
 modlist
+nas
 noatime
 nodev
 nofail

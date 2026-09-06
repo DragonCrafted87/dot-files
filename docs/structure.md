@@ -10,14 +10,14 @@ Three eras sit next to each other. `setup/` is the coherent piece:
 `config/` auto-linking by directory name is the right rule.
 
 The crowded repo root is the rest: `hw_bashrc.sh`, `git_bashrc.sh`,
-`root_bashrc.sh`, `profile`, `omp.yaml`, `pylintrc`, `snipets.sh` live
+`root_bashrc.sh`, `profile`, `omp.yaml`, `pylintrc`, `snippets.sh` live
 beside `setup/` and `config/`.
 
 ## Possible later moves (not started)
 
 - `shell/linux.bashrc`, `shell/git-bash.bashrc`, `shell/root.bashrc`,
   `shell/profile`, `shell/omp.yaml`
-- Delete or park `snipets.sh` (typo, and it `return`s immediately —
+- Delete or park `snippets.sh` (typo, and it `return`s immediately —
   scratch pad, not product)
 - Keep `pylintrc` at root only if pre-commit expects it there
 
@@ -54,12 +54,12 @@ consumed by the modules.
 
 ## Suggested order
 
-1. Kill `snipets.sh` or park it under `scripts/scratch/`.
-2. Point root `update-dot-files` at the bashrc.d function.
-3. Optional `shell/` folder for the three bashrc entrypoints + `profile`
-   + `omp.yaml`.
-4. List-driven dnf packages, matching winget lists.
-5. Single source for monitor layouts so `monitors.d` and
+1. Kill `snippets.sh` or park it under `scripts/scratch/`.
+1. Point root `update-dot-files` at the bashrc.d function.
+1. Optional `shell/` folder for the three bashrc entrypoints + `profile`
+   - `omp.yaml`.
+1. List-driven dnf packages, matching winget lists.
+1. Single source for monitor layouts so `monitors.d` and
    `display-profile.sh` cannot disagree.
 
 ## Subdivide module scripts
