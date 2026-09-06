@@ -13,7 +13,7 @@ VIDEO_SUFFIXES = {".mkv", ".mp4", ".avi", ".webm", ".m4v"}
 
 
 def _source_dir(search_dir):
-    if search_dir:
+    if search_dir not in (None, "", "."):
         return Path(search_dir)
     cropped = Path("cropped")
     if cropped.is_dir():
@@ -143,7 +143,10 @@ def planned_moves(job, search_dir=None):
     tag = folder_tag(job)
     moves = []
     if job["kind"] == "movie":
-        movie_dir = dest_root / job["collection"] / tag if job["collection"] else dest_root / tag
+        if job["collection"]:
+            movie_dir = dest_root / job["collection"] / tag
+        else:
+            movie_dir = dest_root / tag
         feature_name = job["feature_as"] or tag
         if job["feature"]:
             moves.append(
@@ -197,10 +200,12 @@ def write_template(kind, search_dir=None, job_path=DEFAULT_JOB_NAME, title=""):
         raise FileExistsError(job_path)
     kind = kind.lower()
     media = Path(DEFAULT_MEDIA_ROOT)
+    folder = "movies" if kind == "movie" else "tv"
+    placeholder = "TITLE (YEAR) {imdb-tt... or tvdb-...}"
     lines = [
         f"kind: {kind}",
-        f"root: {media / ('movies' if kind == 'movie' else 'tv')}",
-        f"title: {title or 'TITLE (YEAR) {{imdb-tt... or tvdb-...}}'}",
+        f"root: {media / folder}",
+        f"title: {title or placeholder}",
         "",
         f"# sources listed from {source_root.resolve()}",
     ]
