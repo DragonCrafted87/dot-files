@@ -110,3 +110,35 @@ function ffmpeg-audio-convert ()
 {
     _ffmpeg_py audio-convert --search-dir "${1:-.}"
 }
+
+# Write jellyfin.job from mkvs in cropped/ (or cwd). Fill in titles, then plan.
+#   ffmpeg-jellyfin-init tv
+#   ffmpeg-jellyfin-init movie "Solo Mio (2026) {imdb-tt32306991}"
+function ffmpeg-jellyfin-init ()
+{
+    if [[ $# -lt 1 ]]; then
+        _ffmpeg_usage "usage: ffmpeg-jellyfin-init tv|movie [TITLE]"
+        return
+    fi
+    if [[ -n "${2:-}" ]]; then
+        _ffmpeg_py jellyfin-init --kind "$1" --title "$2"
+    else
+        _ffmpeg_py jellyfin-init --kind "$1"
+    fi
+}
+
+# Print source -> Jellyfin dest without moving.
+#   ffmpeg-jellyfin-plan
+#   ffmpeg-jellyfin-plan ./other.job
+function ffmpeg-jellyfin-plan ()
+{
+    _ffmpeg_py jellyfin-plan --job "${1:-jellyfin.job}"
+}
+
+# Move files according to the job. Always run plan first.
+#   ffmpeg-jellyfin-apply
+#   ffmpeg-jellyfin-apply ./other.job
+function ffmpeg-jellyfin-apply ()
+{
+    _ffmpeg_py jellyfin-apply --apply --job "${1:-jellyfin.job}"
+}
