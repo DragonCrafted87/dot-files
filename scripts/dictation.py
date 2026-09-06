@@ -183,7 +183,7 @@ def main():
         test_audio = np.zeros(32000, dtype=np.float32)
         test_audio = pad_audio(test_audio)
         audio_model.transcribe(test_audio, language="en")
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Failed to load or test model: {e}")
         print(
             "This may be due to insufficient memory. Try a smaller model, close "

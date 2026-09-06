@@ -1,0 +1,25 @@
+# Copy to the rip directory as jellyfin.job, fill in titles, then:
+#   ffmpeg-jellyfin-sort
+#
+# TV
+kind: tv
+root: /home/dragon/Network/Storage/Media/tv
+title: ReBoot (1994) {tvdb-73025}
+
+season: 0
+REBOOT_BF_D9-C1-t00 | Fast Forward - The Making of ReBoot
+REBOOT_BF_D9-C2-t01 | Alphanumeric - Looking Back at ReBoot
+
+season: 1
+REBOOT_S1_D1-B1-t00 | The Tearing
+REBOOT_S1_D1-B1-t01 | Racing the Clock
+
+# Movie
+# kind: movie
+# root: /home/dragon/Network/Storage/Media/movies
+# title: Solo Mio (2026) {imdb-tt32306991}
+# # collection: Optional Franchise Folder
+# feature: Solo_Mio-t00.mkv
+# extras:
+# Solo_Mio-t01 | roundtable
+# Solo_Mio-t06 | trailer

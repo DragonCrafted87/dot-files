@@ -1,214 +1,136 @@
 #!/usr/bin/env bash
+# Thin wrappers around scripts/ffmpeg.py. Implementations live in
+# scripts/ffmpeg_tools/. Each function prints usage if called wrong.
 
+_ffmpeg_py() {
+    python -I "${DOTFILES_ROOT:-$HOME/dot-files}/scripts/ffmpeg.py" "$@"
+}
+
+_ffmpeg_usage() {
+    printf '%s\n' "$1" >&2
+    return 2
+}
+
+# Concatenate inputs into STEM.mkv (h264 + flac + copied subs).
+#   ffmpeg-concatenate-videos episode01 part_a.mkv part_b.mkv part_c.mkv
+#   # writes episode01.mkv
 function ffmpeg-concatenate-videos ()
 {
-    file_list_file=$(mktemp ./ffmpeg_file_list.XXXXXXXXX)
-
-    for ((i=2;i<=$#;i++))
-    do
-        echo "file '${!i}'" >> "$file_list_file"
-    done
-
-    output_file_name="$1.mkv"
-
-    video_codec="h264"
-    audio_codec="flac"
-
-    ffmpeg -f concat \
-        -safe 0 \
-        -i "$file_list_file" \
-        -map_metadata 0 \
-        -map_chapters 0 \
-        -acodec $audio_codec \
-        -vcodec $video_codec \
-        -scodec copy \
-        "$output_file_name"
-
-    rm -f "$file_list_file"
+    if [[ $# -lt 2 ]]; then
+        _ffmpeg_usage "usage: ffmpeg-concatenate-videos STEM file1.mkv [file2.mkv ...]"
+        return
+    fi
+    local stem="$1"
+    shift
+    _ffmpeg_py video-concatenate --output_filename "$stem" --input_filenames "$@"
 }
 
+# Stream-copy slices. One mark = that time through EOF. Several marks =
+# consecutive [mark_n, mark_n+1) segments. Writes NAME_split_001.mkv ...
+#   ffmpeg-video-split-by-timestamps show.mkv 600
+#   ffmpeg-video-split-by-timestamps show.mkv 0 600 1200 1800
 function ffmpeg-video-split-by-timestamps ()
 {
-    file="$1"
-    if [ -z "$file" ]; then
-        echo "Missing file argument!"
-        exit 1
+    if [[ $# -lt 2 ]]; then
+        _ffmpeg_usage "usage: ffmpeg-video-split-by-timestamps FILE START [NEXT ...]"
+        return
     fi
-
-    #    video_codec="$(ffprobe -loglevel error -select_streams v:0 -show_entries stream=codec_name -of default=nk=1:nw=1 "$1.mkv")"
-    #    audio_codec="$(ffprobe -loglevel error -select_streams a:0 -show_entries stream=codec_name -of default=nk=1:nw=1 "$1.mkv")"
-    #    subtitle_codec="$(ffprobe -loglevel error -select_streams s:0 -show_entries stream=codec_name -of default=nk=1:nw=1 "$1.mkv")"
-
-    #    video_codec="h264"
-    #    audio_codec="flac"
-    #    subtitle_codec="$(ffprobe -loglevel error -select_streams s:0 -show_entries stream=codec_name -of default=nk=1:nw=1 "$1.mkv")"
-
-    video_codec="copy"
-    audio_codec="copy"
-    subtitle_codec="copy"
-
-    filename=$(basename "$file")
-    filename="${filename%.*}"
-
-    if [[ "$3" ]]; then
-        k=1
-        j=2
-
-        for ((i=3;i<=$#;i++))
-        do
-            # shellcheck disable=SC2027 # This is actually what we want
-            output_file_name=$filename"_split"$(printf '_%03s' $k)".mkv"
-
-            echo ${!j} "${!i}" "$output_file_name"
-
-            ffmpeg -y -i "$1" \
-                -ss ${!j} -to "${!i}" \
-                -map 0:v \
-                -vcodec $video_codec \
-                -map 0:a \
-                -acodec $audio_codec \
-                -map 0:s? \
-                -scodec $subtitle_codec \
-                "$output_file_name" &
-
-            if [[ $((k%3)) -eq 0 ]]; then
-                wait
-            fi
-
-            k=$((k+1))
-            j=$((j+1))
-        done
-    else
-        output_file_name=$filename"_split_001.mkv"
-        end_timestamp=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$file")
-
-        echo "$end_timestamp"
-
-        ffmpeg -y -i "$1" \
-            -ss "$2" -to "$end_timestamp" \
-            -map 0:v \
-            -vcodec $video_codec \
-            -map 0:a \
-            -acodec $audio_codec \
-            -map 0:s? \
-            -scodec $subtitle_codec \
-            "$output_file_name" &
-    fi
-    wait
+    local file="$1"
+    shift
+    _ffmpeg_py video-split-by-timestamps --input_filenames "$file" --timestamps "$@"
 }
+
+# Same as split-by-timestamps, bounds taken from chapter end_time values.
+#   ffmpeg-video-split-by-chapters show.mkv
 function ffmpeg-video-split-by-chapters ()
 {
-    file="$1"
-    if [ -z "$file" ]; then
-        echo "Missing file argument!"
-        exit 1
+    if [[ $# -ne 1 ]]; then
+        _ffmpeg_usage "usage: ffmpeg-video-split-by-chapters FILE"
+        return
     fi
-
-    # shellcheck disable=SC2207 # Don't want to rework it yet
-    timestamp_list=($(ffprobe -i "$file" -show_chapters -loglevel error | grep end_time | cut -d '=' -f 2 ))
-
-    ffmpeg_command="ffmpeg-video-split-by-timestamps $file 0.00 "
-    for i in "${timestamp_list[@]}";
-    do
-        ffmpeg_command=$ffmpeg_command"$i "
-    done
-
-    echo "$ffmpeg_command"
-    eval "$ffmpeg_command"
+    _ffmpeg_py video-split-by-chapters --input_filenames "$1"
 }
 
+# Group already-split files BASE_split_001.mkv ... into episode files.
+# 20 splits / 5 per episode -> BASE_e001.mkv .. BASE_e004.mkv
+#   ffmpeg-video-merge-chapters show 5 20
 function ffmpeg-video-merge-chapters ()
 {
-    base_command='ffmpeg-concatenate-videos '
-    file_extension='.mkv '
-    base_file=$1
-    chapters_per_episode=$2
-    total_chapters=$3
-
-    total_episodes=$total_chapters/$chapters_per_episode
-
-    chapter=1
-    for ((episode=1;episode<=total_episodes;episode++))
-    do
-        file_list=""
-        for ((i=1;i<=chapters_per_episode;i++))
-        do
-            file_list=$file_list$base_file"_split"$(printf '_%03s' $chapter)$file_extension
-            chapter=$((chapter+1))
-        done
-        ffmpeg_command=$base_command$base_file$(printf '_e%03d ' "$episode")$file_list
-        echo "$ffmpeg_command"
-        eval "$ffmpeg_command"
-    done
-
+    if [[ $# -ne 3 ]]; then
+        _ffmpeg_usage "usage: ffmpeg-video-merge-chapters BASE CHAPTERS_PER_EPISODE TOTAL_CHAPTERS"
+        return
+    fi
+    _ffmpeg_py video-merge-chapters \
+        --base "$1" \
+        --chapters-per-episode "$2" \
+        --total-chapters "$3"
 }
 
+# Cropdetect + re-encode every mkv/mp4/avi/webm in cwd, or one file.
+# Writes cropped/NAME.mkv and moves the source to original/.
+#   ffmpeg-video-crop-encode
+#   ffmpeg-video-crop-encode show.mkv
 function ffmpeg-video-crop-encode ()
 {
-    if [ -z "$1" ]; then
-        python -I ~/dot-files/scripts/ffmpeg.py video-crop-encode
+    if [[ -z "${1:-}" ]]; then
+        _ffmpeg_py video-crop-encode
     else
-        python -I ~/dot-files/scripts/ffmpeg.py video-crop-encode --input_filename="$1"
+        _ffmpeg_py video-crop-encode --input_filenames "$@"
     fi
 }
 
+# Build an NTSC DVD ISO from one mkv (or every mkv in cwd).
+#   ffmpeg-video-make-dvd
+#   ffmpeg-video-make-dvd show.mkv
 function ffmpeg-video-make-dvd ()
 {
-    if [ -z "$1" ]; then
-        python -I ~/dot-files/scripts/ffmpeg.py make-dvd
+    if [[ -z "${1:-}" ]]; then
+        _ffmpeg_py make-dvd
     else
-        python -I ~/dot-files/scripts/ffmpeg.py make-dvd --input_filename="$1"
+        _ffmpeg_py make-dvd --input_filenames "$@"
     fi
 }
 
+# Unfinished Audible AAX scrape. Encode path is not implemented yet.
+#   ffmpeg-audio-split-encode
+#   ffmpeg-audio-split-encode book_B002V0Q3T4.aax
 function ffmpeg-audio-split-encode ()
 {
-    if [ -z "$1" ]; then
-        python -I ~/dot-files/scripts/ffmpeg.py audio-split-encode
+    if [[ -z "${1:-}" ]]; then
+        _ffmpeg_py audio-split-encode
     else
-        python -I ~/dot-files/scripts/ffmpeg.py audio-split-encode --input_filename="$1"
+        _ffmpeg_py audio-split-encode --input_filenames "$@"
     fi
 }
 
+# Convert mp3/wav/aac/m4a/ogg under DIR (default .) to flac, archive sources.
+#   ffmpeg-audio-convert
+#   ffmpeg-audio-convert ./incoming
 function ffmpeg-audio-convert ()
 {
-    local search_dir="${1:-.}"  # Default to current directory if no argument provided
+    _ffmpeg_py audio-convert --search-dir "${1:-.}"
+}
 
-    # Check if ffmpeg is installed
-    if ! command -v ffmpeg &> /dev/null
-    then
-        echo "ffmpeg could not be found. Please install ffmpeg first."
-        return 1
+# Write jellyfin.job from mkvs in cropped/ (or cwd). Fill in titles, then sort.
+#   ffmpeg-jellyfin-init tv
+#   ffmpeg-jellyfin-init movie "Solo Mia (2026) {imdb-tt32306991}"
+function ffmpeg-jellyfin-init ()
+{
+    if [[ $# -lt 1 ]]; then
+        _ffmpeg_usage "usage: ffmpeg-jellyfin-init tv|movie [TITLE]"
+        return
     fi
+    if [[ -n "${2:-}" ]]; then
+        _ffmpeg_py jellyfin-init --kind "$1" --title "$2"
+    else
+        _ffmpeg_py jellyfin-init --kind "$1"
+    fi
+}
 
-    # Find all audio files and store them in an array
-    mapfile -t audio_files < <(find "$search_dir" -type f \( -iname "*.mp3" -o -iname "*.wav" -o -iname "*.aac" -o -iname "*.m4a" -o -iname "*.ogg" \))
-
-    for file in "${audio_files[@]}"; do
-        # Get the directory path and filename without extension
-        dir_path=$(dirname "$file")
-        base_name=$(basename "$file")
-        new_name="${base_name%.*}.flac"
-
-        # Convert the file to FLAC
-        ffmpeg -i "$file" -c:a flac -compression_level 12 -map_metadata 0 "$dir_path/$new_name"
-
-        # Check if conversion was successful
-        if [ $? -eq 0 ]; then
-            echo "Converted $file to $dir_path/$new_name"
-
-            # Preserve Windows file metadata
-            touch -r "$file" "$new_name"  # Copies modification times
-            cp -a "$file" "$new_name"     # Copies all file attributes (permissions, timestamps)
-
-            # Create an archives directory if it doesn't exist
-            mkdir -p "archives/$dir_path"
-
-            # Move the original file to the archives directory
-            mv --verbose "$file" "archives/$dir_path"
-            echo "Moved original file to archives/$dir_path"
-        else
-            echo "Failed to convert $file"
-        fi
-    done
+# Print the planned moves, then ask before moving.
+#   ffmpeg-jellyfin-sort
+#   ffmpeg-jellyfin-sort ./other.job
+function ffmpeg-jellyfin-sort ()
+{
+    _ffmpeg_py jellyfin-sort --job "${1:-jellyfin.job}"
 }

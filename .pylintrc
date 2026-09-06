@@ -1,12 +1,11 @@
 [MASTER]
-extension-pkg-whitelist=
+extension-pkg-allow-list=
 ignore=CVS
 ignore-patterns=
 jobs=0
 limit-inference-results=100
 load-plugins=
 persistent=yes
-suggestion-mode=yes
 unsafe-load-any-extension=no
 
 [MESSAGES CONTROL]
@@ -40,5 +39,5 @@ good-names=_
 no-docstring-rgx=^_
 
 [EXCEPTIONS]
-overgeneral-exceptions=BaseException,
-                       Exception
+overgeneral-exceptions=builtins.BaseException,
+                       builtins.Exception
