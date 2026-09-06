@@ -10,7 +10,7 @@ from ffmpeg_tools.audio_convert import convert_audio_tree
 from ffmpeg_tools.dvd import create_all_dvds
 from ffmpeg_tools.dvd import create_dvd
 from ffmpeg_tools.jellyfin import DEFAULT_JOB_NAME
-from ffmpeg_tools.jellyfin import apply_moves
+from ffmpeg_tools.jellyfin import confirm_and_apply
 from ffmpeg_tools.jellyfin import load_job
 from ffmpeg_tools.jellyfin import planned_moves
 from ffmpeg_tools.jellyfin import write_template
@@ -34,8 +34,7 @@ examples:
   %(prog)s audio-convert --search-dir .
   %(prog)s audio-split-encode -i book_B002V0Q3T4.aax
   %(prog)s jellyfin-init --kind tv
-  %(prog)s jellyfin-plan --job jellyfin.job
-  %(prog)s jellyfin-apply --job jellyfin.job --apply
+  %(prog)s jellyfin-sort --job jellyfin.job
 """
 
 
@@ -130,14 +129,9 @@ def cmd_jellyfin_init(args):
     )
 
 
-def cmd_jellyfin_plan(args):
+def cmd_jellyfin_sort(args):
     job = load_job(args.job or DEFAULT_JOB_NAME)
-    apply_moves(planned_moves(job, args.search_dir), dry_run=True)
-
-
-def cmd_jellyfin_apply(args):
-    job = load_job(args.job or DEFAULT_JOB_NAME)
-    apply_moves(planned_moves(job, args.search_dir), dry_run=not args.apply)
+    confirm_and_apply(planned_moves(job, args.search_dir))
 
 
 COMMANDS = {
@@ -151,8 +145,9 @@ COMMANDS = {
     "video-merge-chapters": cmd_video_merge_chapters,
     "audio-convert": cmd_audio_convert,
     "jellyfin-init": cmd_jellyfin_init,
-    "jellyfin-plan": cmd_jellyfin_plan,
-    "jellyfin-apply": cmd_jellyfin_apply,
+    "jellyfin-sort": cmd_jellyfin_sort,
+    "jellyfin-plan": cmd_jellyfin_sort,
+    "jellyfin-apply": cmd_jellyfin_sort,
 }
 
 
@@ -178,13 +173,12 @@ def main():
         "--chapters-per-episode", type=int, help="How many split files per episode"
     )
     parser.add_argument("--total-chapters", type=int, help="How many split files exist")
-    parser.add_argument("--search-dir", default=".", help="Root for audio-convert / jellyfin sources")
+    parser.add_argument(
+        "--search-dir", default=".", help="Root for audio-convert / jellyfin sources"
+    )
     parser.add_argument("--job", default=DEFAULT_JOB_NAME, help="Jellyfin job file")
     parser.add_argument("--kind", choices=("tv", "movie"), help="jellyfin-init library kind")
     parser.add_argument("--title", help="jellyfin-init title / show tag")
-    parser.add_argument(
-        "--apply", action="store_true", help="jellyfin-apply actually moves files"
-    )
     args = parser.parse_args()
     print(args)
     COMMANDS[args.command](args)
