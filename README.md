@@ -2,7 +2,9 @@
 
 Personal Linux (OpenMandriva Rock) and Windows developer setup. One git
 clone under `~/dot-files` is the source of truth. Role scripts install
-packages and link configs. Re-running a role is the upgrade path.
+packages and link configs. Re-running a role is the intended upgrade path.
+
+Layout ideas that are **not done yet** live in `docs/structure.md`.
 
 ## Layout
 
@@ -18,6 +20,7 @@ packages and link configs. Re-running a role is the upgrade path.
 | `setup/`         | OpenMandriva role installer. See `setup/README.md`.                 |
 | `windows/`       | Winget lists and work/personal PowerShell. See `windows/README.md`. |
 | `scripts/`       | One-off Python helpers (ffmpeg, dictation, Minecraft mods).         |
+| `docs/`          | Notes that are not run by a role.                                   |
 
 ## Linux machine
 

@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Point Brave at GNOME Keyring / libsecret instead of KWallet.
+# Point Brave at GNOME Keyring / libsecret instead of KWallet, and make
+# ly/login PAM unlock the keyring named "login" with the Unix password.
 # Existing KWallet-encrypted logins will not migrate; sign in again once.
+#
+# PAM only auto-unlocks the keyring whose name is exactly "login".
+# If Seahorse shows "Default keyring", rename it to login (same password
+# as the account) so the next graphical login unlocks it.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -10,31 +15,60 @@ require_user
 
 ensure_packages gnome-keyring libsecret
 
-pam_ly="/etc/pam.d/ly"
-if [[ -f "$pam_ly" ]] && ! grep -q 'pam_gnome_keyring.so' "$pam_ly"; then
-    log "add gnome-keyring lines to ${pam_ly}"
+ensure_pam_line() {
+    local file="$1"
+    local line="$2"
+    [[ -f "$file" ]] || return 0
+    if grep -Fqx "$line" "$file"; then
+        return 0
+    fi
+    log "pam: ${line} -> ${file}"
     if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-        sudo tee -a "$pam_ly" >/dev/null <<'EOF'
+        printf '\n%s\n' "$line" | sudo tee -a "$file" >/dev/null
+    fi
+}
 
-auth       optional     pam_gnome_keyring.so
-session    optional     pam_gnome_keyring.so auto_start
-EOF
+# ly includes login. Put the auth token capture on both, and start the
+# daemon on session. passwd keeps the keyring password in sync later.
+for pam_file in /etc/pam.d/ly /etc/pam.d/login /etc/pam.d/system-auth; do
+    ensure_pam_line "$pam_file" 'auth       optional     pam_gnome_keyring.so'
+    ensure_pam_line "$pam_file" 'session    optional     pam_gnome_keyring.so auto_start'
+done
+ensure_pam_line /etc/pam.d/passwd 'password   optional     pam_gnome_keyring.so'
+
+keyrings="${DOTFILES_HOME}/.local/share/keyrings"
+ensure_dir "$keyrings"
+default_ptr="${keyrings}/default"
+if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+    if [[ ! -f "$default_ptr" ]] || ! grep -qx 'login' "$default_ptr"; then
+        log "default keyring name -> login (${default_ptr})"
+        printf 'login\n' >"$default_ptr"
+        chmod 600 "$default_ptr" || true
+    fi
+    if [[ ! -e "${keyrings}/login.keyring" ]]; then
+        log "no login.keyring yet; create one named login in Seahorse with the account password"
+        if compgen -G "${keyrings}/*.keyring" >/dev/null; then
+            log "existing keyrings: $(find "$keyrings" -name '*.keyring' -printf '%f ' 2>/dev/null || true)"
+        fi
     fi
 fi
 
 flags="${DOTFILES_HOME}/.config/brave-flags.conf"
 ensure_dir "$(dirname "$flags")"
-if [[ -f "$flags" ]] && grep -q 'password-store=gnome-libsecret' "$flags"; then
-    :
-else
-    log "write ${flags}"
-    if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-        printf '%s\n' '--password-store=gnome-libsecret' >>"$flags"
-    fi
+want_flags=(
+    '--password-store=gnome-libsecret'
+    '--restore-last-session'
+)
+if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+    touch "$flags"
+    for flag in "${want_flags[@]}"; do
+        if ! grep -Fqx "$flag" "$flags"; then
+            log "brave flag ${flag}"
+            printf '%s\n' "$flag" >>"$flags"
+        fi
+    done
 fi
 
-# Session-local desktop override so launchers pick up the flag even if
-# brave-flags.conf is ignored on this build.
 apps="${DOTFILES_HOME}/.local/share/applications"
 ensure_dir "$apps"
 override="${apps}/brave-browser.desktop"
@@ -45,9 +79,9 @@ for candidate in /usr/share/applications/brave-browser.desktop /usr/share/applic
         break
     fi
 done
-if [[ -n "$src" ]]; then
+if [[ -n "$src" && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
     log "desktop override ${override}"
-    if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-        sed 's|^Exec=\(.*brave[^ ]*\)|Exec=\1 --password-store=gnome-libsecret|' "$src" >"$override"
-    fi
+    sed \
+        -e 's|^Exec=\(.*brave[^ ]*\)|Exec=\1 --password-store=gnome-libsecret --restore-last-session|' \
+        "$src" >"$override"
 fi
