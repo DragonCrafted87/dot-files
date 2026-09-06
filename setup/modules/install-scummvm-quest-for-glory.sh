@@ -19,6 +19,7 @@ STEAM_QFG="${STEAM_QFG:-${DOTFILES_HOME}/games/steam-library/steamapps/common/Qu
 SCUMMVM_CONFIG="${SCUMMVM_HOME}/scummvm.ini"
 ICON_DIR="${SCUMMVM_HOME}/icons"
 ICON_BASE="https://raw.githubusercontent.com/scummvm/scummvm-icons/master/icons"
+SCUMMVM_APP_ICON_URL="https://raw.githubusercontent.com/scummvm/scummvm-media/master/scummvm_icon_256.png"
 DATA_HOME="${XDG_DATA_HOME:-${DOTFILES_HOME}/.local/share}"
 HICOLOR_DIR="${DATA_HOME}/icons/hicolor/256x256/apps"
 DESKTOP_DIR="${XDG_DESKTOP_DIR:-}"
@@ -112,6 +113,38 @@ fetch_icon() {
     install_theme_icon "$dest" "$stem" || true
 }
 
+install_scummvm_launcher_icon() {
+    local dest="${ICON_DIR}/scummvm.png"
+    local cand
+    if [[ ! -f "$dest" ]]; then
+        for cand in \
+            /usr/share/icons/hicolor/256x256/apps/scummvm.png \
+            /usr/share/icons/hicolor/128x128/apps/scummvm.png \
+            /usr/share/pixmaps/scummvm.png \
+            /usr/share/icons/hicolor/256x256/apps/org.scummvm.scummvm.png \
+            /usr/share/icons/hicolor/128x128/apps/org.scummvm.scummvm.png; do
+            if [[ -f "$cand" ]]; then
+                log "scummvm icon from ${cand}"
+                if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+                    install -m 0644 "$cand" "$dest"
+                fi
+                break
+            fi
+        done
+    fi
+    if [[ ! -f "$dest" ]]; then
+        log "download official ScummVM icon"
+        if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+            if ! curl -fsSL "$SCUMMVM_APP_ICON_URL" -o "$dest"; then
+                warn "could not download ScummVM icon"
+                rm -f "$dest"
+                return 1
+            fi
+        fi
+    fi
+    install_theme_icon "$dest" scummvm || true
+}
+
 write_desktop() {
     local dest="$1"
     local name="$2"
@@ -201,9 +234,6 @@ platform=pc
 EOF
 }
 
-# An empty ~/.local/share/icons/hicolor/index.theme plus a tiny
-# icon-theme.cache shadows /usr/share/icons/hicolor and turns most
-# app icons into the missing-texture placeholder.
 repair_hicolor_shadow() {
     local hicolor_root="${DATA_HOME}/icons/hicolor"
     local theme="${hicolor_root}/index.theme"
@@ -237,8 +267,6 @@ refresh_desktop_cache() {
     fi
 }
 
-# --- packages and layout ------------------------------------------------
-
 ensure_packages scummvm rsync curl desktop-file-utils
 command -v scummvm >/dev/null 2>&1 || die "scummvm is not on PATH after package install"
 command -v rsync >/dev/null 2>&1 || die "rsync is not on PATH after package install"
@@ -263,9 +291,7 @@ fi
 
 write_wrapper
 write_ini_header
-fetch_icon "org.scummvm.scummvm.png" || fetch_icon "scummvm.png" || true
-
-# --- copy game data -----------------------------------------------------
+install_scummvm_launcher_icon || true
 
 copied=0
 
@@ -371,7 +397,7 @@ write_one() {
 }
 
 write_one scummvm-qfg "ScummVM (Quest for Glory)" \
-    "ScummVM with Quest for Glory games" --gui org.scummvm.scummvm.png
+    "ScummVM with Quest for Glory games" --gui scummvm.png
 
 if [[ -d "${QFG_DEST}/qfg1vga" ]]; then
     write_one qfg1vga "Quest for Glory I (VGA)" \
