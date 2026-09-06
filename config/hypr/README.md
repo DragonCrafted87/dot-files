@@ -40,10 +40,15 @@ Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+T` theater,
 - `idle-display-off.sh` → `display-profile.sh idle-off`
 - `idle-display-on.sh` → `dpms on`, then `display-profile.sh idle-on`
 
-On runewyrm, idle-off records workspaces on HDMI-A-1 and disables that
-output only. Desk DisplayPort panels stay as they are. idle-on re-enables
-HDMI for the saved profile and restores those workspaces. It does not
-rewrite DP-2/DP-3. Other hosts only get `dpms off` / `dpms on`.
+On runewyrm, idle-off records workspaces on HDMI-A-1, `dpms off` that
+output **and** DP-2/DP-3 (desk/theater only), then disables HDMI so the
+TV drops the link. idle-on `dpms on` the DP panels, re-enables HDMI for
+the saved profile, and restores those workspaces. It does **not**
+rewrite DP-2/DP-3 layout keywords. workshare leaves DP disabled.
+
+Lock and unlock also run the same off/on pair (`on_lock_cmd` /
+`on_unlock_cmd`) so the desk blanks when hyprlock starts, not only after
+the 420s idle timer.
 
 If the DP panels are dark after a bad profile, `display-profile.sh desk`
 brings them back.
