@@ -3,9 +3,7 @@
 from os import utime
 from os.path import dirname
 from os.path import getmtime
-from os.path import join
 from os.path import relpath
-from os.path import splitext
 from pathlib import Path
 from subprocess import CalledProcessError
 
