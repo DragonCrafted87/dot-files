@@ -6,12 +6,12 @@ Working notes on `scripts/ffmpeg.py`. Not finished. Branch `ffmpeg-refactor`.
 
 One module, four jobs, plus a CLI:
 
-| Command | What it does | External binaries |
-| --- | --- | --- |
-| `video-crop-encode` | cropdetect + re-encode to h264/flac mkv | ffmpeg, ffprobe |
-| `video-append` / `video-merge-crop-encode` | concat demuxer + rebuilt chapter metadata | ffmpeg, ffprobe |
-| `audio-split-encode` | Audible AAX + scrape narrator + Windows path | ffmpeg, ffprobe, requests |
-| `make-dvd` | chapter-split to ntsc-dvd, dvdauthor, mkisofs | ffmpeg, ffprobe, dvdauthor, mkisofs |
+| Command                                    | What it does                                  | External binaries                   |
+| ------------------------------------------ | --------------------------------------------- | ----------------------------------- |
+| `video-crop-encode`                        | cropdetect + re-encode to h264/flac mkv       | ffmpeg, ffprobe                     |
+| `video-append` / `video-merge-crop-encode` | concat demuxer + rebuilt chapter metadata     | ffmpeg, ffprobe                     |
+| `audio-split-encode`                       | Audible AAX + scrape narrator + Windows path  | ffmpeg, ffprobe, requests           |
+| `make-dvd`                                 | chapter-split to ntsc-dvd, dvdauthor, mkisofs | ffmpeg, ffprobe, dvdauthor, mkisofs |
 
 `bashrc.d/ffmpeg.bashrc` still shells out to the CLI for concat/split and only calls the Python file for crop, dvd, and audio.
 
@@ -49,15 +49,15 @@ Recommendation: PyAV (or keep ffprobe JSON) for **read-only probe**. Keep the ff
 
 ## Pylint overrides to drop
 
-| Current disable | Why it fires | How to drop it |
-| --- | --- | --- |
-| `too-many-locals` | crop/concat/audio each do probe + IO + encode | split functions |
-| `too-many-statements` | same | split functions |
-| `too-many-branches` | `main()` command switch | `dict` of handlers |
-| `broad-except` | bare `except Exception` in every worker | catch `CalledProcessError` / `OSError` / `KeyError` |
-| `unspecified-encoding` | `open(...)` without encoding in audio | `encoding="utf-8"` |
-| `invalid-name` | `f` as file handle | `metadata_file` |
-| `import-error` | `requests` not in pylint env | keep requests; document; optional `--disable` only in CI if needed |
+| Current disable        | Why it fires                                  | How to drop it                                                     |
+| ---------------------- | --------------------------------------------- | ------------------------------------------------------------------ |
+| `too-many-locals`      | crop/concat/audio each do probe + IO + encode | split functions                                                    |
+| `too-many-statements`  | same                                          | split functions                                                    |
+| `too-many-branches`    | `main()` command switch                       | `dict` of handlers                                                 |
+| `broad-except`         | bare `except Exception` in every worker       | catch `CalledProcessError` / `OSError` / `KeyError`                |
+| `unspecified-encoding` | `open(...)` without encoding in audio         | `encoding="utf-8"`                                                 |
+| `invalid-name`         | `f` as file handle                            | `metadata_file`                                                    |
+| `import-error`         | `requests` not in pylint env                  | keep requests; document; optional `--disable` only in CI if needed |
 
 `.pylintrc` already disables several complexity checks globally. Prefer fixing the functions over adding more file-level disables.
 

@@ -1,9 +1,9 @@
 """Chapter-split to ntsc-dvd, author, and wrap an ISO."""
 
+from concurrent.futures import ThreadPoolExecutor
 from glob import glob
 from os import makedirs
 from shutil import rmtree as rmdir
-from concurrent.futures import ThreadPoolExecutor
 
 from . import MAIN_WORKERS
 from .pool import encoding_executor

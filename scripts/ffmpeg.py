@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # Thin CLI. Implementation lives in scripts/ffmpeg_tools/.
 
+import sys
 from argparse import ArgumentParser
 from pathlib import Path
-import sys
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(SCRIPTS_DIR) not in sys.path:
