@@ -19,12 +19,14 @@ STEAM_QFG="${STEAM_QFG:-${DOTFILES_HOME}/games/steam-library/steamapps/common/Qu
 SCUMMVM_CONFIG="${SCUMMVM_HOME}/scummvm.ini"
 ICON_DIR="${SCUMMVM_HOME}/icons"
 ICON_BASE="https://raw.githubusercontent.com/scummvm/scummvm-icons/master/icons"
+DATA_HOME="${XDG_DATA_HOME:-${DOTFILES_HOME}/.local/share}"
+HICOLOR_DIR="${DATA_HOME}/icons/hicolor/256x256/apps"
 DESKTOP_DIR="${XDG_DESKTOP_DIR:-}"
 if [[ -z "$DESKTOP_DIR" ]] && command -v xdg-user-dir >/dev/null 2>&1; then
     DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
 fi
 DESKTOP_DIR="${DESKTOP_DIR:-${DOTFILES_HOME}/Desktop}"
-APPS_DIR="${XDG_DATA_HOME:-${DOTFILES_HOME}/.local/share}/applications"
+APPS_DIR="${DATA_HOME}/applications"
 MARKER="X-DotFiles-QFG"
 
 RSYNC_EXCLUDES=(
@@ -80,21 +82,34 @@ find_variant_dir() {
     return 1
 }
 
-fetch_icon() {
-    local file="$1"
-    local dest="${ICON_DIR}/${file}"
-    if [[ -f "$dest" ]]; then
-        return 0
-    fi
-    log "icon ${file}"
+install_theme_icon() {
+    local src="$1"
+    local name="$2"
+    local dest="${HICOLOR_DIR}/${name}.png"
+    [[ -f "$src" ]] || return 1
+    ensure_dir "$HICOLOR_DIR"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         return 0
     fi
-    if ! curl -fsSL "${ICON_BASE}/${file}" -o "$dest"; then
-        warn "could not download ${file}"
-        rm -f "$dest"
-        return 1
+    install -m 0644 "$src" "$dest"
+}
+
+fetch_icon() {
+    local file="$1"
+    local dest="${ICON_DIR}/${file}"
+    local stem="${file%.png}"
+    if [[ ! -f "$dest" ]]; then
+        log "icon ${file}"
+        if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+            return 0
+        fi
+        if ! curl -fsSL "${ICON_BASE}/${file}" -o "$dest"; then
+            warn "could not download ${file}"
+            rm -f "$dest"
+            return 1
+        fi
     fi
+    install_theme_icon "$dest" "$stem" || true
 }
 
 write_desktop() {
@@ -187,17 +202,34 @@ EOF
 }
 
 refresh_desktop_cache() {
+    local hicolor_root="${DATA_HOME}/icons/hicolor"
+    log "refresh desktop and icon caches"
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        return 0
+    fi
+    touch "$APPS_DIR" "$hicolor_root" 2>/dev/null || true
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "$APPS_DIR" >/dev/null 2>&1 || true
     fi
+    if command -v gtk-update-icon-cache >/dev/null 2>&1 && [[ -d "$hicolor_root" ]]; then
+        touch "${hicolor_root}/index.theme" 2>/dev/null || true
+        gtk-update-icon-cache -f -t "$hicolor_root" >/dev/null 2>&1 || true
+    fi
     if command -v xdg-desktop-menu >/dev/null 2>&1; then
         xdg-desktop-menu forceupdate >/dev/null 2>&1 || true
+    fi
+    if command -v update-mime-database >/dev/null 2>&1 && [[ -d "${DATA_HOME}/mime" ]]; then
+        update-mime-database "${DATA_HOME}/mime" >/dev/null 2>&1 || true
+    fi
+    # Nudge Quickshell DesktopEntries watchers.
+    if command -v qs >/dev/null 2>&1; then
+        qs ipc call startmenu reload >/dev/null 2>&1 || true
     fi
 }
 
 # --- packages and layout ------------------------------------------------
 
-ensure_packages scummvm rsync curl
+ensure_packages scummvm rsync curl desktop-file-utils
 command -v scummvm >/dev/null 2>&1 || die "scummvm is not on PATH after package install"
 command -v rsync >/dev/null 2>&1 || die "rsync is not on PATH after package install"
 
@@ -209,6 +241,7 @@ ensure_dir "$GAMES_ROOT"
 ensure_dir "$SCUMMVM_HOME"
 ensure_dir "${SCUMMVM_HOME}/saves"
 ensure_dir "$ICON_DIR"
+ensure_dir "$HICOLOR_DIR"
 ensure_dir "$QFG_DEST"
 ensure_dir "$DESKTOP_DIR"
 ensure_dir "$APPS_DIR"
@@ -318,16 +351,16 @@ write_one() {
     local comment="$3"
     local target="$4"
     local icon_file="$5"
-    local icon="${ICON_DIR}/${icon_file}"
-    if [[ ! -f "$icon" ]]; then
-        icon="scummvm"
+    local icon_name="${icon_file%.png}"
+    if [[ ! -f "${HICOLOR_DIR}/${icon_name}.png" && ! -f "${ICON_DIR}/${icon_file}" ]]; then
+        icon_name="scummvm"
     fi
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         log "would write launcher ${slug}"
         return 0
     fi
-    write_desktop "${DESKTOP_DIR}/${slug}.desktop" "$name" "$comment" "$target" "$icon"
-    write_desktop "${APPS_DIR}/${slug}.desktop" "$name" "$comment" "$target" "$icon"
+    write_desktop "${DESKTOP_DIR}/${slug}.desktop" "$name" "$comment" "$target" "$icon_name"
+    write_desktop "${APPS_DIR}/${slug}.desktop" "$name" "$comment" "$target" "$icon_name"
 }
 
 write_one scummvm-qfg "ScummVM (Quest for Glory)" \
