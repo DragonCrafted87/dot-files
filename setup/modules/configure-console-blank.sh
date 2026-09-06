@@ -5,8 +5,9 @@
 # Covers:
 #   * kernel VT blanking (consoleblank=900, live + GRUB)
 #   * every getty@ via a systemd drop-in (setterm)
-#   * Ly inactivity_cmd / inactivity_delay when Ly is installed
-#     (config.ini or config.lua)
+#   * Ly inactivity_cmd / inactivity_delay (config.ini or config.lua)
+#     via a helper that writes DRM DPMS Off. Ly 1.1.0's default
+#     inactivity_delay is 0 (never) and setterm alone does not blank DP.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -18,6 +19,8 @@ BLANK_MINUTES="${CONSOLE_BLANK_MINUTES:-15}"
 BLANK_SECONDS="$((BLANK_MINUTES * 60))"
 SETTERM_BIN="$(command -v setterm || true)"
 [[ -n "$SETTERM_BIN" ]] || SETTERM_BIN="/usr/bin/setterm"
+LY_BLANK_DEST="/usr/local/sbin/ly-blank-displays"
+LY_BLANK_SRC="${SETUP_FILES_DIR}/ly-blank-displays.sh"
 
 ensure_grub_cmdline_arg() {
     local arg="$1"
@@ -45,7 +48,6 @@ ensure_grub_cmdline_arg() {
         if [[ " ${current} " == *" ${arg} "* ]]; then
             return 0
         fi
-        # Replace an older consoleblank=N rather than stacking two.
         rebuilt="$(printf '%s\n' "$current" | sed -E "s/consoleblank=[0-9]+//g; s/  +/ /g; s/^ //; s/ $//")"
         if [[ -n "$rebuilt" ]]; then
             rebuilt="${rebuilt} ${arg}"
@@ -90,11 +92,18 @@ set_ly_ini_key() {
         if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
             sudo sed -i -E "s|^${key}[[:space:]]*=.*|${key} = ${value}|" "$file"
         fi
-    else
-        log "add ${key} = ${value} to ${file}"
+        return 0
+    fi
+    if grep -qE "^#[[:space:]]*${key}[[:space:]]*=" "$file"; then
+        log "uncomment ${key} = ${value} in ${file}"
         if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-            printf '%s = %s\n' "$key" "$value" | sudo tee -a "$file" >/dev/null
+            sudo sed -i -E "s|^#[[:space:]]*${key}[[:space:]]*=.*|${key} = ${value}|" "$file"
         fi
+        return 0
+    fi
+    log "add ${key} = ${value} to ${file}"
+    if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+        printf '%s = %s\n' "$key" "$value" | sudo tee -a "$file" >/dev/null
     fi
 }
 
@@ -102,7 +111,6 @@ set_ly_lua_key() {
     local file="$1"
     local key="$2"
     local value="$3"
-    # Matches inactivity_cmd = nil / "..." and inactivity_delay = 0
     if grep -qE "^[[:space:]]*${key}[[:space:]]*=" "$file"; then
         if grep -qE "^[[:space:]]*${key}[[:space:]]*=[[:space:]]*${value}[[:space:]]*,?[[:space:]]*$" "$file"; then
             return 0
@@ -116,6 +124,17 @@ set_ly_lua_key() {
     fi
 }
 
+install_ly_blank_helper() {
+    [[ -f "$LY_BLANK_SRC" ]] || die "missing ${LY_BLANK_SRC}"
+    if [[ -f "$LY_BLANK_DEST" ]] && cmp -s "$LY_BLANK_SRC" "$LY_BLANK_DEST"; then
+        return 0
+    fi
+    log "install ${LY_BLANK_DEST}"
+    if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+        sudo install -m 0755 "$LY_BLANK_SRC" "$LY_BLANK_DEST"
+    fi
+}
+
 # --- kernel / live console ----------------------------------------------
 ensure_grub_cmdline_arg "consoleblank=${BLANK_SECONDS}"
 
@@ -124,8 +143,6 @@ if [[ -f /sys/module/kernel/parameters/consoleblank ]]; then
     if [[ "$current_blank" != "$BLANK_SECONDS" ]]; then
         log "consoleblank=${BLANK_SECONDS} (live)"
         if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-            # Some kernels expose this file but reject writes. Persistent
-            # blanking still comes from GRUB + the getty drop-in.
             if ! printf '%s\n' "$BLANK_SECONDS" | sudo tee /sys/module/kernel/parameters/consoleblank >/dev/null; then
                 warn "kernel rejected live consoleblank write; GRUB value applies on next boot"
             fi
@@ -142,12 +159,14 @@ EOF
 )"
 
 # --- Ly login screen ----------------------------------------------------
+install_ly_blank_helper
+
 if [[ -f /etc/ly/config.ini ]]; then
     set_ly_ini_key /etc/ly/config.ini inactivity_delay "$BLANK_SECONDS"
-    set_ly_ini_key /etc/ly/config.ini inactivity_cmd "${SETTERM_BIN} --blank force"
+    set_ly_ini_key /etc/ly/config.ini inactivity_cmd "$LY_BLANK_DEST"
 elif [[ -f /etc/ly/config.lua ]]; then
     set_ly_lua_key /etc/ly/config.lua inactivity_delay "$BLANK_SECONDS"
-    set_ly_lua_key /etc/ly/config.lua inactivity_cmd "\"${SETTERM_BIN} --blank force\""
+    set_ly_lua_key /etc/ly/config.lua inactivity_cmd "\"${LY_BLANK_DEST}\""
 else
     log "Ly config not present; console blanking only"
 fi
