@@ -19,7 +19,7 @@ ensure_packages \
     kpeople \
     breeze \
     breeze-icons \
-    kf5-qqc2-desktop-style \
+    qqc2-desktop-style \
     kf6-qqc2-desktop-style \
     lib64Qt6Multimedia \
     kirigami-addons
