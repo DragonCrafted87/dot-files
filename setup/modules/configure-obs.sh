@@ -10,6 +10,7 @@ require_user
 
 src="${SETUP_FILES_DIR}/obs"
 dest="${DOTFILES_HOME}/.var/app/com.obsproject.Studio/config/obs-studio"
+nebula="${dest}/basic/scenes/nebula_background.jpg"
 
 if [[ ! -d "$src" ]] || [[ -z "$(find "$src" -type f ! -name '.gitkeep' -print -quit 2>/dev/null)" ]]; then
     warn "no harvested OBS config in ${src}; run setup/utility/harvest-obs.sh"
@@ -30,3 +31,12 @@ rsync -a --delete \
     --exclude 'service.json' \
     --exclude '.gitkeep' \
     "${src}/" "${dest}/"
+
+# Scene collections store absolute paths. Point the Image source at the
+# copy that ships next to Untitled.json, not the old loose file in $HOME.
+if [[ -f "$nebula" ]]; then
+    shopt -s nullglob
+    for scene in "${dest}/basic/scenes/"*.json "${dest}/basic/scenes/"*.json.bak; do
+        [[ -f "$scene" ]] || continue
+        sed -i \
+            -e 's|/home/dragon/360_F_1423685604_x8B0ES8ArnfKfnAZsg5duuWNAHxR6oeD.jpg|'
