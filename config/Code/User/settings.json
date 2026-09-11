@@ -1,0 +1,9 @@
+{
+    "git.useIntegratedAskPass": true,
+    "git.terminalAuthentication": true,
+    "git.autofetch": true,
+    "remote.SSH.enableX11Forwarding": false,
+    "terminal.integrated.env.linux": {
+        "SSH_ASKPASS_REQUIRE": "never"
+    }
+}
