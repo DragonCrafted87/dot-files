@@ -21,6 +21,31 @@ ensure_packages \
     kirigami-addons \
     kf6-qqc2-desktop-style
 
+install_android_udev() {
+    local src="${SETUP_FILES_DIR}/kdeconnect/51-android.rules"
+    local dest="/etc/udev/rules.d/51-android.rules"
+
+    if [[ ! -f "$src" ]]; then
+        warn "missing ${src}"
+        return 0
+    fi
+    if [[ -f "$dest" ]] && cmp -s "$src" "$dest"; then
+        :
+    else
+        log "udev ${dest}"
+        run sudo install -m 0644 "$src" "$dest"
+        run sudo udevadm control --reload-rules
+        run sudo udevadm trigger --subsystem-match=usb || true
+    fi
+
+    if getent group plugdev >/dev/null; then
+        if ! id -nG "${DOTFILES_USER}" | grep -qw plugdev; then
+            log "add ${DOTFILES_USER} to plugdev"
+            run sudo gpasswd -a "${DOTFILES_USER}" plugdev
+        fi
+    fi
+}
+
 allow_kdeconnect_firewall() {
     if ! command -v firewall-cmd >/dev/null; then
         return 0
@@ -56,6 +81,7 @@ allow_kdeconnect_firewall() {
 }
 
 allow_kdeconnect_firewall
+install_android_udev
 
 log "tray: kdeconnect-indicator   sms: kdeconnect-sms"
 log "names need Contacts plugin on the phone plus kpeoplevcard"
