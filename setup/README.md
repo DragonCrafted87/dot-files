@@ -69,12 +69,12 @@ A single module can be run on its own:
 Edit `roles.conf` to change the module lists. `[common]` runs for every
 role. `laptop` includes `@workstation` and then laptop-only modules.
 
-| Role          | Extra modules                                                                            |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, BOINC Manager |
-| `laptop`      | workstation plus `configure-laptop` (power-profiles-daemon)                              |
-| `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client                                         |
-| `server`      | CLI baseline, k3s, BOINC client; no GUI session                                          |
+| Role          | Extra modules                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------- |
+| `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, KDE Connect, BOINC Manager |
+| `laptop`      | workstation plus `configure-laptop` (power-profiles-daemon)                                           |
+| `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client                                                      |
+| `server`      | CLI baseline, k3s, BOINC client; no GUI session                                                       |
 
 Dolphin is the Hyprland file manager (`SUPER+E`). After
 `remove-plasma-sddm` strips Plasma, it has no KService/MIME map unless
@@ -105,6 +105,23 @@ Copy secrets onto a new box without going through `init-remote.sh`:
 
 ```bash
 ~/dot-files/setup/utility/transfer-secrets.sh dragon@newbox.lan
+```
+
+## KDE Connect / GrapheneOS SMS
+
+`install-kdeconnect` is on workstation (and therefore laptop). It
+installs the `kdeconnect` rpm plus `android-tools`, and opens firewalld
+ports 1714-1764 (or the packaged `kdeconnect` service if present).
+Hyprland starts the daemon from `config/hypr/scripts/start-kdeconnect.sh`.
+
+Pair the GrapheneOS phone yourself. Steps are in
+`setup/files/kdeconnect/README.md`. Short version: F-Droid KDE Connect,
+same Wi-Fi, pair, grant SMS/contacts/notifications, enable the SMS
+plugin. Sent messages that never show up on the desktop need:
+
+```bash
+adb shell appops set --uid org.kde.kdeconnect_tp READ_RESTRICTED_MESSAGES allow
+adb shell am force-stop org.kde.kdeconnect_tp
 ```
 
 ## MakeMKV
