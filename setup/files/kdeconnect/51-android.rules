@@ -1,0 +1,14 @@
+# Allow the seat user to talk to Android gadgets over USB (adb / fastboot).
+# GrapheneOS / Pixel uses Google 18d1; keep a few common OEM IDs too.
+ACTION!="add|change", GOTO="android_usb_end"
+SUBSYSTEM!="usb", GOTO="android_usb_end"
+
+ATTR{idVendor}=="18d1", MODE="0660", TAG+="uaccess", GROUP="plugdev"
+ATTR{idVendor}=="22d9", MODE="0660", TAG+="uaccess", GROUP="plugdev"
+ATTR{idVendor}=="0bb4", MODE="0660", TAG+="uaccess", GROUP="plugdev"
+ATTR{idVendor}=="04e8", MODE="0660", TAG+="uaccess", GROUP="plugdev"
+ATTR{idVendor}=="2a70", MODE="0660", TAG+="uaccess", GROUP="plugdev"
+ATTR{idVendor}=="0fce", MODE="0660", TAG+="uaccess", GROUP="plugdev"
+ATTR{idVendor}=="2717", MODE="0660", TAG+="uaccess", GROUP="plugdev"
+
+LABEL="android_usb_end"
