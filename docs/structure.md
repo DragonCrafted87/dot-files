@@ -17,7 +17,7 @@ Those shell entrypoints now live under `shell/`. `bashrc.d/` stays at
 the repo root so `DOTFILES_ROOT` remains "parent of bashrc.d". Pylint
 reads `.pylintrc` via `--rcfile=.pylintrc`.
 
-## Possible later moves (not started)
+## ~~Possible later moves (not started)~~
 
 - ~~`shell/linux.bashrc`, `shell/git-bash.bashrc`, `shell/root.bashrc`,
   `shell/profile`, `shell/omp.yaml`~~

@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# Git/ssh from VS Code (and other GUI tools) try ssh-askpass over X11
+# when DISPLAY is set. That fails on Hyprland. Force the tty/agent path.
+export SSH_ASKPASS_REQUIRE=never
+unset SSH_ASKPASS
+
 case "$HOSTNAME" in
 
     *media*|*node*)

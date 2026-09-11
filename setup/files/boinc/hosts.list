@@ -1,15 +1,15 @@
 # Hosts that run BOINC or the BOINC Manager.
-# One DNS name or IP per line. Copied to remote_hosts.cfg on every client
-# so workstation and laptop managers can query the fleet.
-# Replace these with your real names before the first fleet run.
+# Short hostname only; search-domain DNS fills in the rest.
+# One name per line. Copied to remote_hosts.cfg on every client.
+# install-boinc adds this machine under the matching role section
+# when it is missing.
 
 # workstation
-runewyrm.stealthdragonland.net
+runewyrm
 
 # laptop
-forgewyrm.stealthdragonland.net
+forgewyrm
 
 # htpcs
-
 
 # servers

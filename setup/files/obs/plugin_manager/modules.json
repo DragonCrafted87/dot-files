@@ -1,0 +1,16 @@
+[
+    {
+        "display_name": "",
+        "enabled": true,
+        "encoders": [],
+        "id": "",
+        "module_name": "obs-backgroundremoval",
+        "outputs": [],
+        "services": [],
+        "sources": [
+            "background_removal",
+            "enhanceportrait"
+        ],
+        "version": ""
+    }
+]

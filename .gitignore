@@ -1,2 +1,13 @@
 *__pycache__*
 omp.yaml.bak
+
+# VS Code writes a Chromium profile next to settings. Ignore the whole
+# tree, then keep the files we actually want in git.
+config/Code/**
+!config/Code/User/
+!config/Code/User/**
+!config/Code/Preferences
+!config/Code/languagepacks.json
+config/Code/User/History/
+config/Code/User/globalStorage/
+config/Code/User/workspaceStorage/

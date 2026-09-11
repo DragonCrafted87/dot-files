@@ -35,6 +35,64 @@ role="${role:-server}"
 prefs_src="${src}/prefs/${role}.xml"
 [[ -f "$prefs_src" ]] || die "missing role prefs ${prefs_src}"
 
+hosts_list="${src}/hosts.list"
+short_host="$(hostname -s 2>/dev/null || hostname)"
+short_host="${short_host%%.*}"
+
+boinc_role_header() {
+    case "$1" in
+        workstation) printf '%s\n' '# workstation' ;;
+        laptop) printf '%s\n' '# laptop' ;;
+        htpc) printf '%s\n' '# htpcs' ;;
+        server) printf '%s\n' '# servers' ;;
+        *) printf '# %s\n' "$1" ;;
+    esac
+}
+
+host_in_list() {
+    local list="$1" name="$2" line stripped
+    [[ -f "$list" ]] || return 1
+    while IFS= read -r line || [[ -n "${line:-}" ]]; do
+        stripped="${line%%#*}"
+        stripped="${stripped//[[:space:]]/}"
+        [[ -z "$stripped" ]] && continue
+        stripped="${stripped%%.*}"
+        if [[ "$stripped" == "$name" ]]; then
+            return 0
+        fi
+    done <"$list"
+    return 1
+}
+
+ensure_host_in_list() {
+    local list="$1" name="$2" header="$3"
+    local tmp line inserted=0
+    if host_in_list "$list" "$name"; then
+        return 0
+    fi
+    log "add ${name} to hosts.list under ${header}"
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        return 0
+    fi
+    tmp="$(mktemp)"
+    if [[ -f "$list" ]]; then
+        while IFS= read -r line || [[ -n "${line:-}" ]]; do
+            printf '%s\n' "$line" >>"$tmp"
+            if [[ "$line" == "$header" ]]; then
+                printf '%s\n' "$name" >>"$tmp"
+                inserted=1
+            fi
+        done <"$list"
+    fi
+    if [[ "$inserted" -eq 0 ]]; then
+        printf '\n%s\n%s\n' "$header" "$name" >>"$tmp"
+    fi
+    cat "$tmp" >"$list"
+    rm -f "$tmp"
+}
+
+ensure_host_in_list "$hosts_list" "$short_host" "$(boinc_role_header "$role")"
+
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     log "configure ${boinc_dir} from ${src} (prefs ${role})"
     exit 0
@@ -131,9 +189,9 @@ fi
 install_boinc_file "${src}/cc_config.xml" "${boinc_dir}/cc_config.xml"
 install_boinc_file "$prefs_src" "${boinc_dir}/global_prefs_override.xml"
 
-install_boinc_file "${src}/hosts.list" /etc/boinc-client/hosts.list 0644 1
+install_boinc_file "$hosts_list" /etc/boinc-client/hosts.list 0644 1
 tmp="$(mktemp)"
-grep -vE '^[[:space:]]*(#|$)' "${src}/hosts.list" >"$tmp" || true
+grep -vE '^[[:space:]]*(#|$)' "$hosts_list" >"$tmp" || true
 if [[ ! -s "$tmp" ]]; then
     warn "files/boinc/hosts.list has no live hosts; remote manager will be denied until you add some"
 fi
