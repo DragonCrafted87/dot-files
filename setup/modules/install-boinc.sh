@@ -27,7 +27,11 @@ boinc_dir="${DOTFILES_HOME}/.var/app/edu.berkeley.BOINC"
 rpc_file="${boinc_dir}/gui_rpc_auth.cfg"
 secret="${DOTFILES_HOME}/.config/dot-files/boinc-rpc.password"
 src="${SETUP_FILES_DIR}/boinc"
-role="${OMV_ROLE:-server}"
+role="${OMV_ROLE:-}"
+if [[ -z "$role" && -f "${CONFIG_TARGET_DIR}/dot-files/role" ]]; then
+    role="$(tr -d '[:space:]' <"${CONFIG_TARGET_DIR}/dot-files/role")"
+fi
+role="${role:-server}"
 prefs_src="${src}/prefs/${role}.xml"
 [[ -f "$prefs_src" ]] || die "missing role prefs ${prefs_src}"
 
@@ -43,7 +47,6 @@ ensure_dir /etc/boinc-client || run sudo mkdir -p /etc/boinc-client
 install -m 0644 "${src}/boinc-client.service" \
     "${DOTFILES_HOME}/.config/systemd/user/boinc-client.service"
 
-# Wrappers so scripts and PATH find the Flatpak binaries.
 write_wrapper() {
     local dest="$1"
     local command="$2"

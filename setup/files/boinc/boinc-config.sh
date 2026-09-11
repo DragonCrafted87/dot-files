@@ -40,6 +40,11 @@ load_secret_file() {
     fi
 }
 
+attached_to_science_united() {
+    timeout 8 "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null \
+        | grep -q "$PROJECT_URL"
+}
+
 if ! boinc_service_active; then
     printf 'error: boinc-client user service is not running\n' >&2
     printf '       systemctl --user status boinc-client.service\n' >&2
@@ -63,13 +68,14 @@ if ! wait_for_boinc_rpc; then
     exit 1
 fi
 
-if "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
+if attached_to_science_united; then
     printf 'already attached to Science United\n'
     if [[ "${BOINC_REPLACE:-0}" != "1" ]]; then
         exit 0
     fi
     printf 'detaching existing Science United account manager\n'
-    "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr detach
+    "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr detach || true
+    sleep 2
 fi
 
 if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
@@ -78,17 +84,25 @@ if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
 fi
 
 printf 'attaching to Science United as %s\n' "$science_united_user"
-if ! timeout 60 "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" \
-        --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password"; then
-    printf 'warning: attach timed out or Science United HTTP failed\n' >&2
-    printf '          retry later: /usr/local/bin/boinc-config.sh\n' >&2
-    exit 1
-fi
+# acct_mgr attach is async. The first call usually prints "poll status: retry"
+# and returns 0. Keep asking until info shows the URL or we time out.
+attach_out=""
+attach_out="$("$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" \
+    --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password" 2>&1 || true)"
+printf '%s\n' "$attach_out"
 
-sleep 2
-if timeout 8 "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
-    printf 'attached to Science United\n'
-else
-    printf 'warning: attach did not verify; retry with /usr/local/bin/boinc-config.sh\n' >&2
-    exit 1
-fi
+tries=0
+while ! attached_to_science_united; do
+    tries=$((tries + 1))
+    if [[ "$tries" -gt 24 ]]; then
+        printf 'error: Science United attach did not finish after polling\n' >&2
+        printf '       last client output:\n%s\n' "$attach_out" >&2
+        exit 1
+    fi
+    sleep 5
+    attach_out="$("$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" \
+        --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password" 2>&1 || true)"
+    printf 'poll %s: %s\n' "$tries" "$(printf '%s\n' "$attach_out" | tail -n1)"
+done
+
+printf 'attached to Science United\n'

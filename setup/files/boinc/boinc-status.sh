@@ -28,23 +28,21 @@ printf 'account manager:\n'
 boinc_cmd --passwd "$RPC_PASSWORD" --acct_mgr info 2>/dev/null | sed 's/^/  /' || printf '  unavailable\n'
 
 printf 'projects:\n'
-if PROJECT_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_project_status 2>/dev/null)"; then
-    if [[ -z "$PROJECT_STATUS" ]] || printf '%s\n' "$PROJECT_STATUS" | grep -q "no projects"; then
-        printf '  none attached\n'
-    else
-        printf '%s\n' "$PROJECT_STATUS" | grep "master URL" | sed 's/.*master URL: /  - /'
-    fi
+PROJECT_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_project_status 2>/dev/null || true)"
+if [[ -z "$PROJECT_STATUS" ]] || printf '%s\n' "$PROJECT_STATUS" | grep -q "no projects"; then
+    printf '  none attached\n'
 else
-    printf '  failed to query\n'
+    printf '%s\n' "$PROJECT_STATUS" | grep "master URL" | sed 's/.*master URL: /  - /' || printf '  none attached\n'
 fi
 
 printf 'tasks:\n'
-if TASK_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_tasks 2>/dev/null)"; then
-    if [[ -z "$TASK_STATUS" ]] || printf '%s\n' "$TASK_STATUS" | grep -q "no active tasks"; then
-        printf '  none active\n'
-    else
-        printf '%s\n' "$TASK_STATUS" | grep "name:" | sed 's/.*name: /  - /'
-    fi
+TASK_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_tasks 2>/dev/null || true)"
+if [[ -z "$TASK_STATUS" ]] || printf '%s\n' "$TASK_STATUS" | grep -q "no active tasks"; then
+    printf '  none active\n'
 else
-    printf '  failed to query\n'
+    if printf '%s\n' "$TASK_STATUS" | grep -q "name:"; then
+        printf '%s\n' "$TASK_STATUS" | grep "name:" | sed 's/.*name: /  - /'
+    else
+        printf '  none active\n'
+    fi
 fi
