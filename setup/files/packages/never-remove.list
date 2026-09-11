@@ -96,3 +96,5 @@ xdg-utils
 desktop-file-utils
 kdeconnect
 android-tools
+qt6-qtmultimedia
+qt6-qtdeclarative
