@@ -1,34 +1,13 @@
 *__pycache__*
-config/Code/Cache/**
-config/Code/CachedConfigurations/**
-config/Code/CachedData/**
-config/Code/CachedExtensionVSIXs/**
-config/Code/CachedProfilesData/**
-config/Code/Code Cache/**
-config/Code/Cookies
-config/Code/Cookies-journal
-config/Code/Crashpad/**
-config/Code/DIPS
-config/Code/DIPS-wal
-config/Code/DawnGraphiteCache/**
-config/Code/DawnWebGPUCache/**
-config/Code/Dictionaries/en-US-10-1.bdic
-config/Code/GPUCache/**
-config/Code/Local State
-config/Code/Local Storage/**
-config/Code/Network Persistent State
-config/Code/Service Worker/**
-config/Code/Shared Dictionary/**
-config/Code/SharedStorage
-config/Code/SharedStorage-wal
-config/Code/TransportSecurity
-config/Code/Trust Tokens
-config/Code/Trust Tokens-journal
-config/Code/User/History/**
-config/Code/User/globalStorage/**
-config/Code/User/workspaceStorage/**
-config/Code/WebStorage/**
-config/Code/code.lock
-config/Code/logs/**
-config/Code/machineid
 omp.yaml.bak
+
+# VS Code writes a Chromium profile next to settings. Ignore the whole
+# tree, then keep the files we actually want in git.
+config/Code/**
+!config/Code/User/
+!config/Code/User/**
+!config/Code/Preferences
+!config/Code/languagepacks.json
+config/Code/User/History/
+config/Code/User/globalStorage/
+config/Code/User/workspaceStorage/
