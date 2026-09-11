@@ -1,0 +1,52 @@
+# managed by dot-files configure-mime-defaults
+# Default handlers for Dolphin / xdg-open after Plasma is stripped.
+# Desktop ids match OpenMandriva KF6 + distro LibreOffice packages.
+
+[Default Applications]
+inode/directory=org.kde.dolphin.desktop
+application/pdf=org.kde.okular.desktop
+application/x-gzpdf=org.kde.okular.desktop
+application/x-bzpdf=org.kde.okular.desktop
+application/epub+zip=org.kde.okular.desktop
+application/vnd.oasis.opendocument.text=libreoffice-writer.desktop
+application/vnd.oasis.opendocument.text-template=libreoffice-writer.desktop
+application/vnd.oasis.opendocument.spreadsheet=libreoffice-calc.desktop
+application/vnd.oasis.opendocument.spreadsheet-template=libreoffice-calc.desktop
+application/vnd.oasis.opendocument.presentation=libreoffice-impress.desktop
+application/vnd.oasis.opendocument.presentation-template=libreoffice-impress.desktop
+application/vnd.oasis.opendocument.graphics=libreoffice-draw.desktop
+application/vnd.oasis.opendocument.formula=libreoffice-math.desktop
+application/vnd.openxmlformats-officedocument.wordprocessingml.document=libreoffice-writer.desktop
+application/vnd.openxmlformats-officedocument.wordprocessingml.template=libreoffice-writer.desktop
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet=libreoffice-calc.desktop
+application/vnd.openxmlformats-officedocument.spreadsheetml.template=libreoffice-calc.desktop
+application/vnd.openxmlformats-officedocument.presentationml.presentation=libreoffice-impress.desktop
+application/vnd.openxmlformats-officedocument.presentationml.template=libreoffice-impress.desktop
+application/msword=libreoffice-writer.desktop
+application/vnd.ms-word=libreoffice-writer.desktop
+application/vnd.ms-excel=libreoffice-calc.desktop
+application/vnd.ms-powerpoint=libreoffice-impress.desktop
+application/rtf=libreoffice-writer.desktop
+text/rtf=libreoffice-writer.desktop
+text/csv=libreoffice-calc.desktop
+application/vnd.ms-excel.sheet.macroEnabled.12=libreoffice-calc.desktop
+video/mp4=vlc.desktop
+video/x-matroska=vlc.desktop
+audio/mpeg=vlc.desktop
+audio/flac=vlc.desktop
+x-scheme-handler/http=brave-browser.desktop
+x-scheme-handler/https=brave-browser.desktop
+text/html=brave-browser.desktop
+
+[Added Associations]
+inode/directory=org.kde.dolphin.desktop;
+application/pdf=org.kde.okular.desktop;
+application/vnd.oasis.opendocument.text=libreoffice-writer.desktop;
+application/vnd.oasis.opendocument.spreadsheet=libreoffice-calc.desktop;
+application/vnd.oasis.opendocument.presentation=libreoffice-impress.desktop;
+application/vnd.openxmlformats-officedocument.wordprocessingml.document=libreoffice-writer.desktop;
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet=libreoffice-calc.desktop;
+application/vnd.openxmlformats-officedocument.presentationml.presentation=libreoffice-impress.desktop;
+application/msword=libreoffice-writer.desktop;
+application/vnd.ms-excel=libreoffice-calc.desktop;
+application/vnd.ms-powerpoint=libreoffice-impress.desktop;
