@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
-# Local BOINC status. Run with sudo so the RPC password is readable.
-#   sudo /usr/local/bin/boinc-status.sh
+# Local BOINC status.
+#   /usr/local/bin/boinc-status.sh
 
 set -euo pipefail
 
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-boinccmd.sh"
 
-BOINC_DIR="${BOINC_DIR:-/var/lib/boinc}"
-[[ -d /var/lib/boinc-client ]] && BOINC_DIR="/var/lib/boinc-client"
+OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
+BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.var/app/edu.berkeley.BOINC}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 
-if [[ "$(id -u)" -ne 0 ]]; then
-    printf 'error: run with sudo so %s is readable\n' "$RPC_AUTH_FILE" >&2
-    exit 1
-fi
-
-if ! systemctl is-active --quiet boinc-client; then
+if ! boinc_service_active; then
     printf 'BOINC service: not running\n'
     exit 1
 fi
@@ -33,23 +28,21 @@ printf 'account manager:\n'
 boinc_cmd --passwd "$RPC_PASSWORD" --acct_mgr info 2>/dev/null | sed 's/^/  /' || printf '  unavailable\n'
 
 printf 'projects:\n'
-if PROJECT_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_project_status 2>/dev/null)"; then
-    if [[ -z "$PROJECT_STATUS" ]] || printf '%s\n' "$PROJECT_STATUS" | grep -q "no projects"; then
-        printf '  none attached\n'
-    else
-        printf '%s\n' "$PROJECT_STATUS" | grep "master URL" | sed 's/.*master URL: /  - /'
-    fi
+PROJECT_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_project_status 2>/dev/null || true)"
+if [[ -z "$PROJECT_STATUS" ]] || printf '%s\n' "$PROJECT_STATUS" | grep -q "no projects"; then
+    printf '  none attached\n'
 else
-    printf '  failed to query\n'
+    printf '%s\n' "$PROJECT_STATUS" | grep "master URL" | sed 's/.*master URL: /  - /' || printf '  none attached\n'
 fi
 
 printf 'tasks:\n'
-if TASK_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_tasks 2>/dev/null)"; then
-    if [[ -z "$TASK_STATUS" ]] || printf '%s\n' "$TASK_STATUS" | grep -q "no active tasks"; then
-        printf '  none active\n'
-    else
-        printf '%s\n' "$TASK_STATUS" | grep "name:" | sed 's/.*name: /  - /'
-    fi
+TASK_STATUS="$(boinc_cmd --passwd "$RPC_PASSWORD" --get_tasks 2>/dev/null || true)"
+if [[ -z "$TASK_STATUS" ]] || printf '%s\n' "$TASK_STATUS" | grep -q "no active tasks"; then
+    printf '  none active\n'
 else
-    printf '  failed to query\n'
+    if printf '%s\n' "$TASK_STATUS" | grep -q "name:"; then
+        printf '%s\n' "$TASK_STATUS" | grep "name:" | sed 's/.*name: /  - /'
+    else
+        printf '  none active\n'
+    fi
 fi

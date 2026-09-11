@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Attach this host to Science United using
-# ~/.config/dot-files/boinc-rpc.password. No prompts when that file
-# already has science_united_user and science_united_password.
-#   sudo /usr/local/bin/boinc-config.sh
+# ~/.config/dot-files/boinc-rpc.password.
+# science_united_user must be the Science United email address.
+#   /usr/local/bin/boinc-config.sh
 
 set -euo pipefail
 
@@ -10,10 +10,9 @@ set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-boinccmd.sh"
 
 PROJECT_URL="https://scienceunited.org/"
-BOINC_DIR="${BOINC_DIR:-/var/lib/boinc}"
-[[ -d /var/lib/boinc-client ]] && BOINC_DIR="/var/lib/boinc-client"
-RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
+BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.var/app/edu.berkeley.BOINC}"
+RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 SECRET="${BOINC_SECRET:-/home/${OWNER}/.config/dot-files/boinc-rpc.password}"
 
 rpc_password=""
@@ -41,59 +40,69 @@ load_secret_file() {
     fi
 }
 
-if [[ "$(id -u)" -ne 0 ]]; then
-    printf 'error: run this with sudo so %s is readable\n' "$RPC_AUTH_FILE" >&2
+attached_to_science_united() {
+    timeout 8 "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null \
+        | grep -q "$PROJECT_URL"
+}
+
+if ! boinc_service_active; then
+    printf 'error: boinc-client user service is not running\n' >&2
+    printf '       systemctl --user status boinc-client.service\n' >&2
     exit 1
 fi
 
-if ! systemctl is-active --quiet boinc-client; then
-    printf 'error: boinc-client is not running\n' >&2
-    exit 1
-fi
-
-if ! sudo test -f "$RPC_AUTH_FILE"; then
-    printf 'error: %s is missing; re-run the role install-boinc module\n' "$RPC_AUTH_FILE" >&2
+if [[ ! -f "$RPC_AUTH_FILE" ]]; then
+    printf 'error: %s is missing; re-run install-boinc\n' "$RPC_AUTH_FILE" >&2
     exit 1
 fi
 
 load_secret_file "$SECRET" || true
 if [[ -z "$rpc_password" ]]; then
-    rpc_password="$(sudo cat "$RPC_AUTH_FILE" | tr -d '[:space:]')"
+    rpc_password="$(tr -d '[:space:]' <"$RPC_AUTH_FILE")"
 fi
 [[ -n "$rpc_password" ]] || { printf 'error: empty RPC password\n' >&2; exit 1; }
 
 if ! wait_for_boinc_rpc; then
     printf 'error: boinc GUI RPC is not listening on %s:31416\n' "$BOINC_HOST" >&2
-    systemctl --no-pager --full status boinc-client.service >&2 || true
+    systemctl --user --no-pager --full status boinc-client.service >&2 || true
     exit 1
 fi
 
-if "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
+if attached_to_science_united; then
     printf 'already attached to Science United\n'
     if [[ "${BOINC_REPLACE:-0}" != "1" ]]; then
         exit 0
     fi
     printf 'detaching existing Science United account manager\n'
-    "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr detach
+    "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr detach || true
+    sleep 2
 fi
 
 if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
-    printf 'error: set science_united_user and science_united_password in %s\n' "$SECRET" >&2
+    printf 'error: set science_united_user (email) and science_united_password in %s\n' "$SECRET" >&2
     exit 1
 fi
 
 printf 'attaching to Science United as %s\n' "$science_united_user"
-if ! timeout 45 "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" \
-        --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password"; then
-    printf 'warning: attach timed out or Science United HTTP failed\n' >&2
-    printf '          retry later: sudo /usr/local/bin/boinc-config.sh\n' >&2
-    exit 0
-fi
+# acct_mgr attach is async. The first call usually prints "poll status: retry"
+# and returns 0. Keep asking until info shows the URL or we time out.
+attach_out=""
+attach_out="$("$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" \
+    --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password" 2>&1 || true)"
+printf '%s\n' "$attach_out"
 
-sleep 2
-if timeout 8 "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null | grep -q "$PROJECT_URL"; then
-    printf 'attached to Science United\n'
-else
-    printf 'warning: attach did not verify; retry with sudo /usr/local/bin/boinc-config.sh\n' >&2
-    exit 0
-fi
+tries=0
+while ! attached_to_science_united; do
+    tries=$((tries + 1))
+    if [[ "$tries" -gt 24 ]]; then
+        printf 'error: Science United attach did not finish after polling\n' >&2
+        printf '       last client output:\n%s\n' "$attach_out" >&2
+        exit 1
+    fi
+    sleep 5
+    attach_out="$("$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" \
+        --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password" 2>&1 || true)"
+    printf 'poll %s: %s\n' "$tries" "$(printf '%s\n' "$attach_out" | tail -n1)"
+done
+
+printf 'attached to Science United\n'

@@ -3,8 +3,13 @@
 # so workstation and laptop managers can query the fleet.
 # Replace these with your real names before the first fleet run.
 
-# workstation.stealthdragonland.net
-# laptop.stealthdragonland.net
-# htpc.stealthdragonland.net
-# castellan.stealthdragonland.net
-# calligraphy-wyrm.stealthdragonland.net
+# workstation
+runewyrm.stealthdragonland.net
+
+# laptop
+forgewyrm.stealthdragonland.net
+
+# htpcs
+
+
+# servers
