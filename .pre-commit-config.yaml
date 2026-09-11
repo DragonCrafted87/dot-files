@@ -27,11 +27,13 @@ repos:
   - id: debug-statements
   - id: requirements-txt-fixer
   - id: check-json
+    exclude: config/Code/User/settings.json
   - id: pretty-format-json
     args:
     - --autofix
     - --indent
     - '4'
+    exclude: config/Code/User/settings.json
   - id: check-toml
   - id: check-xml
   - id: check-yaml
