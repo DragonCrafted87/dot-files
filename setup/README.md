@@ -150,23 +150,41 @@ build lists the game.
 
 ## BOINC
 
-Every role installs `boinc-client`. Workstation and laptop also get
-`boinc-manager`. Fill `files/boinc/hosts.list` with real hostnames so
-each client allows GUI RPC from the others. Role prefs live in
-`files/boinc/prefs/<role>.xml`. A `git pull` plus a role rerun recopies
-hosts, prefs, and helper scripts and restarts the client only if they
-changed. `~/.config/dot-files/boinc-rpc.password` holds
-`rpc_password`, `science_united_user`, and `science_united_password`.
-`utility/transfer-secrets.sh` copies that file. The role attaches Science United
-unattended once those fields are set.
+Every role installs the Flathub app `edu.berkeley.BOINC`. OpenMandriva
+has no BOINC rpms; the old Fedora packages were ABI-mismatched and are
+removed on the next role run.
 
-```bash
-sudo /usr/local/bin/boinc-config.sh
-sudo /usr/local/bin/boinc-status.sh
-sudo /usr/local/bin/boinc-status-all.sh
+The client is a lingering user unit, not a system daemon:
+
+```text
+~/.config/systemd/user/boinc-client.service
+~/.var/app/edu.berkeley.BOINC/          data dir
 ```
 
-In the manager: Advanced → Select computer → hostname + that password.
+`loginctl enable-linger` keeps it running after logout so servers and
+the HTPC still crunch without a desktop session. Manager and CLI share
+that data dir:
+
+```bash
+boincmgr
+flatpak run edu.berkeley.BOINC
+/usr/local/bin/boinc-config.sh
+/usr/local/bin/boinc-status.sh
+/usr/local/bin/boinc-status-all.sh
+systemctl --user status boinc-client.service
+```
+
+Fill `files/boinc/hosts.list` with real hostnames so each client allows
+GUI RPC from the others. Role prefs live in `files/boinc/prefs/<role>.xml`.
+`~/.config/dot-files/boinc-rpc.password` holds `rpc_password`,
+`science_united_user` (the Science United **email**), and
+`science_united_password`. `utility/transfer-secrets.sh` copies that
+file. The role attaches Science United unattended once those fields are
+set.
+
+In the manager: Advanced → Select computer → `127.0.0.1` + that
+password. Do not let the manager start a second client; the user unit
+already owns port 31416.
 
 k3s gets `CPUWeight=500`. BOINC gets `CPUWeight=idle`, `Nice=10`, and
 `lower_client_priority`. Wine and Steam pause BOINC; gamescope is left
