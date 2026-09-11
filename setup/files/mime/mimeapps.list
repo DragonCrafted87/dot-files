@@ -4,6 +4,7 @@
 
 [Default Applications]
 inode/directory=org.kde.dolphin.desktop
+application/x-code-workspace=code.desktop
 application/pdf=org.kde.okular.desktop
 application/x-gzpdf=org.kde.okular.desktop
 application/x-bzpdf=org.kde.okular.desktop
@@ -39,7 +40,15 @@ x-scheme-handler/https=brave-browser.desktop
 text/html=brave-browser.desktop
 
 [Added Associations]
-inode/directory=org.kde.dolphin.desktop;
+inode/directory=org.kde.dolphin.desktop;code.desktop;
+application/x-code-workspace=code.desktop;
+text/plain=code.desktop;
+application/json=code.desktop;
+application/javascript=code.desktop;
+application/x-shellscript=code.desktop;
+text/x-python=code.desktop;
+text/x-csrc=code.desktop;
+text/x-c++src=code.desktop;
 application/pdf=org.kde.okular.desktop;
 application/vnd.oasis.opendocument.text=libreoffice-writer.desktop;
 application/vnd.oasis.opendocument.spreadsheet=libreoffice-calc.desktop;

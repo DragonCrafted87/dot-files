@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=all/allfiles;
+Actions=OpenFile;
+X-KDE-Priority=TopLevel
+Icon=vscode
+
+[Desktop Action OpenFile]
+Name=Open File in Visual Studio Code
+Icon=vscode
+Exec=code -g %F

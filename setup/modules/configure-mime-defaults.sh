@@ -14,6 +14,11 @@ src="${SETUP_FILES_DIR}/mime/mimeapps.list"
 dest="${CONFIG_TARGET_DIR}/mimeapps.list"
 menu_src="${SETUP_FILES_DIR}/mime/applications.menu"
 menu_dest="${CONFIG_TARGET_DIR}/menus/applications.menu"
+svc_src="${SETUP_FILES_DIR}/mime/servicemenus"
+svc_kf6="${DOTFILES_HOME}/.local/share/kio/servicemenus"
+svc_kf5="${DOTFILES_HOME}/.local/share/kservices5/ServiceMenus"
+mime_xml_src="${SETUP_FILES_DIR}/mime/code-workspace.xml"
+mime_xml_dest="${DOTFILES_HOME}/.local/share/mime/packages/code-workspace.xml"
 
 if [[ ! -f "$src" ]]; then
     die "missing ${src}"
@@ -21,6 +26,9 @@ fi
 
 ensure_dir "${CONFIG_TARGET_DIR}"
 ensure_dir "${CONFIG_TARGET_DIR}/menus"
+ensure_dir "$svc_kf6"
+ensure_dir "$svc_kf5"
+ensure_dir "$(dirname "$mime_xml_dest")"
 
 write_mimeapps=0
 if [[ ! -f "$dest" ]]; then
@@ -47,6 +55,31 @@ if [[ -f "$menu_src" ]]; then
             install -m 0644 "$menu_src" "$menu_dest"
         fi
     fi
+fi
+
+if [[ -f "$mime_xml_src" ]]; then
+    if [[ ! -f "$mime_xml_dest" ]] || ! cmp -s "$mime_xml_src" "$mime_xml_dest"; then
+        log "write ${mime_xml_dest}"
+        if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+            install -m 0644 "$mime_xml_src" "$mime_xml_dest"
+        fi
+    fi
+fi
+
+if [[ -d "$svc_src" ]]; then
+    shopt -s nullglob
+    for desktop in "$svc_src"/*.desktop; do
+        name="$(basename "$desktop")"
+        for dest_dir in "$svc_kf6" "$svc_kf5"; do
+            target="${dest_dir}/${name}"
+            if [[ ! -f "$target" ]] || ! cmp -s "$desktop" "$target"; then
+                log "write ${target}"
+                if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+                    install -m 0755 "$desktop" "$target"
+                fi
+            fi
+        done
+    done
 fi
 
 # Merge SingleClick=false into kdeglobals / dolphinrc without clobbering.
@@ -113,6 +146,10 @@ ensure_kde_key "${CONFIG_TARGET_DIR}/dolphinrc" KDE SingleClick false
 
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     exit 0
+fi
+
+if command -v update-mime-database >/dev/null 2>&1; then
+    update-mime-database "${DOTFILES_HOME}/.local/share/mime" >/dev/null 2>&1 || true
 fi
 
 if command -v update-desktop-database >/dev/null 2>&1; then
