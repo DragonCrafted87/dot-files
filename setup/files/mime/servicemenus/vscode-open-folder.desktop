@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=inode/directory;
+Actions=OpenFolder;
+X-KDE-Priority=TopLevel
+Icon=vscode
+
+[Desktop Action OpenFolder]
+Name=Open Folder in Visual Studio Code
+Icon=vscode
+Exec=code %F

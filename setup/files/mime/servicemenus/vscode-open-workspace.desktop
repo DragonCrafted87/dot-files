@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=application/x-code-workspace;
+Actions=OpenWorkspace;
+X-KDE-Priority=TopLevel
+Icon=vscode
+
+[Desktop Action OpenWorkspace]
+Name=Open Workspace in Visual Studio Code
+Icon=vscode
+Exec=code %F

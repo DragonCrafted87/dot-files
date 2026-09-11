@@ -84,3 +84,13 @@ pipewire
 wireplumber
 xorg-x11-server-Xwayland
 xwayland
+plasma6-dolphin
+dolphin
+plasma6-kio-extras
+kio-extras
+plasma6-kde-cli-tools
+kde-cli-tools
+kf6-kservice
+kf6-kio
+xdg-utils
+desktop-file-utils

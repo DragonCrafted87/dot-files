@@ -1,0 +1,14 @@
+<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"
+ "http://www.freedesktop.org/standards/menu-spec/menu-1.0.dtd">
+<Menu>
+  <Name>Applications</Name>
+  <AppDir>/usr/share/applications</AppDir>
+  <AppDir>/usr/local/share/applications</AppDir>
+  <DirectoryDir>/usr/share/desktop-directories</DirectoryDir>
+  <DefaultLayout inline="false" show_empty="false">
+    <Merge type="all"/>
+  </DefaultLayout>
+  <Include>
+    <All/>
+  </Include>
+</Menu>
