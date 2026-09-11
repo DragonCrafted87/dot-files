@@ -36,6 +36,11 @@ elif command -v powershell >/dev/null 2>&1; then
     alias pwsh='powershell'
 fi
 
+# Keep the OSCrypt key on gnome-libsecret even when launched from a tty.
+# Use the real binaries so the alias does not recurse.
+alias brave-browser='/usr/bin/brave-browser --password-store=gnome-libsecret --restore-last-session'
+alias brave-browser-stable='/usr/bin/brave-browser-stable --password-store=gnome-libsecret --restore-last-session'
+
 function base_find ()
 {
     FIND_EXCLUDES=' | grep -v "\.git" '
