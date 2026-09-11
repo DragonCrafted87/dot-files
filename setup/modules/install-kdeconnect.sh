@@ -8,17 +8,15 @@ set -euo pipefail
 
 require_user
 
-# Rock kdeconnect-sms is still Qt5 / Kirigami.2. SMS QML needs
-# qt5-qtmultimedia. Names need kpeoplevcard. Dark chrome needs Breeze
-# plus qqc2-desktop-style reading ~/.config/kdeglobals.
+# Rock kdeconnect-sms is still Qt5 / Kirigami.2.
+# KF5 breeze / breeze-icons file-conflict with plasma6-breeze and
+# kf6-breeze-icons. Color schemes already come from plasma6-breeze.
 ensure_packages \
     kdeconnect \
     android-tools \
     qt5-qtmultimedia \
     kpeoplevcard \
     kpeople \
-    breeze \
-    breeze-icons \
     qqc2-desktop-style \
     kf6-qqc2-desktop-style \
     lib64Qt6Multimedia \
