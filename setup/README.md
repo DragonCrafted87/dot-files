@@ -76,6 +76,14 @@ role. `laptop` includes `@workstation` and then laptop-only modules.
 | `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client                                         |
 | `server`      | CLI baseline, k3s, BOINC client; no GUI session                                          |
 
+Dolphin is the Hyprland file manager (`SUPER+E`). After
+`remove-plasma-sddm` strips Plasma, it has no KService/MIME map unless
+`install-desktop-packages` installs `plasma6-dolphin` plus KIO extras and
+`configure-mime-defaults` writes `~/.config/mimeapps.list` and runs
+`kbuildsycoca6`. The other half is `config/hypr/conf.d/env.conf`
+(`XDG_CURRENT_DESKTOP=Hyprland:KDE`) so KIO treats LibreOffice and Okular
+as valid "Open with" targets.
+
 The chosen role is written to `~/.config/dot-files/role`.
 
 Rock extra / restricted / non-free are enabled on every role. Architecture
