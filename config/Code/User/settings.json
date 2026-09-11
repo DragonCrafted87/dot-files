@@ -169,6 +169,7 @@
         "vscode-kubernetes.helm-path-linux": "/home/dragon/.local/state/vs-kubernetes/tools/helm/linux-amd64/helm",
         "vscode-kubernetes.minikube-path-linux": "/home/dragon/.local/state/vs-kubernetes/tools/minikube/linux-amd64/minikube",
         "vscode-kubernetes.kubectl-path-linux": "/home/dragon/.local/state/vs-kubernetes/tools/kubectl/kubectl",
+        "vs-kubernetes.minikube-show-information-expiration": "2027-03-10T18:54:32.858Z"
     },
     "remote.SSH.connectTimeout": 30,
     "remote.SSH.showLoginTerminal": true,
