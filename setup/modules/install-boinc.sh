@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # BOINC via Flathub on every role. Manager is the same Flatpak.
 # Data lives in ~/.var/app/edu.berkeley.BOINC so a user systemd unit
-# can run the client after logout (linger).
+# can run the client after logout (linger is enabled in common).
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -9,11 +9,7 @@ set -euo pipefail
 
 require_user
 
-ensure_packages flatpak
-ensure_flatpak_remote flathub https://flathub.org/repo/flathub.flatpakrepo
-ensure_flatpak edu.berkeley.BOINC
-
-# Drop the Fedora RPMs if a previous role run installed them.
+# Drop the Fedora RPMs before the Flatpak goes in so both never share 31416.
 if [[ -f /etc/yum.repos.d/boinc-stable.repo ]]; then
     log "remove leftover BOINC distro repo"
     run sudo rm -f /etc/yum.repos.d/boinc-stable.repo
@@ -22,6 +18,10 @@ if systemctl list-unit-files boinc-client.service >/dev/null 2>&1; then
     disable_service boinc-client.service || true
 fi
 remove_packages boinc-client boinc-manager || true
+
+ensure_packages flatpak
+ensure_flatpak_remote flathub https://flathub.org/repo/flathub.flatpakrepo
+ensure_flatpak edu.berkeley.BOINC
 
 boinc_dir="${DOTFILES_HOME}/.var/app/edu.berkeley.BOINC"
 rpc_file="${boinc_dir}/gui_rpc_auth.cfg"
@@ -144,13 +144,6 @@ install_boinc_file "${src}/find-boinccmd.sh" /usr/local/bin/find-boinccmd.sh 064
 install_boinc_file "${src}/boinc-config.sh" /usr/local/bin/boinc-config.sh 0755 1
 install_boinc_file "${src}/boinc-status.sh" /usr/local/bin/boinc-status.sh 0755 1
 install_boinc_file "${src}/boinc-status-all.sh" /usr/local/bin/boinc-status-all.sh 0755 1
-
-if command -v loginctl >/dev/null 2>&1; then
-    if ! loginctl show-user "${DOTFILES_USER}" -p Linger 2>/dev/null | grep -qx 'Linger=yes'; then
-        log "enable lingering for ${DOTFILES_USER} so BOINC survives logout"
-        run sudo loginctl enable-linger "${DOTFILES_USER}"
-    fi
-fi
 
 systemctl --user daemon-reload
 enable_user_service boinc-client.service
