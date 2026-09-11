@@ -1,8 +1,12 @@
 # KDE Connect on GrapheneOS
 
-The workstation role installs the desktop package, opens LAN ports
-1714-1764, and starts `kdeconnectd` from Hyprland. Pairing is still a
-phone-side step.
+The workstation role installs the desktop package, Qt Multimedia QML
+(needed by `kdeconnect-sms`), opens LAN ports 1714-1764, and starts
+`kdeconnect-indicator` from Hyprland. Pairing is still a phone-side step.
+
+OpenMandriva no longer puts `kdeconnectd` on PATH. The binaries are
+`kdeconnect-indicator` (tray), `kdeconnect-app`, `kdeconnect-sms`,
+`kdeconnect-cli`, `kdeconnect-handler`, and `kdeconnect-settings`.
 
 ## Phone
 
@@ -19,8 +23,10 @@ KDE Connect does not need to be the default SMS app.
 
 ## Desktop
 
-- Tray / `kdeconnect-app` → the paired phone → **SMS Messages**.
-- Daemon is started by `config/hypr/scripts/start-kdeconnect.sh`.
+- Tray: `kdeconnect-indicator` (started by
+  `config/hypr/scripts/start-kdeconnect.sh`).
+- SMS window: `kdeconnect-sms` (needs `qt6-qtmultimedia` for QML module
+  `QtMultimedia`).
 - Re-run `~/dot-files/setup/modules/install-kdeconnect.sh` after a role
   reset if the firewall ports vanished.
 
