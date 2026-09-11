@@ -121,3 +121,7 @@ without inventing a fifth top-level role.
 
 Same pattern could pin MakeMKV-only quirks to runewyrm later if a laptop
 should stay a workstation without optical-drive code paths.
+
+## Cleanup
+
+- the oh-my-posh install needs a short circuit instead of always downloading the binary

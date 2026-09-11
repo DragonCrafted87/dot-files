@@ -32,7 +32,9 @@ KDE Connect does not need to be the default SMS app.
 Bare numbers means the SMS window has no KPeople vCard cache yet.
 
 1. Install `kpeoplevcard` and `kpeople` (this module does that).
+
 1. On the phone, Contacts permission + Contacts plugin on.
+
 1. Wait for sync, or force it:
 
    ```bash
