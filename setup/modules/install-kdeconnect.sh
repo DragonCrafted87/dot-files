@@ -8,12 +8,15 @@ set -euo pipefail
 
 require_user
 
-# Rock's kdeconnect rpm does not Requires the QML bits SMS needs.
-# Missing QtMultimedia / kirigamiaddons makes kdeconnect-sms exit with
-# no window (tray "SMS Messages" then does nothing).
+# Rock kdeconnect-sms is still Qt5 / Kirigami.2. SMS QML needs
+# qt5-qtmultimedia. Names need kpeoplevcard reading vCards the phone
+# plugin drops in ~/.local/share/kpeoplevcard/.
 ensure_packages \
     kdeconnect \
     android-tools \
+    qt5-qtmultimedia \
+    kpeoplevcard \
+    kpeople \
     lib64Qt6Multimedia \
     kirigami-addons \
     kf6-qqc2-desktop-style
@@ -55,5 +58,5 @@ allow_kdeconnect_firewall() {
 allow_kdeconnect_firewall
 
 log "tray: kdeconnect-indicator   sms: kdeconnect-sms"
-log "if SMS from the tray is silent, run kdeconnect-sms in a terminal"
+log "names need Contacts plugin on the phone plus kpeoplevcard"
 log "GrapheneOS pairing notes: ${SETUP_FILES_DIR}/kdeconnect/README.md"
