@@ -39,4 +39,8 @@ if [[ -f "$nebula" ]]; then
     for scene in "${dest}/basic/scenes/"*.json "${dest}/basic/scenes/"*.json.bak; do
         [[ -f "$scene" ]] || continue
         sed -i \
-            -e 's|/home/dragon/360_F_1423685604_x8B0ES8ArnfKfnAZsg5duuWNAHxR6oeD.jpg|'
+            -e "s|/home/dragon/360_F_1423685604_x8B0ES8ArnfKfnAZsg5duuWNAHxR6oeD.jpg|${nebula}|g" \
+            "$scene"
+    done
+    log "Image source -> ${nebula}"
+fi
