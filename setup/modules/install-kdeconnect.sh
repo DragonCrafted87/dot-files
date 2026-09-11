@@ -8,12 +8,14 @@ set -euo pipefail
 
 require_user
 
-# Rock's kdeconnect rpm does not Requires the QML bits SMS needs.
-# Missing QtMultimedia / kirigamiaddons makes kdeconnect-sms exit with
-# no window (tray "SMS Messages" then does nothing).
+# Rock kdeconnect-sms still resolves Kirigami.2 from /usr/lib64/qt5/qml.
+# QtMultimedia QML for that stack is qt5-qtmultimedia, not lib64Qt6Multimedia.
+# Do not set QML_IMPORT_PATH to /usr/lib64/qt6/qml or Qt5 Kirigami mixes with
+# Qt6 QtQml and the SMS window never appears.
 ensure_packages \
     kdeconnect \
     android-tools \
+    qt5-qtmultimedia \
     lib64Qt6Multimedia \
     kirigami-addons \
     kf6-qqc2-desktop-style
