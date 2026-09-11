@@ -11,3 +11,5 @@ config/Code/**
 config/Code/User/History/
 config/Code/User/globalStorage/
 config/Code/User/workspaceStorage/
+config/Code/User/snippets
+config/Code/User/settings.json.bak.**
