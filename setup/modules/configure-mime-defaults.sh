@@ -82,7 +82,7 @@ if [[ -d "$svc_src" ]]; then
     done
 fi
 
-# Merge SingleClick=false into kdeglobals / dolphinrc without clobbering.
+# Merge keys into kdeglobals / dolphinrc without clobbering other settings.
 ensure_kde_key() {
     local file="$1"
     local section="$2"
@@ -143,6 +143,9 @@ PY
 
 ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" KDE SingleClick false
 ensure_kde_key "${CONFIG_TARGET_DIR}/dolphinrc" KDE SingleClick false
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General TerminalApplication kitty
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General TerminalService kitty.desktop
+ensure_kde_key "${CONFIG_TARGET_DIR}/dolphinrc" General TerminalApplication kitty
 
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     exit 0
