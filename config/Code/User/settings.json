@@ -1,5 +1,26 @@
 {
-    "git.useIntegratedAskPass": true,
+    "yaml.disableSchemaDetection": [
+        "**/.github/workflows/*.yml",
+        "**/.github/workflows/*.yaml",
+        "**/.gitea/workflows/*.yml",
+        "**/.gitea/workflows/*.yaml",
+        "**/.forgejo/workflows/*.yml",
+        "**/.forgejo/workflows/*.yaml"
+    ],
+    "workbench.editorAssociations": {
+        "{git,gitlens,chat-editing-snapshot-text-model,copilot,git-graph,git-graph-3}:/**/*.qrc": "default",
+        "{git,gitlens,chat-editing-snapshot-text-model,copilot,git-graph,git-graph-3}:/**/*.ui": "default",
+        "*.copilotmd": "vscode.markdown.preview.editor",
+        "*.qrc": "qt-core.qrcEditor"
+    },
+    "qt-core.additionalQtPaths": [
+        {
+            "name": "Qt-5.15.15-linux-clang-x86_64_from_PATH",
+            "path": "/sbin/qmake"
+        }
+    ],
+    "redhat.telemetry.enabled": false,
+   "git.useIntegratedAskPass": true,
     "git.terminalAuthentication": true,
     "git.autofetch": true,
     "remote.SSH.enableX11Forwarding": false,

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Link every directory in the repo config/ folder into ~/.config under the
 # same name. Drop a new folder in config/ and the next role run picks it up.
-# Loose files in config/ are left alone. Missing or empty config/ is fine.
+# Loose files in this folder are left alone. Missing or empty config/ is fine.
+#
+# Code/ is handled by configure-vscode. Linking the whole Chromium profile
+# replaces Local State and VS Code rewrites settings.json to {}.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -26,6 +29,12 @@ for source_path in "${config_dirs[@]}"; do
     source_path="${source_path%/}"
     dest_name="$(basename "$source_path")"
     dest_path="${CONFIG_TARGET_DIR}/${dest_name}"
+
+    case "$dest_name" in
+        Code)
+            continue
+            ;;
+    esac
 
     ensure_symlink "$source_path" "$dest_path"
 done
