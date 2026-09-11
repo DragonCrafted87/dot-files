@@ -8,13 +8,15 @@ set -euo pipefail
 
 require_user
 
-# kdeconnect-sms imports QML module QtMultimedia. The rpm Requires the C++
-# lib but not the QML plugin, so Rock leaves SMS broken until this is in.
+# Rock's kdeconnect rpm does not Requires the QML bits SMS needs.
+# Missing QtMultimedia / kirigamiaddons makes kdeconnect-sms exit with
+# no window (tray "SMS Messages" then does nothing).
 ensure_packages \
     kdeconnect \
     android-tools \
-    qt6-qtmultimedia \
-    qt6-qtdeclarative
+    lib64Qt6Multimedia \
+    kirigami-addons \
+    kf6-qqc2-desktop-style
 
 allow_kdeconnect_firewall() {
     if ! command -v firewall-cmd >/dev/null; then
@@ -53,4 +55,5 @@ allow_kdeconnect_firewall() {
 allow_kdeconnect_firewall
 
 log "tray: kdeconnect-indicator   sms: kdeconnect-sms"
+log "if SMS from the tray is silent, run kdeconnect-sms in a terminal"
 log "GrapheneOS pairing notes: ${SETUP_FILES_DIR}/kdeconnect/README.md"

@@ -96,5 +96,6 @@ xdg-utils
 desktop-file-utils
 kdeconnect
 android-tools
-qt6-qtmultimedia
-qt6-qtdeclarative
+lib64Qt6Multimedia
+kirigami-addons
+kf6-qqc2-desktop-style
