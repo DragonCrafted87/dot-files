@@ -1,0 +1,17 @@
+[General]
+ColorScheme=BreezeDark
+Name=Breeze Dark
+widgetStyle=Breeze
+
+[Icons]
+Theme=breeze-dark
+
+[KDE]
+LookAndFeelPackage=org.kde.breezedark.desktop
+widgetStyle=Breeze
+
+[UiSettings]
+ColorScheme=BreezeDark
+
+[KFileDialog Settings]
+theme=BreezeDark
