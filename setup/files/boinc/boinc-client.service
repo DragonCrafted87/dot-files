@@ -1,0 +1,23 @@
+[Unit]
+Description=BOINC client (Flatpak)
+Documentation=https://boinc.berkeley.edu/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Nice=10
+CPUWeight=idle
+IOWeight=25
+OOMScoreAdjust=400
+Restart=on-failure
+RestartSec=10
+WorkingDirectory=%h/.var/app/edu.berkeley.BOINC
+ExecStartPre=/usr/bin/mkdir -p %h/.var/app/edu.berkeley.BOINC
+ExecStart=/usr/bin/flatpak run --command=boinc edu.berkeley.BOINC --dir %h/.var/app/edu.berkeley.BOINC
+ExecReload=/usr/local/bin/boinccmd --host 127.0.0.1 --read_cc_config
+ExecStop=/usr/local/bin/boinccmd --host 127.0.0.1 --quit
+ExecStopPost=/bin/rm -f %h/.var/app/edu.berkeley.BOINC/lockfile
+
+[Install]
+WantedBy=default.target

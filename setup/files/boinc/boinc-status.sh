@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
-# Local BOINC status. Run with sudo so the RPC password is readable.
-#   sudo /usr/local/bin/boinc-status.sh
+# Local BOINC status.
+#   /usr/local/bin/boinc-status.sh
 
 set -euo pipefail
 
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-boinccmd.sh"
 
-BOINC_DIR="${BOINC_DIR:-/var/lib/boinc}"
-[[ -d /var/lib/boinc-client ]] && BOINC_DIR="/var/lib/boinc-client"
+OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
+BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.var/app/edu.berkeley.BOINC}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 
-if [[ "$(id -u)" -ne 0 ]]; then
-    printf 'error: run with sudo so %s is readable\n' "$RPC_AUTH_FILE" >&2
-    exit 1
-fi
-
-if ! systemctl is-active --quiet boinc-client; then
+if ! boinc_service_active; then
     printf 'BOINC service: not running\n'
     exit 1
 fi
