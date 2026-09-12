@@ -1,12 +1,46 @@
 # Network and rack plan
 
-Logged 2026-09-12. Not purchased yet. mist-dragon stays OpenWrt 24 on two NICs
-(Starlink on `eth0`, LAN/trunk on `eth1`). Work-PC isolation waits on managed
-switches because that host sits behind two unmanaged switches.
+Logged 2026-09-12, updated same day. Not all of this is purchased yet.
+mist-dragon stays OpenWrt 24 on two NICs (Starlink on `eth0`, LAN/trunk on
+`eth1`). Work-PC isolation waits on managed switches because that host sits
+behind two unmanaged switches.
 
-## Cart to save toward
+## Existing rack
 
-ZyXEL GS1900 pair (US SKUs from the cart snapshot):
+Open-frame 4-post, **27U**, ~**31 in** rail-to-rail (Amazon `B076VQ8WZQ`).
+No plan to enclose it. Square holes + cage nuts. Ambient air is free; still
+leave 1U gaps so 1U gear is not exhausting into the next lid.
+
+| Position | What |
+| --- | --- |
+| Bottom | RROYJJ 4U 24-bay hot-swap (`B095YMXW1K`, ~650 mm / 25.6 in deep) — main data server |
+| Top | HP ProLiant DL360p Gen8 1U |
+
+Do not mix rail kits between the RROYJJ, the DL360p, and the future RackChoice
+5U boxes. Each chassis has its own slide pattern.
+
+### Target U stack (bottom up)
+
+```
+4U   RROYJJ 24-bay
+1U   empty / cable
+5U   tower A (RackChoice)
+1U   empty
+5U   tower B (RackChoice)
+1U   empty
+1U   GS1900-24HPv2 (later)
+1U   empty
+1U   DL360p Gen8
+1U   empty under the top of the frame
+```
+
+About 21U used, ~6U spare. Do not pack the two 5U cases against each other.
+
+## Cart / save list
+
+### Switches
+
+ZyXEL GS1900 pair (US cart snapshot):
 
 | Role | Model | SKU | PoE | List |
 | --- | --- | --- | --- | --- |
@@ -14,22 +48,47 @@ ZyXEL GS1900 pair (US SKUs from the cart snapshot):
 | Office | GS1900-8HP | GS1900-8HP-USAM03F | 8× PoE+, 70 W | $109.99 |
 | | | | **Subtotal** | **$359.98** |
 
-Rack is 31 inches deep. These are short 1U boxes (~8–12 in). Depth is not a constraint.
+PoE today: one OpenWrt AP + two other PDs. A couple more later still fits
+170 W. Buried driveway magnet stays wireless (LoRa/ESP), not a PoE homerun.
 
-PoE load today: one OpenWrt AP + two other PDs. A couple more later is still
-inside 170 W. A buried driveway magnet is planned as wireless (LoRa/ESP),
-not a long PoE homerun.
+### Tower-to-rack cases and rails
 
-### OpenWrt on the switches
+| Item | ASIN / SKU | Notes |
+| --- | --- | --- |
+| 2× RackChoice 5U ATX/EATX chassis | `B0D2ZT3QDZ` | 360 mm rad cage unused if staying on air; D15-class Noctua needs ≥170 mm CPU height (5U is the point) |
+| 2× Rosewill RSV-RL26HV2 slides | `B0GZS9RJNC` | 26–39.4 in, 2U–5U chassis slides. Matches 31 in 4-post. |
+
+Do **not** buy the RackChoice **20 in** optional rail (`B0DJPC7V3F`). Too short
+for this rack. Skip StarTech UNIRAILS1UB (those are L-brackets, not chassis
+slides).
+
+Noctua NH-D15 / D15 G2 ~165–168 mm. 4U (177.8 mm) is tight after the tray;
+5U (222 mm) is the safe pick.
+
+### DL360p Gen8 PSUs (replace both)
+
+Dead brick label: **499250-201**, 460 W on the fan. That is HP **Common Slot
+Gold** 460 W (kit **503296-B21**; also seen as `499250-101` / `511777-001` /
+`HSTNS-PL14`).
+
+Replace **both** modules. The survivor lived in the same hot bay. Buy two
+used-tested **460 W CS Gold**, same family. Do not mix Gold + Platinum in the
+two slots.
+
+Platinum (~94%) vs Gold (~92%) does **not** pay back here. At ~150 W output the
+gap is ~3 W, a few dollars a year. This is a reliability buy, not an efficiency
+buy. Only take Platinum (`739252-B21`) if it is the same price as Gold that day.
+
+## OpenWrt on the switches
 
 Preferred if the exact hardware revision is supported. GS1900 is Realtek
 RTL838x; LuCI/uci matches the router and AP.
 
 **v2 PoE is the risk.** `realtek-poe` works well on many GS1900 **v1** boards.
-v2 / later PSE chips have been flaky across 24.10 and 25.12 (power on by
-default, weak per-port control). After purchase, check the ToH for that
-revision. If OpenWrt PoE is junk on the unit in hand, keep **stock ZyXEL
-firmware** for VLANs + PoE and leave OpenWrt on mist-dragon and the AP only.
+v2 / later PSE chips have been flaky across 24.10 and 25.12. After purchase,
+check the ToH for that revision. If OpenWrt PoE is junk on the unit in hand,
+keep **stock ZyXEL firmware** for VLANs + PoE and leave OpenWrt on mist-dragon
+and the AP only.
 
 Do not flash a random Omada/Netgear PoE switch expecting OpenWrt.
 
@@ -43,7 +102,7 @@ its own VLAN on a managed port.
 Guest Wi-Fi does **not** have to wait: second SSID + NAT + client isolation on
 the OpenWrt AP, uplink as WAN, no bridge onto `192.168.0.0/16`.
 
-## Target layout
+## Target network layout
 
 ```
 Starlink --eth0-- mist-dragon --eth1 802.1Q trunk
@@ -82,33 +141,12 @@ on the LAN unless DHCP option 121/249 (`192.168.100.1/32 via 192.168.0.1`)
 is pushed. Keep the router `/32` on `wan`. Do not put Dishy in table 100
 (PureVPN reply table).
 
+`dishy.starlink.com` is a Unbound `local-data` A to `192.168.100.1` plus
+dnsmasq `address=/dishy.starlink.com/192.168.100.1`. Do not add a second
+`local=` line for dishy; OpenWrt concatenates list `local` onto one invalid
+`local=` and dnsmasq will not start.
+
 When VLANs land, shrinking lan to a `/24` (or several) is the durable fix.
-
-## Rack PCs (two old towers)
-
-Move two tower-format machines into the rack with large Noctua coolers.
-
-Noctua NH-D15 / D15 G2 / similar dual-tower coolers are ~165–168 mm tall.
-Motherboard tray + cooler must fit the case interior height:
-
-| Rack units | Height | Dual-tower Noctua |
-| --- | --- | --- |
-| 4U | 177.8 mm | Tight. Many 4U chassis advertise ~160–165 mm CPU clearance. Measure the **exact** cooler + board + tray before buying 4U. |
-| 5U | 222.3 mm | Comfortable for D15-class sinks and a 25 mm fan swap. |
-
-Plan on **5U** unless a specific 4U model lists clearance above the cooler
-height + ~10 mm. 31" rail depth is enough for ATX rack trays.
-
-Look at 4U/5U **rackmount server cases** with a standard ATX tray (Silverstone
-RM / CS, Rosewill RSV, Chenbro, iStarUSA), not a 1U pizza box. Need:
-
-- ATX / eATX if the donor boards need it
-- Front intake, rear exhaust; Noctua fans can replace stock if the mounts match
-- USB / power / reset on the front
-- PCI slot opening if a NIC or HBA moves with the board
-
-Two chassis → 8U or 10U of rail plus the 1U switch and whatever already lives
-in the rack. Leave blank U for airflow over the Noctua stacks.
 
 ## Do not do until the switches exist
 
