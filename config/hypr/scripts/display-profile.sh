@@ -32,7 +32,16 @@ need_hypr() {
     command -v hyprctl >/dev/null 2>&1 || { echo "hyprctl not found" >&2; return 1; }
 }
 
-keyword_monitor() { hyprctl keyword monitor "$1" >/dev/null 2>&1 || true; }
+# hyprctl keyword monitor wants 2560x1440@143.91, not @143.91Hz.
+normalize_monitor_spec() {
+    printf '%s\n' "$1" | sed 's/@\([0-9.][0-9.]*\)Hz,/@\1,/'
+}
+
+keyword_monitor() {
+    local spec
+    spec="$(normalize_monitor_spec "$1")"
+    hyprctl keyword monitor "$spec" >/dev/null 2>&1 || true
+}
 
 dpms() {
     local action="$1"
@@ -360,6 +369,18 @@ wait_for_monitor() {
     return 1
 }
 
+layout_ready() {
+    local file spec name
+    file="$(current_conf)" || return 1
+    while IFS= read -r spec; do
+        [[ -n "$spec" ]] || continue
+        monitor_is_disabled "$spec" && continue
+        name="$(monitor_name "$spec")"
+        monitor_is_live "$name" || return 1
+    done < <(monitor_lines "$file")
+    return 0
+}
+
 workspaces_restored() {
     local mon="$1"
     local wanted actual
@@ -504,16 +525,24 @@ cmd_idle_on() {
     QUIET=1
     with_apply_lock || return 0
     # DRM is often still coming back after sleep. Give it a beat.
-    sleep 0.3
-    dpms on
-    dpms_desk_ports on
+    sleep 1
+    local i file
+    file="$(current_conf || true)"
+    for i in $(seq 1 10); do
+        dpms on
+        dpms_desk_ports on
+        [[ -n "$file" ]] && apply_monitor_conf "$file"
+        if [[ "$HOST" == "runewyrm" ]]; then
+            enable_idle_monitor || true
+        fi
+        layout_ready && break
+        sleep 0.5
+    done
+    release_apply_lock
+    schedule_workspace_restore
     if [[ "$HOST" == "runewyrm" ]]; then
-        enable_idle_monitor || true
-        release_apply_lock
-        schedule_workspace_restore
         refresh_cursor "$RUNEWYRM_IDLE_MONITOR"
     else
-        release_apply_lock
         refresh_cursor
     fi
 }
