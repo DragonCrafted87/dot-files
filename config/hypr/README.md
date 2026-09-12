@@ -17,17 +17,17 @@ File names:
 
 ## Profiles (runewyrm)
 
-| Profile     | File                         | Monitors                                  | Audio                     |
-| ----------- | ---------------------------- | ----------------------------------------- | ------------------------- |
-| `desk`      | `runewyrm-desk.conf`         | DP-2 + DP-3 + HDMI-A-1                    | restore last / desk sink  |
-| `theater`   | `runewyrm-theater.conf`      | same DPs; HDMI uses the TV preferred mode | default sink to HDMI / TV |
-| `workshare` | `runewyrm-workshare.conf`    | DP-2 and DP-3 disabled; HDMI stays        | restore desk sink         |
+| Profile     | File                      | Monitors                                              | Audio                     |
+| ----------- | ------------------------- | ----------------------------------------------------- | ------------------------- |
+| `desk`      | `runewyrm-desk.conf`      | DP-2 + DP-3 + HDMI-A-1                                | restore last / desk sink  |
+| `theater`   | `runewyrm-theater.conf`   | DP-2 and DP-3 disabled (other room); HDMI / TV only   | default sink to HDMI / TV |
+| `workshare` | `runewyrm-workshare.conf` | DP-2 and DP-3 disabled; HDMI stays at desk mode       | restore desk sink         |
 
 ## Profiles (forgewyrm)
 
-| Profile   | File              | Monitor | Mode           | Scale | Logical size |
-| --------- | ----------------- | ------- | -------------- | ----- | ------------ |
-| `default` | `forgewyrm.conf`  | eDP-1   | 3840x2400@60Hz | 1.5   | 2560x1600    |
+| Profile   | File             | Monitor | Mode           | Scale | Logical size |
+| --------- | ---------------- | ------- | -------------- | ----- | ------------ |
+| `default` | `forgewyrm.conf` | eDP-1   | 3840x2400@60Hz | 1.5   | 2560x1600    |
 
 Scale 1.5 keeps the native 16:10 framebuffer and makes UI size match a
 2560x1600 (16:10 2K) panel. Scale 2.0 would look like 1920x1200.
@@ -60,9 +60,9 @@ Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+T` theater,
 On runewyrm, idle-off records workspaces on HDMI-A-1, `dpms off` that
 output **and** DP-2/DP-3 when those outputs are not `disable` in the
 active conf, then disables HDMI so the TV drops the link. idle-on
-`dpms on` the DP panels, re-enables HDMI using the HDMI line from the
-active conf, and restores those workspaces. It does **not** rewrite
-DP-2/DP-3 layout keywords. workshare leaves DP disabled.
+`dpms on` the DP panels only when the active conf leaves them enabled,
+re-enables HDMI using the HDMI line from that conf, and restores those
+workspaces. theater and workshare leave the desk DPs disabled.
 
 Lock and unlock also run the same off/on pair (`on_lock_cmd` /
 `on_unlock_cmd`) so the desk blanks when hyprlock starts, not only after
