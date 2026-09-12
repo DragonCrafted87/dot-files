@@ -222,6 +222,34 @@ ensure_packages() {
     run sudo dnf install -y "$@"
 }
 
+# Rock 6.0 ships plasma6-* names for KF6 apps. The unprefixed names are
+# leftover KF5 packages and file-conflict. Extra args install with the
+# plasma6 package (okular extras, etc).
+install_kf6_or_plain() {
+    local plasma6_name="$1"
+    local plain_name="$2"
+    shift 2
+    local extras=("$@")
+
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        log "${plasma6_name} / ${plain_name} package"
+        return 0
+    fi
+    if rpm -q "$plasma6_name" >/dev/null 2>&1; then
+        log "${plasma6_name} already installed"
+        return 0
+    fi
+    if rpm -q "$plain_name" >/dev/null 2>&1; then
+        log "${plain_name} already installed"
+        return 0
+    fi
+    if dnf list --available "$plasma6_name" >/dev/null 2>&1; then
+        ensure_packages "$plasma6_name" "${extras[@]}"
+    else
+        ensure_packages "$plain_name"
+    fi
+}
+
 ensure_flatpak_remote() {
     local name="$1"
     local url="$2"
