@@ -265,34 +265,42 @@ apply_profile() {
     notify "Display profile: ${HOST}/${profile}"
 }
 
-workspaces_on_monitor() {
-    local mon="$1"
+# workspace=3:HDMI-A-1  active=HDMI-A-1:3
+workspace_map_dump() {
     hyprctl workspaces -j 2>/dev/null | python3 -c '
 import json, sys
-mon = sys.argv[1]
 try:
     data = json.load(sys.stdin)
 except Exception:
     raise SystemExit(0)
 for w in data:
-    if w.get("monitor") != mon:
+    mon = w.get("monitor") or ""
+    if not mon:
         continue
     name = str(w.get("name") or "")
     wid = w.get("id")
-    if name.startswith("special"):
-        print(name)
-    elif wid is not None:
-        print(wid)
-' "$mon" 2>/dev/null || true
+    key = name if name.startswith("special") else (str(wid) if wid is not None else name)
+    if not key:
+        continue
+    print(f"workspace={key}:{mon}")
+' 2>/dev/null || true
+    hyprctl monitors -j 2>/dev/null | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(0)
+for m in data:
+    name = m.get("name") or ""
+    ws = (m.get("activeWorkspace") or {}).get("name") or (m.get("activeWorkspace") or {}).get("id")
+    if name and ws is not None and str(ws) != "":
+        print(f"active={name}:{ws}")
+' 2>/dev/null || true
 }
 
-save_monitor_workspaces() {
-    local mon="$1"
+save_workspace_map() {
     mkdir -p "$STATE_DIR"
-    {
-        printf 'monitor=%s\n' "$mon"
-        workspaces_on_monitor "$mon" | awk '{print "workspace=" $0}'
-    } >"$SAVED_WS_FILE"
+    workspace_map_dump >"$SAVED_WS_FILE"
 }
 
 monitor_is_live() {
@@ -351,15 +359,6 @@ refresh_cursor() {
     fi
 }
 
-wait_for_unlock() {
-    local waited=0
-    while command -v pidof >/dev/null 2>&1 && pidof hyprlock >/dev/null 2>&1; do
-        sleep 0.4
-        waited=1
-    done
-    [[ "$waited" -eq 1 ]] && sleep 0.3
-}
-
 wait_for_monitor() {
     local mon="$1" i
     for i in $(seq 1 20); do
@@ -381,26 +380,61 @@ layout_ready() {
     return 0
 }
 
+workspace_on_monitor() {
+    local ws="$1" mon="$2"
+    hyprctl workspaces -j 2>/dev/null | python3 -c '
+import json, sys
+ws, mon = sys.argv[1], sys.argv[2]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for w in data:
+    name = str(w.get("name") or "")
+    wid = str(w.get("id") if w.get("id") is not None else "")
+    if ws not in (name, wid):
+        continue
+    raise SystemExit(0 if (w.get("monitor") or "") == mon else 1)
+raise SystemExit(1)
+' "$ws" "$mon" 2>/dev/null
+}
+
 workspaces_restored() {
-    local mon="$1"
-    local wanted actual
-    wanted="$(awk -F= '/^workspace=/{print $2}' "$SAVED_WS_FILE" | sort)"
-    [[ -n "$wanted" ]] || return 0
-    actual="$(workspaces_on_monitor "$mon" | sort)"
-    [[ "$wanted" == "$actual" ]]
+    local line ws mon
+    [[ -f "$SAVED_WS_FILE" ]] || return 0
+    while IFS= read -r line; do
+        [[ "$line" == workspace=* ]] || continue
+        ws="${line#workspace=}"
+        mon="${ws##*:}"
+        ws="${ws%:*}"
+        [[ -n "$ws" && -n "$mon" ]] || continue
+        workspace_on_monitor "$ws" "$mon" || return 1
+    done <"$SAVED_WS_FILE"
+    return 0
 }
 
 restore_saved_workspaces_now() {
     [[ -f "$SAVED_WS_FILE" ]] || return 0
-    local mon ws
-    mon="$(awk -F= '/^monitor=/{print $2; exit}' "$SAVED_WS_FILE")"
-    [[ -n "$mon" ]] || return 0
-    wait_for_monitor "$mon" || return 1
-    while IFS= read -r ws; do
-        [[ -n "$ws" ]] || continue
+    local line ws mon
+    while IFS= read -r line; do
+        [[ "$line" == workspace=* ]] || continue
+        ws="${line#workspace=}"
+        mon="${ws##*:}"
+        ws="${ws%:*}"
+        [[ -n "$ws" && -n "$mon" ]] || continue
+        wait_for_monitor "$mon" || return 1
         hyprctl dispatch moveworkspacetomonitor "$ws" "$mon" >/dev/null 2>&1 || true
-    done < <(awk -F= '/^workspace=/{print $2}' "$SAVED_WS_FILE")
-    if workspaces_restored "$mon"; then
+    done <"$SAVED_WS_FILE"
+    while IFS= read -r line; do
+        [[ "$line" == active=* ]] || continue
+        mon="${line#active=}"
+        ws="${mon##*:}"
+        mon="${mon%:*}"
+        [[ -n "$ws" && -n "$mon" ]] || continue
+        hyprctl dispatch focusmonitor "$mon" >/dev/null 2>&1 || true
+        hyprctl dispatch workspace "$ws" >/dev/null 2>&1 || true
+    done <"$SAVED_WS_FILE"
+    if workspaces_restored; then
         rm -f "$SAVED_WS_FILE"
         return 0
     fi
@@ -417,11 +451,10 @@ schedule_workspace_restore() {
         fi
     fi
     (
-        wait_for_unlock
         local i
-        for i in 1 2 3 4 5 6; do
+        for i in $(seq 1 12); do
             restore_saved_workspaces_now && break
-            sleep 1
+            sleep 0.5
         done
         rm -f "$RESTORE_WS_PID_FILE"
     ) &
@@ -499,12 +532,18 @@ enable_idle_monitor() {
     return 1
 }
 
+# Desk HDMI is a real desktop panel. Disabling it dumps its workspaces onto
+# DP-2/DP-3. Only theater should drop HDMI out of the layout.
 idle_off_runewyrm() {
-    save_monitor_workspaces "$RUNEWYRM_IDLE_MONITOR"
+    local profile
+    profile="$(current_profile)"
+    save_workspace_map
     dpms off "$RUNEWYRM_IDLE_MONITOR"
     dpms_desk_ports off
-    sleep 0.2
-    keyword_monitor "${RUNEWYRM_IDLE_MONITOR},disable"
+    if [[ "$profile" == theater ]]; then
+        sleep 0.2
+        keyword_monitor "${RUNEWYRM_IDLE_MONITOR},disable"
+    fi
 }
 
 idle_off_other() { dpms off; }
