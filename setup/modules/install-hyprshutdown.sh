@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Graceful Hyprland logout/reboot helper. Prefer the distro package.
-# If it is missing, build upstream with clang/lld like MakeMKV.
+# Build upstream with clang only when the packaged Hypr stack is new enough.
+# Current Rock/OMV hyprutils is 0.6 and has no hyprtoolkit; session-control.sh
+# already falls back to hyprctl dispatch exit in that case.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -12,6 +14,7 @@ HYPRSHUTDOWN_REPO="${HYPRSHUTDOWN_REPO:-https://github.com/hyprwm/hyprshutdown.g
 HYPRSHUTDOWN_SRC="${HYPRSHUTDOWN_SRC:-${DOTFILES_HOME}/.cache/hyprshutdown-src}"
 HYPRSHUTDOWN_PREFIX="${HYPRSHUTDOWN_PREFIX:-/usr/local}"
 STAMP="${HYPRSHUTDOWN_PREFIX}/share/hyprshutdown/.dotfiles-revision"
+NEED_HYPRUTILS="${HYPRSHUTDOWN_MIN_HYPRUTILS:-0.11.0}"
 
 pick_pkg() {
     local p
@@ -28,6 +31,32 @@ pick_pkg() {
     return 1
 }
 
+pc_mod() {
+    command -v pkg-config >/dev/null 2>&1 || return 1
+    pkg-config "$@"
+}
+
+stack_ready_to_build() {
+    pc_mod --exists hyprtoolkit || return 1
+    pc_mod --atleast-version="$NEED_HYPRUTILS" hyprutils || return 1
+    pc_mod --exists pixman-1 || return 1
+    pc_mod --exists libdrm || return 1
+    return 0
+}
+
+explain_missing_stack() {
+    local hu="none" ht="missing"
+    if pc_mod --exists hyprutils; then
+        hu="$(pc_mod --modversion hyprutils)"
+    fi
+    if pc_mod --exists hyprtoolkit; then
+        ht="$(pc_mod --modversion hyprtoolkit)"
+    fi
+    warn "hyprshutdown source needs hyprtoolkit and hyprutils >= ${NEED_HYPRUTILS}"
+    warn "this host has hyprtoolkit=${ht} hyprutils=${hu}"
+    warn "leaving logout on hyprctl dispatch exit until the distro Hypr stack catches up"
+}
+
 if command -v hyprshutdown >/dev/null 2>&1 && [[ "${HYPRSHUTDOWN_FORCE_BUILD:-0}" != "1" ]]; then
     log "hyprshutdown already on PATH: $(command -v hyprshutdown)"
     exit 0
@@ -39,7 +68,7 @@ if [[ "${HYPRSHUTDOWN_FORCE_BUILD:-0}" != "1" ]] && dnf list --available hyprshu
         log "installed hyprshutdown from dnf"
         exit 0
     fi
-    warn "hyprshutdown rpm installed but not on PATH; building from source"
+    warn "hyprshutdown rpm installed but not on PATH"
 fi
 
 install_build_deps() {
@@ -70,6 +99,12 @@ install_build_deps() {
 }
 
 install_build_deps
+
+if ! stack_ready_to_build; then
+    explain_missing_stack
+    exit 0
+fi
+
 command -v clang >/dev/null 2>&1 || die "clang is not on PATH after package install"
 command -v clang++ >/dev/null 2>&1 || die "clang++ is not on PATH after package install"
 command -v cmake >/dev/null 2>&1 || die "cmake is not on PATH after package install"
