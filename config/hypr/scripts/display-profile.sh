@@ -153,6 +153,9 @@ apply_workshare_monitors() {
 
 apply_default_monitors() { keyword_monitor ",preferred,highrr,auto"; }
 
+# Native 3840x2400 @ 60. Scale 1.5 → 2560x1600 logical (16:10 2K).
+apply_forgewyrm_monitors() { keyword_monitor "eDP-1,3840x2400@60,0x0,1.5"; }
+
 apply_runewyrm() {
     local profile="${1:-desk}"
     case "$profile" in
@@ -163,6 +166,12 @@ apply_runewyrm() {
     esac
     save_profile "$profile"
     notify "Display profile: ${HOST}/${profile}"
+}
+
+apply_forgewyrm() {
+    apply_forgewyrm_monitors
+    save_profile "laptop"
+    notify "Display profile: ${HOST}/laptop"
 }
 
 apply_other_host() {
@@ -293,14 +302,20 @@ cmd_apply() {
     need_hypr
     QUIET=1
     with_apply_lock || return 0
-    if [[ "$HOST" == "runewyrm" ]]; then
-        local profile
-        profile="$(current_profile)"
-        [[ -n "$profile" && "$profile" != "default" ]] || profile="desk"
-        apply_runewyrm "$profile"
-    else
-        apply_other_host
-    fi
+    case "$HOST" in
+        runewyrm)
+            local profile
+            profile="$(current_profile)"
+            [[ -n "$profile" && "$profile" != "default" ]] || profile="desk"
+            apply_runewyrm "$profile"
+            ;;
+        forgewyrm)
+            apply_forgewyrm
+            ;;
+        *)
+            apply_other_host
+            ;;
+    esac
     schedule_workspace_restore
 }
 
@@ -310,7 +325,11 @@ cmd_set() {
     with_apply_lock || return 0
     if [[ "$HOST" != "runewyrm" ]]; then
         notify "Profiles desk/theater/workshare are runewyrm-only (this host is ${HOST})"
-        apply_other_host
+        if [[ "$HOST" == "forgewyrm" ]]; then
+            apply_forgewyrm
+        else
+            apply_other_host
+        fi
         return 0
     fi
     apply_runewyrm "$profile"
@@ -382,11 +401,17 @@ cmd_status() {
 }
 
 cmd_list() {
-    if [[ "$HOST" == "runewyrm" ]]; then
-        printf '%s\n' "runewyrm profiles: desk, theater, workshare"
-    else
-        printf '%s\n' "${HOST}: default preferred/auto layout"
-    fi
+    case "$HOST" in
+        runewyrm)
+            printf '%s\n' "runewyrm profiles: desk, theater, workshare"
+            ;;
+        forgewyrm)
+            printf '%s\n' "forgewyrm: eDP-1 3840x2400@60 scale 1.5 (2560x1600 logical)"
+            ;;
+        *)
+            printf '%s\n' "${HOST}: default preferred/auto layout"
+            ;;
+    esac
 }
 
 usage() { echo "Usage: display-profile.sh [apply|idle-off|idle-on|restore-ws|status|list|desk|theater|workshare]"; }
