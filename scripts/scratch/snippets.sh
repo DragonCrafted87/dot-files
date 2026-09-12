@@ -2,6 +2,6 @@
 # shellcheck disable=SC2317
 return
 
-find . -type f -name "*.sh" -exec chmod +x {} +
+find . -type f \( -name "*.sh" -o -name "*.bashrc" \) -exec chmod +x {} +
 
 git commit -m "fix pre-commit issues"

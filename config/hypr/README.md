@@ -2,8 +2,7 @@
 
 The linked `~/.config/hypr` tree is shared across machines. Host-specific
 layouts live in `conf.d/monitors.d/` and are the source of truth.
-`scripts/display-profile.sh` parses those files and applies `hyprctl
-keyword monitor` so a laptop never inherits runewyrm's triple-head
+`scripts/display-profile.sh` parses those files and applies `hyprctl keyword monitor` so a laptop never inherits runewyrm's triple-head
 layout from `monitors.conf` on disk.
 
 Startup applies the last profile once (`exec-once`). Reloads do not
@@ -17,11 +16,11 @@ File names:
 
 ## Profiles (runewyrm)
 
-| Profile     | File                      | Monitors                                              | Audio                     |
-| ----------- | ------------------------- | ----------------------------------------------------- | ------------------------- |
-| `desk`      | `runewyrm-desk.conf`      | DP-2 + DP-3 + HDMI-A-1                                | restore last / desk sink  |
-| `theater`   | `runewyrm-theater.conf`   | DP-2 and DP-3 disabled (other room); HDMI / TV only   | default sink to HDMI / TV |
-| `workshare` | `runewyrm-workshare.conf` | DP-2 and DP-3 disabled; HDMI stays at desk mode       | restore desk sink         |
+| Profile     | File                      | Monitors                                            | Audio                     |
+| ----------- | ------------------------- | --------------------------------------------------- | ------------------------- |
+| `desk`      | `runewyrm-desk.conf`      | DP-2 + DP-3 + HDMI-A-1                              | restore last / desk sink  |
+| `theater`   | `runewyrm-theater.conf`   | DP-2 and DP-3 disabled (other room); HDMI / TV only | default sink to HDMI / TV |
+| `workshare` | `runewyrm-workshare.conf` | DP-2 and DP-3 disabled; HDMI stays at desk mode     | restore desk sink         |
 
 ## Profiles (forgewyrm)
 
