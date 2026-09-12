@@ -13,7 +13,8 @@
         "powershell",
         "python-extra",
         "python",
-        "shell"
+        "shell",
+        "docs"
     ],
     "dictionaryDefinitions": [
         {
@@ -40,6 +41,10 @@
         {
             "name": "powershell",
             "path": "./.cspell/powershell.dict"
+        },
+        {
+            "name": "docs",
+            "path": "./.cspell/docs.dict"
         }
     ],
     "flagWords": [

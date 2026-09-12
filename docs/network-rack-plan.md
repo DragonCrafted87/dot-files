@@ -12,17 +12,17 @@ On **casters**, not lagged down. No plan to enclose it. Square holes + cage
 nuts. Ambient air is free; still leave 1U gaps so 1U gear is not exhausting
 into the next lid.
 
-| Position | What |
-| --- | --- |
-| Bottom | RROYJJ 4U 24-bay hot-swap (`B095YMXW1K`, ~650 mm / 25.6 in deep) — main data server |
-| Top | HP ProLiant DL360p Gen8 1U |
+| Position | What                                                                                |
+| -------- | ----------------------------------------------------------------------------------- |
+| Bottom   | RROYJJ 4U 24-bay hot-swap (`B095YMXW1K`, ~650 mm / 25.6 in deep) — main data server |
+| Top      | HP ProLiant DL360p Gen8 1U                                                          |
 
 Do not mix rail kits between the RROYJJ, the DL360p, and the future RackChoice
 5U boxes. Each chassis has its own slide pattern.
 
 ### Target U stack (bottom up)
 
-```
+```txt
 4U   RROYJJ 24-bay
 1U   empty / cable
 5U   tower A (RackChoice)
@@ -60,21 +60,21 @@ Neck height is acceptable because this is break-glass, not a daily desk.
 
 ZyXEL GS1900 pair (US cart snapshot):
 
-| Role | Model | SKU | PoE | List |
-| --- | --- | --- | --- | --- |
-| Main / rack | GS1900-24HPv2 | GS190024HPV2-USAM01F | 24× PoE+, 170 W | $249.99 |
-| Office | GS1900-8HP | GS1900-8HP-USAM03F | 8× PoE+, 70 W | $109.99 |
-| | | | **Subtotal** | **$359.98** |
+| Role        | Model         | SKU                  | PoE             | List        |
+| ----------- | ------------- | -------------------- | --------------- | ----------- |
+| Main / rack | GS1900-24HPv2 | GS190024HPV2-USAM01F | 24× PoE+, 170 W | $249.99     |
+| Office      | GS1900-8HP    | GS1900-8HP-USAM03F   | 8× PoE+, 70 W   | $109.99     |
+|             |               |                      | **Subtotal**    | **$359.98** |
 
 PoE today: one OpenWrt AP + two other PDs. A couple more later still fits
 170 W. Buried driveway magnet stays wireless (LoRa/ESP), not a PoE homerun.
 
 ### Tower-to-rack cases and rails
 
-| Item | ASIN / SKU | Notes |
-| --- | --- | --- |
+| Item                              | ASIN / SKU   | Notes                                                                                                 |
+| --------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
 | 2× RackChoice 5U ATX/EATX chassis | `B0D2ZT3QDZ` | 360 mm rad cage unused if staying on air; D15-class Noctua needs ≥170 mm CPU height (5U is the point) |
-| 2× Rosewill RSV-RL26HV2 slides | `B0GZS9RJNC` | 26–39.4 in, 2U–5U chassis slides. Matches 31 in 4-post. |
+| 2× Rosewill RSV-RL26HV2 slides    | `B0GZS9RJNC` | 26–39.4 in, 2U–5U chassis slides. Matches 31 in 4-post.                                               |
 
 Do **not** buy the RackChoice **20 in** optional rail (`B0DJPC7V3F`). Too short
 for this rack. Skip StarTech UNIRAILS1UB (those are L-brackets, not chassis
@@ -122,7 +122,7 @@ the OpenWrt AP, uplink as WAN, no bridge onto `192.168.0.0/16`.
 
 ## Target network layout
 
-```
+```txt
 Starlink --eth0-- mist-dragon --eth1 802.1Q trunk
                       |
               GS1900-24HPv2 (rack)
@@ -141,13 +141,13 @@ either trunk.
 
 IDs can move; keep them documented here when they are assigned.
 
-| ID | Name | Untagged on | Notes |
-| --- | --- | --- | --- |
-| 10 | lan | house ports, AP LAN BSS | current `192.168.0.0/16` until a later split |
-| 20 | work | office port for the work PC | WAN + printer `.6` only |
-| 30 | guest | AP guest BSS (or AP-local NAT until trunk exists) | no LAN |
-| 40 | iot | optional later | printer may stay on lan |
-| 99 | mgmt | switch/AP/router UIs | do not expose to work/guest |
+| ID  | Name  | Untagged on                                       | Notes                                        |
+| --- | ----- | ------------------------------------------------- | -------------------------------------------- |
+| 10  | lan   | house ports, AP LAN BSS                           | current `192.168.0.0/16` until a later split |
+| 20  | work  | office port for the work PC                       | WAN + printer `.6` only                      |
+| 30  | guest | AP guest BSS (or AP-local NAT until trunk exists) | no LAN                                       |
+| 40  | iot   | optional later                                    | printer may stay on lan                      |
+| 99  | mgmt  | switch/AP/router UIs                              | do not expose to work/guest                  |
 
 Printer stays on lan. One forward: `work` → `192.168.0.6` (print ports).
 Work PC never shares an untagged port with lan hosts.
@@ -176,7 +176,7 @@ When VLANs land, shrinking lan to a `/24` (or several) is the durable fix.
 ## After the switches arrive
 
 1. Confirm GS1900 hardware version vs OpenWrt ToH; flash or keep stock.
-2. Cable router trunk and office trunk only. Leave house hosts on lan untagged.
-3. One office port untagged VLAN 20 for the work PC; test isolation.
-4. Move guest off AP-local NAT onto VLAN 30 when the AP trunk is clean.
-5. Optional: split `192.168.0.0/16` into per-VLAN prefixes.
+1. Cable router trunk and office trunk only. Leave house hosts on lan untagged.
+1. One office port untagged VLAN 20 for the work PC; test isolation.
+1. Move guest off AP-local NAT onto VLAN 30 when the AP trunk is clean.
+1. Optional: split `192.168.0.0/16` into per-VLAN prefixes.
