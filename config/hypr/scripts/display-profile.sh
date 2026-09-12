@@ -17,6 +17,7 @@ RUNEWYRM_DP_MONITORS=(DP-2 DP-3)
 THEATER_SINK_MATCH="${THEATER_SINK_MATCH:-hdmi}"
 DESK_SINK_MATCH="${DESK_SINK_MATCH:-}"
 QUIET=0
+LOCK_HELD=0
 
 notify() {
     local msg="$1"
@@ -43,14 +44,31 @@ dpms() {
     fi
 }
 
-with_apply_lock() {
+acquire_apply_lock() {
     mkdir -p "$STATE_DIR"
     exec 9>"$APPLY_LOCK_FILE"
-    if ! flock -n 9; then
+    if ! flock -w 25 9; then
+        echo "display-profile: timed out waiting for apply.lock" >&2
+        exec 9>&-
         return 1
     fi
+    LOCK_HELD=1
     return 0
 }
+
+release_apply_lock() {
+    [[ "$LOCK_HELD" -eq 1 ]] || return 0
+    flock -u 9 2>/dev/null || true
+    exec 9>&-
+    LOCK_HELD=0
+}
+
+with_apply_lock() {
+    acquire_apply_lock || return 1
+    return 0
+}
+
+trap release_apply_lock EXIT
 
 save_profile() {
     mkdir -p "$STATE_DIR"
@@ -106,7 +124,7 @@ profile_conf() {
 }
 
 host_profiles() {
-    local base file name
+    local file name
     shopt -s nullglob
     if [[ -f "${MONITORS_D}/${HOST}.conf" ]]; then
         printf '%s\n' "default"
@@ -289,6 +307,41 @@ raise SystemExit(1)
 ' "$mon" 2>/dev/null
 }
 
+monitor_center() {
+    local mon="$1"
+    hyprctl monitors -j 2>/dev/null | python3 -c '
+import json, sys
+mon = sys.argv[1]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for m in data:
+    if m.get("name") != mon:
+        continue
+    x = int(m.get("x") or 0)
+    y = int(m.get("y") or 0)
+    w = int(m.get("width") or 0)
+    h = int(m.get("height") or 0)
+    print(x + max(w // 2, 1), y + max(h // 2, 1))
+    raise SystemExit(0)
+raise SystemExit(1)
+' "$mon" 2>/dev/null
+}
+
+refresh_cursor() {
+    local mon="${1:-}" pos
+    hyprctl keyword cursor:no_hardware_cursors 1 >/dev/null 2>&1 || true
+    sleep 0.05
+    hyprctl keyword cursor:no_hardware_cursors 0 >/dev/null 2>&1 || true
+    if [[ -n "$mon" ]] && pos="$(monitor_center "$mon" || true)" && [[ -n "$pos" ]]; then
+        # shellcheck disable=SC2086
+        hyprctl dispatch movecursor $pos >/dev/null 2>&1 || true
+    else
+        hyprctl dispatch movecursor 1 1 >/dev/null 2>&1 || true
+    fi
+}
+
 wait_for_unlock() {
     local waited=0
     while command -v pidof >/dev/null 2>&1 && pidof hyprlock >/dev/null 2>&1; do
@@ -345,7 +398,7 @@ schedule_workspace_restore() {
     (
         wait_for_unlock
         local i
-        for i in 1 2 3 4; do
+        for i in 1 2 3 4 5 6; do
             restore_saved_workspaces_now && break
             sleep 1
         done
@@ -364,6 +417,7 @@ cmd_apply() {
     local profile
     profile="$(current_profile)"
     apply_profile "$profile"
+    release_apply_lock
     schedule_workspace_restore
 }
 
@@ -374,9 +428,11 @@ cmd_set() {
     if ! profile_conf "$profile" >/dev/null; then
         notify "No ${HOST}-${profile}.conf (this host is ${HOST})"
         apply_profile "$(current_profile)"
+        release_apply_lock
         return 0
     fi
     apply_profile "$profile"
+    release_apply_lock
     schedule_workspace_restore
 }
 
@@ -407,6 +463,21 @@ dpms_desk_ports() {
     done
 }
 
+enable_idle_monitor() {
+    local file spec i
+    file="$(current_conf)" || return 1
+    spec="$(monitor_spec_from_conf "$file" "$RUNEWYRM_IDLE_MONITOR" || true)"
+    [[ -n "$spec" ]] || return 1
+    monitor_is_disabled "$spec" && return 0
+    for i in $(seq 1 12); do
+        keyword_monitor "$spec"
+        dpms on "$RUNEWYRM_IDLE_MONITOR"
+        monitor_is_live "$RUNEWYRM_IDLE_MONITOR" && return 0
+        sleep 0.4
+    done
+    return 1
+}
+
 idle_off_runewyrm() {
     save_monitor_workspaces "$RUNEWYRM_IDLE_MONITOR"
     dpms off "$RUNEWYRM_IDLE_MONITOR"
@@ -420,32 +491,31 @@ idle_off_other() { dpms off; }
 cmd_idle_off() {
     need_hypr
     QUIET=1
+    with_apply_lock || return 0
     case "$HOST" in
         runewyrm) idle_off_runewyrm ;;
         *) idle_off_other ;;
     esac
+    release_apply_lock
 }
 
 cmd_idle_on() {
     need_hypr
     QUIET=1
     with_apply_lock || return 0
+    # DRM is often still coming back after sleep. Give it a beat.
+    sleep 0.3
     dpms on
     dpms_desk_ports on
     if [[ "$HOST" == "runewyrm" ]]; then
-        local file spec
-        file="$(current_conf)" || true
-        spec=""
-        if [[ -n "$file" ]]; then
-            spec="$(monitor_spec_from_conf "$file" "$RUNEWYRM_IDLE_MONITOR" || true)"
-        fi
-        if [[ -n "$spec" ]] && ! monitor_is_disabled "$spec"; then
-            keyword_monitor "$spec"
-        fi
-        dpms on "$RUNEWYRM_IDLE_MONITOR"
+        enable_idle_monitor || true
+        release_apply_lock
         schedule_workspace_restore
+        refresh_cursor "$RUNEWYRM_IDLE_MONITOR"
+    else
+        release_apply_lock
+        refresh_cursor
     fi
-    hyprctl dispatch movecursor 1 1 >/dev/null 2>&1 || true
 }
 
 cmd_status() {
@@ -454,6 +524,7 @@ cmd_status() {
     printf 'host:            %s\n' "$HOST"
     printf 'saved profile:   %s\n' "$(current_profile)"
     printf 'conf:            %s\n' "${file:-none}"
+    printf 'lock:            %s\n' "$APPLY_LOCK_FILE"
     printf 'default sink:    %s\n' "$(default_sink)"
     if [[ -n "$file" ]]; then
         printf 'monitors:\n'
