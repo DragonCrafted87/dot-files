@@ -13,11 +13,33 @@ set -euo pipefail
 
 dotfiles_here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SETUP_DIR="${SETUP_DIR:-$dotfiles_here}"
-REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+_git_toplevel() {
+    git -C "$1" rev-parse --show-toplevel 2>/dev/null || return 1
+}
+
+# Never use bare `git rev-parse` — modules are often run from $HOME.
+if [[ -z "${REPO_ROOT:-}" ]]; then
+    REPO_ROOT="$(_git_toplevel "$SETUP_DIR" || true)"
+fi
+if [[ -z "${REPO_ROOT:-}" ]]; then
+    REPO_ROOT="$(_git_toplevel "$(dirname "$SETUP_DIR")" || true)"
+fi
+if [[ -z "${REPO_ROOT:-}" && -d "${SETUP_DIR}/../bashrc.d" ]]; then
+    REPO_ROOT="$(cd "${SETUP_DIR}/.." && pwd)"
+fi
 
 DOTFILES_USER="${DOTFILES_USER:-dragon}"
 DOTFILES_HOME="${DOTFILES_HOME:-/home/${DOTFILES_USER}}"
 DOTFILES_DIR="${DOTFILES_DIR:-${DOTFILES_HOME}/dot-files}"
+
+if [[ -z "${REPO_ROOT:-}" && -d "${DOTFILES_DIR}/.git" ]]; then
+    REPO_ROOT="$(_git_toplevel "$DOTFILES_DIR" || printf '%s' "$DOTFILES_DIR")"
+fi
+if [[ -z "${REPO_ROOT:-}" ]]; then
+    die "cannot find the dot-files repo root from ${SETUP_DIR} (cwd=$(pwd))"
+fi
+
 DOTFILES_REPO_URL="${DOTFILES_REPO_URL:-git@github.com:DragonCrafted87/dot-files.git}"
 SSH_KEY_PATH="${SSH_KEY_PATH:-${DOTFILES_HOME}/.ssh/id_ed25519}"
 DOTFILES_BASHRC="${DOTFILES_BASHRC:-hw_bashrc.sh}"
