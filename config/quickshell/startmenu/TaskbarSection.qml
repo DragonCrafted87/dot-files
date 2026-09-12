@@ -13,15 +13,14 @@ Rectangle {
 
     signal windowFocused()
     property bool minimizedOnly: true
-
-    readonly property string clientsPath:
-        (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/qs-startmenu-clients.json"
+    property int refreshGen: 0
 
     ListModel { id: winModel }
 
     function refresh() {
-        clientsFile.path = ""
-        clientsProc.running = false
+        root.refreshGen++
+        if (clientsProc.running)
+            clientsProc.running = false
         clientsProc.running = true
     }
 
@@ -83,23 +82,10 @@ Rectangle {
 
     Process {
         id: clientsProc
-        command: [
-            "sh", "-c",
-            "hyprctl clients -j > '" + root.clientsPath + "' 2>/dev/null || echo '[]' > '" + root.clientsPath + "'"
-        ]
-        running: true
-        onExited: {
-            clientsFile.path = root.clientsPath
-            clientsFile.reload()
-        }
-    }
-
-    FileView {
-        id: clientsFile
-        // path assigned after process exits
-        onLoaded: {
-            // text() is a function, not a property
-            root.parseClients(clientsFile.text())
+        command: ["hyprctl", "clients", "-j"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: root.parseClients(text)
         }
     }
 
@@ -109,6 +95,7 @@ Rectangle {
     }
 
     onMinimizedOnlyChanged: root.refresh()
+    Component.onCompleted: root.refresh()
 
     ColumnLayout {
         anchors.fill: parent
