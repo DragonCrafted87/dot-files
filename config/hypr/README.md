@@ -16,6 +16,15 @@ re-run apply, so `keyword monitor` cannot loop the compositor.
 | `theater`   | same DPs; HDMI uses the TV preferred mode | default sink to HDMI / TV |
 | `workshare` | DP-2 and DP-3 disabled; HDMI stays        | restore desk sink         |
 
+## Profiles (forgewyrm)
+
+| Profile  | Monitor | Mode           | Scale | Logical size |
+| -------- | ------- | -------------- | ----- | ------------ |
+| `laptop` | eDP-1   | 3840x2400@60Hz | 1.5   | 2560x1600    |
+
+Scale 1.5 keeps the native 16:10 framebuffer and makes UI size match a
+2560x1600 (16:10 2K) panel. Scale 2.0 would look like 1920x1200.
+
 Every other hostname only gets `monitor=,preferred,highrr,auto`.
 
 Last profile is stored in `~/.local/state/hypr/display-profile` (outside
@@ -27,6 +36,7 @@ the git-linked tree).
 ~/.config/hypr/scripts/display-profile.sh desk
 ~/.config/hypr/scripts/display-profile.sh theater
 ~/.config/hypr/scripts/display-profile.sh workshare
+~/.config/hypr/scripts/display-profile.sh apply
 ~/.config/hypr/scripts/display-profile.sh status
 ```
 
@@ -67,5 +77,5 @@ or edit `*_SINK_MATCH` at the top of `scripts/display-profile.sh`.
 
 ## Hostname
 
-The check is `hostname -s` == `runewyrm`. A FQDN like
-`runewyrm.stealthdragonland.net` still matches.
+The check is `hostname -s`. A FQDN like `runewyrm.stealthdragonland.net`
+or `forgewyrm.example` still matches the short name.
