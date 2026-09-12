@@ -11,6 +11,19 @@ DOTFILES_LIB_LOADED=1
 
 set -euo pipefail
 
+log() {
+    printf '==> %s\n' "$*"
+}
+
+warn() {
+    printf 'warning: %s\n' "$*" >&2
+}
+
+die() {
+    printf 'error: %s\n' "$*" >&2
+    exit 1
+}
+
 dotfiles_here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SETUP_DIR="${SETUP_DIR:-$dotfiles_here}"
 
@@ -48,19 +61,6 @@ OMP_INSTALL_DIR="${OMP_INSTALL_DIR:-${DOTFILES_HOME}/bin}"
 CONFIG_SOURCE_DIR="${CONFIG_SOURCE_DIR:-${REPO_ROOT}/config}"
 CONFIG_TARGET_DIR="${CONFIG_TARGET_DIR:-${DOTFILES_HOME}/.config}"
 SETUP_FILES_DIR="${SETUP_FILES_DIR:-${SETUP_DIR}/files}"
-
-log() {
-    printf '==> %s\n' "$*"
-}
-
-warn() {
-    printf 'warning: %s\n' "$*" >&2
-}
-
-die() {
-    printf 'error: %s\n' "$*" >&2
-    exit 1
-}
 
 run() {
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
