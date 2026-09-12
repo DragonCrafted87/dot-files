@@ -27,6 +27,7 @@ ShellRoot {
     function applyCursorPlacement(raw) {
         // raw: first line "x, y" from hyprctl cursorpos
         // rest: monitors JSON
+        const wasOpen = root.menuOpen
         try {
             const lines = raw.trim().split("\n")
             const posLine = lines[0] || "0, 0"
@@ -41,6 +42,8 @@ ShellRoot {
                 root.menuMarginLeft = 8
                 root.menuMarginTop = 8
                 root.menuOpen = true
+                if (wasOpen)
+                    taskbarSection.refresh()
                 return
             }
 
@@ -63,16 +66,16 @@ ShellRoot {
             root.menuMarginLeft = left
             root.menuMarginTop = top
             root.menuOpen = true
-
-            taskbarSection.refresh()
+            if (wasOpen)
+                taskbarSection.refresh()
         } catch (e) {
             console.log("cursor place error:", e)
 
             root.menuMarginLeft = 8
             root.menuMarginTop = 8
             root.menuOpen = true
-
-            taskbarSection.refresh()
+            if (wasOpen)
+                taskbarSection.refresh()
         }
     }
 
@@ -92,7 +95,6 @@ ShellRoot {
         id: cursorProc
         command: [
             "sh", "-c",
-            // one file: line1 = cursor, rest = monitors json
             "echo \"$(hyprctl cursorpos)\" > '" + root.cursorPath + "'; " +
             "hyprctl monitors -j >> '" + root.cursorPath + "'"
         ]
@@ -120,7 +122,6 @@ ShellRoot {
         WlrLayershell.keyboardFocus: root.menuOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         WlrLayershell.namespace: "qs-startmenu"
 
-        // only top+left so margins act as free position
         anchors {
             left: true
             top: true
