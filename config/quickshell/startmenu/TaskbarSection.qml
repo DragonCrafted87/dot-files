@@ -16,7 +16,14 @@ Rectangle {
     property int refreshReq: 0
     property int refreshSeen: 0
 
+    readonly property string runtimeDir:
+        Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
+
     ListModel { id: winModel }
+
+    function clientsPath(gen) {
+        return root.runtimeDir + "/qs-startmenu-clients-" + gen + ".json"
+    }
 
     function refresh() {
         root.refreshReq++
@@ -89,31 +96,31 @@ Rectangle {
             if (clientsProc.running)
                 return
             root.refreshSeen = root.refreshReq
+            const path = root.clientsPath(root.refreshSeen)
+            clientsProc.command = [
+                "sh", "-c",
+                "hyprctl clients -j > '" + path + "'"
+            ]
             clientsProc.running = true
         }
     }
 
     Process {
         id: clientsProc
-        command: ["hyprctl", "clients", "-j"]
+        command: ["true"]
         running: false
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const payload = text
-                const req = root.refreshSeen
-                clientsProc.running = false
-                if (payload && String(payload).trim())
-                    root.parseClients(payload)
-                if (root.refreshReq !== req)
-                    refreshKick.restart()
-            }
-        }
-        onExited: function (code) {
-            if (clientsProc.running)
-                clientsProc.running = false
-            if (root.refreshReq !== root.refreshSeen)
+        onExited: {
+            const req = root.refreshSeen
+            clientsFile.path = root.clientsPath(req)
+            clientsFile.reload()
+            if (root.refreshReq !== req)
                 refreshKick.restart()
         }
+    }
+
+    FileView {
+        id: clientsFile
+        onLoaded: root.parseClients(clientsFile.text())
     }
 
     Process {
