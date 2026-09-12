@@ -88,7 +88,6 @@ current_profile() {
     if [[ -f "$PROFILE_FILE" ]]; then tr -d '[:space:]' <"$PROFILE_FILE"; else echo ""; fi
 }
 
-# Lines like `monitor = DP-2,2560x1440@143.91,0x0,1` or `monitor=eDP-1,...`
 monitor_lines() {
     local file="$1" line spec
     [[ -f "$file" ]] || return 1
@@ -265,7 +264,6 @@ apply_profile() {
     notify "Display profile: ${HOST}/${profile}"
 }
 
-# workspace=3:HDMI-A-1  active=HDMI-A-1:3
 workspace_map_dump() {
     hyprctl workspaces -j 2>/dev/null | python3 -c '
 import json, sys
@@ -452,9 +450,9 @@ schedule_workspace_restore() {
     fi
     (
         local i
-        for i in $(seq 1 12); do
+        for i in $(seq 1 16); do
             restore_saved_workspaces_now && break
-            sleep 0.5
+            sleep 0.4
         done
         rm -f "$RESTORE_WS_PID_FILE"
     ) &
@@ -532,18 +530,13 @@ enable_idle_monitor() {
     return 1
 }
 
-# Desk HDMI is a real desktop panel. Disabling it dumps its workspaces onto
-# DP-2/DP-3. Only theater should drop HDMI out of the layout.
+# HDMI wakes itself from DPMS-only. Disable it after the workspace map is saved.
 idle_off_runewyrm() {
-    local profile
-    profile="$(current_profile)"
     save_workspace_map
     dpms off "$RUNEWYRM_IDLE_MONITOR"
     dpms_desk_ports off
-    if [[ "$profile" == theater ]]; then
-        sleep 0.2
-        keyword_monitor "${RUNEWYRM_IDLE_MONITOR},disable"
-    fi
+    sleep 0.2
+    keyword_monitor "${RUNEWYRM_IDLE_MONITOR},disable"
 }
 
 idle_off_other() { dpms off; }
@@ -563,7 +556,6 @@ cmd_idle_on() {
     need_hypr
     QUIET=1
     with_apply_lock || return 0
-    # DRM is often still coming back after sleep. Give it a beat.
     sleep 1
     local i file
     file="$(current_conf || true)"
@@ -577,6 +569,7 @@ cmd_idle_on() {
         layout_ready && break
         sleep 0.5
     done
+    restore_saved_workspaces_now || true
     release_apply_lock
     schedule_workspace_restore
     if [[ "$HOST" == "runewyrm" ]]; then
