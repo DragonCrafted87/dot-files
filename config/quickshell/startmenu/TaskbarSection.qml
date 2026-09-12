@@ -13,23 +13,25 @@ Rectangle {
 
     signal windowFocused()
     property bool minimizedOnly: true
-    property int refreshGen: 0
+    property int refreshReq: 0
+    property int refreshSeen: 0
 
     ListModel { id: winModel }
 
     function refresh() {
-        root.refreshGen++
-        if (clientsProc.running)
-            clientsProc.running = false
-        clientsProc.running = true
+        root.refreshReq++
+        if (!clientsProc.running)
+            refreshKick.start()
     }
 
     function parseClients(raw) {
         winModel.clear()
-        console.log("clients raw length:", raw ? raw.length : 0)
+        if (!raw || !String(raw).trim()) {
+            console.log("clients empty payload")
+            return
+        }
         try {
             const clients = JSON.parse(raw)
-            console.log("clients count:", clients.length)
             const filtered = clients.filter(c => {
                 if (!c || !c.address) return false
                 const ws = (c.workspace && c.workspace.name) ? String(c.workspace.name) : ""
@@ -38,7 +40,6 @@ Rectangle {
                 }
                 return true
             })
-            console.log("filtered count:", filtered.length)
             filtered.sort((a, b) => {
                 const ca = (a.initialClass || a.class || "").toLowerCase()
                 const cb = (b.initialClass || b.class || "").toLowerCase()
@@ -80,12 +81,38 @@ Rectangle {
         root.windowFocused()
     }
 
+    Timer {
+        id: refreshKick
+        interval: 30
+        repeat: false
+        onTriggered: {
+            if (clientsProc.running)
+                return
+            root.refreshSeen = root.refreshReq
+            clientsProc.running = true
+        }
+    }
+
     Process {
         id: clientsProc
         command: ["hyprctl", "clients", "-j"]
         running: false
         stdout: StdioCollector {
-            onStreamFinished: root.parseClients(text)
+            onStreamFinished: {
+                const payload = text
+                const req = root.refreshSeen
+                clientsProc.running = false
+                if (payload && String(payload).trim())
+                    root.parseClients(payload)
+                if (root.refreshReq !== req)
+                    refreshKick.restart()
+            }
+        }
+        onExited: function (code) {
+            if (clientsProc.running)
+                clientsProc.running = false
+            if (root.refreshReq !== root.refreshSeen)
+                refreshKick.restart()
         }
     }
 
