@@ -3,6 +3,7 @@
 # Hyprland env (XDG_CURRENT_DESKTOP=Hyprland:KDE) is the other half.
 # That KDE tag also flips Dolphin 25.04 to single-click and binds
 # double-click to "nothing", so this module pins SingleClick=false.
+# Loose config/kdeglobals is applied here; link-user-config ignores files.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -19,6 +20,8 @@ svc_kf6="${DOTFILES_HOME}/.local/share/kio/servicemenus"
 svc_kf5="${DOTFILES_HOME}/.local/share/kservices5/ServiceMenus"
 mime_xml_src="${SETUP_FILES_DIR}/mime/code-workspace.xml"
 mime_xml_dest="${DOTFILES_HOME}/.local/share/mime/packages/code-workspace.xml"
+theme_src="${CONFIG_SOURCE_DIR}/kdeglobals"
+theme_dest="${CONFIG_TARGET_DIR}/kdeglobals"
 
 if [[ ! -f "$src" ]]; then
     die "missing ${src}"
@@ -141,11 +144,77 @@ if new != text:
 PY
 }
 
+seed_breeze_dark() {
+    local dest_file="$1"
+    local src_file="$2"
+
+    [[ -f "$src_file" ]] || return 0
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        log "dry-run: seed Breeze Dark into ${dest_file}"
+        return 0
+    fi
+    if [[ ! -f "$dest_file" ]]; then
+        log "write ${dest_file} from ${src_file}"
+        install -m 0644 "$src_file" "$dest_file"
+        return 0
+    fi
+    if grep -q '^\[Colors:Window\]' "$dest_file"; then
+        return 0
+    fi
+    log "append Breeze Dark color groups to ${dest_file}"
+    python3 - "$dest_file" "$src_file" <<'PY'
+import sys
+from pathlib import Path
+
+dest, src = Path(sys.argv[1]), Path(sys.argv[2])
+text = dest.read_text() if dest.exists() else ""
+src_text = src.read_text()
+wanted = (
+    "[Colors:Window]",
+    "[Colors:View]",
+    "[Colors:Button]",
+    "[Colors:Selection]",
+    "[Colors:Tooltip]",
+    "[Colors:Complementary]",
+    "[Colors:Header]",
+)
+blocks = []
+current = None
+buf = []
+for line in src_text.splitlines():
+    stripped = line.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        if current in wanted:
+            blocks.append("\n".join(buf).rstrip())
+        current = stripped
+        buf = [line]
+        continue
+    if current in wanted:
+        buf.append(line)
+if current in wanted and buf:
+    blocks.append("\n".join(buf).rstrip())
+if not blocks:
+    raise SystemExit(0)
+new = text.rstrip() + "\n\n" + "\n\n".join(blocks) + "\n"
+if new != text:
+    dest.write_text(new)
+PY
+}
+
 ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" KDE SingleClick false
 ensure_kde_key "${CONFIG_TARGET_DIR}/dolphinrc" KDE SingleClick false
 ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General TerminalApplication kitty
 ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General TerminalService kitty.desktop
 ensure_kde_key "${CONFIG_TARGET_DIR}/dolphinrc" General TerminalApplication kitty
+
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General ColorScheme BreezeDark
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General Name "Breeze Dark"
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General widgetStyle Fusion
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" Icons Theme breeze-dark
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" KDE LookAndFeelPackage org.kde.breezedark.desktop
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" KDE widgetStyle Fusion
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" UiSettings ColorScheme BreezeDark
+seed_breeze_dark "$theme_dest" "$theme_src"
 
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     exit 0
