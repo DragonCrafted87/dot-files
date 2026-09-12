@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Apply or switch Hyprland display profiles by hostname.
+# Monitor layouts come only from conf.d/monitors.d/*.conf.
 set -euo pipefail
 
 HOST="$(hostname -s 2>/dev/null || hostname)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MONITORS_D="${SCRIPT_DIR}/../conf.d/monitors.d"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 PROFILE_FILE="${STATE_DIR}/display-profile"
 SAVED_SINK_FILE="${STATE_DIR}/desk-audio-sink"
@@ -56,6 +59,84 @@ save_profile() {
 
 current_profile() {
     if [[ -f "$PROFILE_FILE" ]]; then tr -d '[:space:]' <"$PROFILE_FILE"; else echo ""; fi
+}
+
+# Lines like `monitor = DP-2,2560x1440@143.91,0x0,1` or `monitor=eDP-1,...`
+monitor_lines() {
+    local file="$1" line spec
+    [[ -f "$file" ]] || return 1
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -n "$line" ]] || continue
+        [[ "$line" == monitor* ]] || continue
+        spec="${line#monitor}"
+        spec="${spec#"${spec%%[![:space:]=]*}"}"
+        spec="${spec#=}"
+        spec="${spec#"${spec%%[![:space:]]*}"}"
+        spec="${spec%"${spec##*[![:space:]]}"}"
+        [[ -n "$spec" ]] || continue
+        printf '%s\n' "$spec"
+    done <"$file"
+}
+
+monitor_name() {
+    local spec="$1"
+    printf '%s\n' "${spec%%,*}"
+}
+
+monitor_is_disabled() {
+    local spec="$1"
+    [[ "${spec#*,}" == disable ]]
+}
+
+profile_conf() {
+    local profile="${1:-}"
+    local file
+    if [[ -n "$profile" && "$profile" != default ]]; then
+        file="${MONITORS_D}/${HOST}-${profile}.conf"
+        [[ -f "$file" ]] && { printf '%s\n' "$file"; return 0; }
+    fi
+    file="${MONITORS_D}/${HOST}.conf"
+    [[ -f "$file" ]] && { printf '%s\n' "$file"; return 0; }
+    file="${MONITORS_D}/default.conf"
+    [[ -f "$file" ]] && { printf '%s\n' "$file"; return 0; }
+    return 1
+}
+
+host_profiles() {
+    local base file name
+    shopt -s nullglob
+    if [[ -f "${MONITORS_D}/${HOST}.conf" ]]; then
+        printf '%s\n' "default"
+    fi
+    for file in "${MONITORS_D}/${HOST}-"*.conf; do
+        name="$(basename "$file" .conf)"
+        printf '%s\n' "${name#${HOST}-}"
+    done
+    shopt -u nullglob
+}
+
+apply_monitor_conf() {
+    local file="$1" spec
+    [[ -f "$file" ]] || { echo "missing monitor conf: $file" >&2; return 1; }
+    while IFS= read -r spec; do
+        [[ -n "$spec" ]] || continue
+        keyword_monitor "$spec"
+    done < <(monitor_lines "$file")
+}
+
+monitor_spec_from_conf() {
+    local file="$1" mon="$2" spec name
+    while IFS= read -r spec; do
+        name="$(monitor_name "$spec")"
+        if [[ "$name" == "$mon" ]]; then
+            printf '%s\n' "$spec"
+            return 0
+        fi
+    done < <(monitor_lines "$file")
+    return 1
 }
 
 list_sinks() { command -v pactl >/dev/null 2>&1 && pactl list short sinks 2>/dev/null | awk '{print $2}'; }
@@ -125,58 +206,36 @@ apply_theater_audio() {
     set_sink "$sink" || true
 }
 
-hdmi_spec_for_profile() {
-    case "${1:-desk}" in
-        theater) printf '%s\n' "${RUNEWYRM_IDLE_MONITOR},preferred,auto,1" ;;
-        workshare) printf '%s\n' "${RUNEWYRM_IDLE_MONITOR},2560x1440@143.91Hz,0x0,1" ;;
-        *) printf '%s\n' "${RUNEWYRM_IDLE_MONITOR},2560x1440@143.91Hz,6000x0,1" ;;
-    esac
+default_profile_for_host() {
+    local first="" name
+    while IFS= read -r name; do
+        [[ -n "$name" ]] || continue
+        if [[ "$name" == desk ]]; then
+            printf '%s\n' "desk"
+            return 0
+        fi
+        [[ -n "$first" ]] || first="$name"
+    done < <(host_profiles)
+    printf '%s\n' "${first:-default}"
 }
 
-apply_desk_monitors() {
-    keyword_monitor "DP-2,2560x1440@143.91,0x0,1"
-    keyword_monitor "DP-3,3440x1440@144,2560x0,1"
-    keyword_monitor "$(hdmi_spec_for_profile desk)"
-}
-
-apply_theater_monitors() {
-    keyword_monitor "DP-2,2560x1440@143.91,0x0,1"
-    keyword_monitor "DP-3,3440x1440@144,2560x0,1"
-    keyword_monitor "$(hdmi_spec_for_profile theater)"
-}
-
-apply_workshare_monitors() {
-    keyword_monitor "DP-2,disable"
-    keyword_monitor "DP-3,disable"
-    keyword_monitor "$(hdmi_spec_for_profile workshare)"
-}
-
-apply_default_monitors() { keyword_monitor ",preferred,highrr,auto"; }
-
-# Native 3840x2400 @ 60. Scale 1.5 → 2560x1600 logical (16:10 2K).
-apply_forgewyrm_monitors() { keyword_monitor "eDP-1,3840x2400@60,0x0,1.5"; }
-
-apply_runewyrm() {
-    local profile="${1:-desk}"
+apply_profile() {
+    local profile="${1:-}"
+    local file
+    if [[ -z "$profile" || "$profile" == default ]]; then
+        profile="$(default_profile_for_host)"
+    fi
+    file="$(profile_conf "$profile")" || {
+        echo "no monitor conf for ${HOST}/${profile}" >&2
+        return 1
+    }
+    apply_monitor_conf "$file"
     case "$profile" in
-        desk) apply_desk_monitors; restore_desk_audio ;;
-        theater) apply_theater_monitors; apply_theater_audio ;;
-        workshare) apply_workshare_monitors; restore_desk_audio ;;
-        *) echo "unknown runewyrm profile: $profile" >&2; return 1 ;;
+        theater) apply_theater_audio ;;
+        desk|workshare) restore_desk_audio ;;
     esac
     save_profile "$profile"
     notify "Display profile: ${HOST}/${profile}"
-}
-
-apply_forgewyrm() {
-    apply_forgewyrm_monitors
-    save_profile "laptop"
-    notify "Display profile: ${HOST}/laptop"
-}
-
-apply_other_host() {
-    apply_default_monitors
-    save_profile "default"
 }
 
 workspaces_on_monitor() {
@@ -302,20 +361,9 @@ cmd_apply() {
     need_hypr
     QUIET=1
     with_apply_lock || return 0
-    case "$HOST" in
-        runewyrm)
-            local profile
-            profile="$(current_profile)"
-            [[ -n "$profile" && "$profile" != "default" ]] || profile="desk"
-            apply_runewyrm "$profile"
-            ;;
-        forgewyrm)
-            apply_forgewyrm
-            ;;
-        *)
-            apply_other_host
-            ;;
-    esac
+    local profile
+    profile="$(current_profile)"
+    apply_profile "$profile"
     schedule_workspace_restore
 }
 
@@ -323,23 +371,32 @@ cmd_set() {
     local profile="$1"
     need_hypr
     with_apply_lock || return 0
-    if [[ "$HOST" != "runewyrm" ]]; then
-        notify "Profiles desk/theater/workshare are runewyrm-only (this host is ${HOST})"
-        if [[ "$HOST" == "forgewyrm" ]]; then
-            apply_forgewyrm
-        else
-            apply_other_host
-        fi
+    if ! profile_conf "$profile" >/dev/null; then
+        notify "No ${HOST}-${profile}.conf (this host is ${HOST})"
+        apply_profile "$(current_profile)"
         return 0
     fi
-    apply_runewyrm "$profile"
+    apply_profile "$profile"
     schedule_workspace_restore
 }
 
+current_conf() {
+    profile_conf "$(current_profile)" || profile_conf "$(default_profile_for_host)"
+}
+
 desk_dp_in_use() {
-    local profile
-    profile="$(current_profile)"
-    [[ "$profile" != "workshare" ]]
+    local file spec name
+    file="$(current_conf)" || return 1
+    while IFS= read -r spec; do
+        name="$(monitor_name "$spec")"
+        case "$name" in
+            DP-2|DP-3)
+                monitor_is_disabled "$spec" && return 1
+                return 0
+                ;;
+        esac
+    done < <(monitor_lines "$file")
+    return 1
 }
 
 dpms_desk_ports() {
@@ -350,8 +407,6 @@ dpms_desk_ports() {
     done
 }
 
-# Blank every panel that should be on. HDMI is then disabled so the TV
-# drops the link. DP layout keywords are not rewritten.
 idle_off_runewyrm() {
     save_monitor_workspaces "$RUNEWYRM_IDLE_MONITOR"
     dpms off "$RUNEWYRM_IDLE_MONITOR"
@@ -371,8 +426,6 @@ cmd_idle_off() {
     esac
 }
 
-# Wake DP with dpms only. Re-enable HDMI for the saved profile. Never
-# keyword-disable DP here (that is what left the desk dark).
 cmd_idle_on() {
     need_hypr
     QUIET=1
@@ -380,10 +433,15 @@ cmd_idle_on() {
     dpms on
     dpms_desk_ports on
     if [[ "$HOST" == "runewyrm" ]]; then
-        local profile
-        profile="$(current_profile)"
-        [[ -n "$profile" && "$profile" != "default" ]] || profile="desk"
-        keyword_monitor "$(hdmi_spec_for_profile "$profile")"
+        local file spec
+        file="$(current_conf)" || true
+        spec=""
+        if [[ -n "$file" ]]; then
+            spec="$(monitor_spec_from_conf "$file" "$RUNEWYRM_IDLE_MONITOR" || true)"
+        fi
+        if [[ -n "$spec" ]] && ! monitor_is_disabled "$spec"; then
+            keyword_monitor "$spec"
+        fi
         dpms on "$RUNEWYRM_IDLE_MONITOR"
         schedule_workspace_restore
     fi
@@ -391,9 +449,16 @@ cmd_idle_on() {
 }
 
 cmd_status() {
+    local file
+    file="$(current_conf || true)"
     printf 'host:            %s\n' "$HOST"
     printf 'saved profile:   %s\n' "$(current_profile)"
+    printf 'conf:            %s\n' "${file:-none}"
     printf 'default sink:    %s\n' "$(default_sink)"
+    if [[ -n "$file" ]]; then
+        printf 'monitors:\n'
+        monitor_lines "$file" | sed 's/^/  /'
+    fi
     if [[ -f "$SAVED_WS_FILE" ]]; then
         printf 'pending ws:\n'
         sed 's/^/  /' "$SAVED_WS_FILE"
@@ -401,20 +466,16 @@ cmd_status() {
 }
 
 cmd_list() {
-    case "$HOST" in
-        runewyrm)
-            printf '%s\n' "runewyrm profiles: desk, theater, workshare"
-            ;;
-        forgewyrm)
-            printf '%s\n' "forgewyrm: eDP-1 3840x2400@60 scale 1.5 (2560x1600 logical)"
-            ;;
-        *)
-            printf '%s\n' "${HOST}: default preferred/auto layout"
-            ;;
-    esac
+    local names
+    names="$(host_profiles | paste -sd ', ' -)"
+    if [[ -n "$names" ]]; then
+        printf '%s profiles: %s\n' "$HOST" "$names"
+    else
+        printf '%s: default.conf fallback\n' "$HOST"
+    fi
 }
 
-usage() { echo "Usage: display-profile.sh [apply|idle-off|idle-on|restore-ws|status|list|desk|theater|workshare]"; }
+usage() { echo "Usage: display-profile.sh [apply|idle-off|idle-on|restore-ws|status|list|<profile>]"; }
 
 main() {
     local cmd="${1:-apply}"
@@ -425,9 +486,8 @@ main() {
         restore-ws) cmd_restore_ws ;;
         status) cmd_status ;;
         list) cmd_list ;;
-        desk|theater|workshare) cmd_set "$cmd" ;;
         -h|--help|help) usage ;;
-        *) usage >&2; exit 1 ;;
+        *) cmd_set "$cmd" ;;
     esac
 }
 
