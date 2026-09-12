@@ -54,3 +54,9 @@ install_kf6_or_plain() {
 install_kf6_or_plain plasma6-dolphin dolphin
 install_kf6_or_plain plasma6-kio-extras kio-extras
 install_kf6_or_plain plasma6-kde-cli-tools kde-cli-tools
+
+# Fresh machines have no leftover Plasma theme. These give Dolphin / Okular
+# Breeze Dark plus the kde Qt platform plugin that reads ~/.config/kdeglobals.
+install_kf6_or_plain plasma6-integration plasma-integration
+install_kf6_or_plain kf6-breeze-icons breeze-icon-theme
+install_kf6_or_plain plasma6-breeze breeze
