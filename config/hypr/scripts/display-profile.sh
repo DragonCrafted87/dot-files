@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Apply or switch Hyprland display profiles by hostname.
+# Monitor layouts come only from conf.d/monitors.d/*.conf.
 set -euo pipefail
 
 HOST="$(hostname -s 2>/dev/null || hostname)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MONITORS_D="${SCRIPT_DIR}/../conf.d/monitors.d"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 PROFILE_FILE="${STATE_DIR}/display-profile"
 SAVED_SINK_FILE="${STATE_DIR}/desk-audio-sink"
@@ -14,6 +17,7 @@ RUNEWYRM_DP_MONITORS=(DP-2 DP-3)
 THEATER_SINK_MATCH="${THEATER_SINK_MATCH:-hdmi}"
 DESK_SINK_MATCH="${DESK_SINK_MATCH:-}"
 QUIET=0
+LOCK_HELD=0
 
 notify() {
     local msg="$1"
@@ -28,7 +32,16 @@ need_hypr() {
     command -v hyprctl >/dev/null 2>&1 || { echo "hyprctl not found" >&2; return 1; }
 }
 
-keyword_monitor() { hyprctl keyword monitor "$1" >/dev/null 2>&1 || true; }
+# hyprctl keyword monitor wants 2560x1440@143.91, not @143.91Hz.
+normalize_monitor_spec() {
+    printf '%s\n' "$1" | sed 's/@\([0-9.][0-9.]*\)Hz,/@\1,/'
+}
+
+keyword_monitor() {
+    local spec
+    spec="$(normalize_monitor_spec "$1")"
+    hyprctl keyword monitor "$spec" >/dev/null 2>&1 || true
+}
 
 dpms() {
     local action="$1"
@@ -40,14 +53,31 @@ dpms() {
     fi
 }
 
-with_apply_lock() {
+acquire_apply_lock() {
     mkdir -p "$STATE_DIR"
     exec 9>"$APPLY_LOCK_FILE"
-    if ! flock -n 9; then
+    if ! flock -w 25 9; then
+        echo "display-profile: timed out waiting for apply.lock" >&2
+        exec 9>&-
         return 1
     fi
+    LOCK_HELD=1
     return 0
 }
+
+release_apply_lock() {
+    [[ "$LOCK_HELD" -eq 1 ]] || return 0
+    flock -u 9 2>/dev/null || true
+    exec 9>&-
+    LOCK_HELD=0
+}
+
+with_apply_lock() {
+    acquire_apply_lock || return 1
+    return 0
+}
+
+trap release_apply_lock EXIT
 
 save_profile() {
     mkdir -p "$STATE_DIR"
@@ -56,6 +86,83 @@ save_profile() {
 
 current_profile() {
     if [[ -f "$PROFILE_FILE" ]]; then tr -d '[:space:]' <"$PROFILE_FILE"; else echo ""; fi
+}
+
+monitor_lines() {
+    local file="$1" line spec
+    [[ -f "$file" ]] || return 1
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -n "$line" ]] || continue
+        [[ "$line" == monitor* ]] || continue
+        spec="${line#monitor}"
+        spec="${spec#"${spec%%[![:space:]=]*}"}"
+        spec="${spec#=}"
+        spec="${spec#"${spec%%[![:space:]]*}"}"
+        spec="${spec%"${spec##*[![:space:]]}"}"
+        [[ -n "$spec" ]] || continue
+        printf '%s\n' "$spec"
+    done <"$file"
+}
+
+monitor_name() {
+    local spec="$1"
+    printf '%s\n' "${spec%%,*}"
+}
+
+monitor_is_disabled() {
+    local spec="$1"
+    [[ "${spec#*,}" == disable ]]
+}
+
+profile_conf() {
+    local profile="${1:-}"
+    local file
+    if [[ -n "$profile" && "$profile" != default ]]; then
+        file="${MONITORS_D}/${HOST}-${profile}.conf"
+        [[ -f "$file" ]] && { printf '%s\n' "$file"; return 0; }
+    fi
+    file="${MONITORS_D}/${HOST}.conf"
+    [[ -f "$file" ]] && { printf '%s\n' "$file"; return 0; }
+    file="${MONITORS_D}/default.conf"
+    [[ -f "$file" ]] && { printf '%s\n' "$file"; return 0; }
+    return 1
+}
+
+host_profiles() {
+    local file name
+    shopt -s nullglob
+    if [[ -f "${MONITORS_D}/${HOST}.conf" ]]; then
+        printf '%s\n' "default"
+    fi
+    for file in "${MONITORS_D}/${HOST}-"*.conf; do
+        name="$(basename "$file" .conf)"
+        printf '%s\n' "${name#${HOST}-}"
+    done
+    shopt -u nullglob
+}
+
+apply_monitor_conf() {
+    local file="$1" spec
+    [[ -f "$file" ]] || { echo "missing monitor conf: $file" >&2; return 1; }
+    while IFS= read -r spec; do
+        [[ -n "$spec" ]] || continue
+        keyword_monitor "$spec"
+    done < <(monitor_lines "$file")
+}
+
+monitor_spec_from_conf() {
+    local file="$1" mon="$2" spec name
+    while IFS= read -r spec; do
+        name="$(monitor_name "$spec")"
+        if [[ "$name" == "$mon" ]]; then
+            printf '%s\n' "$spec"
+            return 0
+        fi
+    done < <(monitor_lines "$file")
+    return 1
 }
 
 list_sinks() { command -v pactl >/dev/null 2>&1 && pactl list short sinks 2>/dev/null | awk '{print $2}'; }
@@ -125,79 +232,73 @@ apply_theater_audio() {
     set_sink "$sink" || true
 }
 
-hdmi_spec_for_profile() {
-    case "${1:-desk}" in
-        theater) printf '%s\n' "${RUNEWYRM_IDLE_MONITOR},preferred,auto,1" ;;
-        workshare) printf '%s\n' "${RUNEWYRM_IDLE_MONITOR},2560x1440@143.91Hz,0x0,1" ;;
-        *) printf '%s\n' "${RUNEWYRM_IDLE_MONITOR},2560x1440@143.91Hz,6000x0,1" ;;
-    esac
+default_profile_for_host() {
+    local first="" name
+    while IFS= read -r name; do
+        [[ -n "$name" ]] || continue
+        if [[ "$name" == desk ]]; then
+            printf '%s\n' "desk"
+            return 0
+        fi
+        [[ -n "$first" ]] || first="$name"
+    done < <(host_profiles)
+    printf '%s\n' "${first:-default}"
 }
 
-apply_desk_monitors() {
-    keyword_monitor "DP-2,2560x1440@143.91,0x0,1"
-    keyword_monitor "DP-3,3440x1440@144,2560x0,1"
-    keyword_monitor "$(hdmi_spec_for_profile desk)"
-}
-
-apply_theater_monitors() {
-    keyword_monitor "DP-2,2560x1440@143.91,0x0,1"
-    keyword_monitor "DP-3,3440x1440@144,2560x0,1"
-    keyword_monitor "$(hdmi_spec_for_profile theater)"
-}
-
-apply_workshare_monitors() {
-    keyword_monitor "DP-2,disable"
-    keyword_monitor "DP-3,disable"
-    keyword_monitor "$(hdmi_spec_for_profile workshare)"
-}
-
-apply_default_monitors() { keyword_monitor ",preferred,highrr,auto"; }
-
-apply_runewyrm() {
-    local profile="${1:-desk}"
+apply_profile() {
+    local profile="${1:-}"
+    local file
+    if [[ -z "$profile" || "$profile" == default ]]; then
+        profile="$(default_profile_for_host)"
+    fi
+    file="$(profile_conf "$profile")" || {
+        echo "no monitor conf for ${HOST}/${profile}" >&2
+        return 1
+    }
+    apply_monitor_conf "$file"
     case "$profile" in
-        desk) apply_desk_monitors; restore_desk_audio ;;
-        theater) apply_theater_monitors; apply_theater_audio ;;
-        workshare) apply_workshare_monitors; restore_desk_audio ;;
-        *) echo "unknown runewyrm profile: $profile" >&2; return 1 ;;
+        theater) apply_theater_audio ;;
+        desk|workshare) restore_desk_audio ;;
     esac
     save_profile "$profile"
     notify "Display profile: ${HOST}/${profile}"
 }
 
-apply_other_host() {
-    apply_default_monitors
-    save_profile "default"
-}
-
-workspaces_on_monitor() {
-    local mon="$1"
+workspace_map_dump() {
     hyprctl workspaces -j 2>/dev/null | python3 -c '
 import json, sys
-mon = sys.argv[1]
 try:
     data = json.load(sys.stdin)
 except Exception:
     raise SystemExit(0)
 for w in data:
-    if w.get("monitor") != mon:
+    mon = w.get("monitor") or ""
+    if not mon:
         continue
     name = str(w.get("name") or "")
     wid = w.get("id")
-    if name.startswith("special"):
-        print(name)
-    elif wid is not None:
-        print(wid)
-' "$mon" 2>/dev/null || true
+    key = name if name.startswith("special") else (str(wid) if wid is not None else name)
+    if not key:
+        continue
+    print(f"workspace={key}:{mon}")
+' 2>/dev/null || true
+    hyprctl monitors -j 2>/dev/null | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(0)
+for m in data:
+    name = m.get("name") or ""
+    ws = (m.get("activeWorkspace") or {}).get("name") or (m.get("activeWorkspace") or {}).get("id")
+    if name and ws is not None and str(ws) != "":
+        print(f"active={name}:{ws}")
+' 2>/dev/null || true
 }
 
-save_monitor_workspaces() {
-    local mon="$1"
+save_workspace_map() {
     mkdir -p "$STATE_DIR"
-    {
-        printf 'monitor=%s\n' "$mon"
-        workspaces_on_monitor "$mon" | awk '{print "workspace=" $0}'
-    } >"$SAVED_WS_FILE"
+    workspace_map_dump >"$SAVED_WS_FILE"
 }
 
 monitor_is_live() {
@@ -221,13 +322,39 @@ raise SystemExit(1)
 ' "$mon" 2>/dev/null
 }
 
-wait_for_unlock() {
-    local waited=0
-    while command -v pidof >/dev/null 2>&1 && pidof hyprlock >/dev/null 2>&1; do
-        sleep 0.4
-        waited=1
-    done
-    [[ "$waited" -eq 1 ]] && sleep 0.3
+monitor_center() {
+    local mon="$1"
+    hyprctl monitors -j 2>/dev/null | python3 -c '
+import json, sys
+mon = sys.argv[1]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for m in data:
+    if m.get("name") != mon:
+        continue
+    x = int(m.get("x") or 0)
+    y = int(m.get("y") or 0)
+    w = int(m.get("width") or 0)
+    h = int(m.get("height") or 0)
+    print(x + max(w // 2, 1), y + max(h // 2, 1))
+    raise SystemExit(0)
+raise SystemExit(1)
+' "$mon" 2>/dev/null
+}
+
+refresh_cursor() {
+    local mon="${1:-}" pos
+    hyprctl keyword cursor:no_hardware_cursors 1 >/dev/null 2>&1 || true
+    sleep 0.05
+    hyprctl keyword cursor:no_hardware_cursors 0 >/dev/null 2>&1 || true
+    if [[ -n "$mon" ]] && pos="$(monitor_center "$mon" || true)" && [[ -n "$pos" ]]; then
+        # shellcheck disable=SC2086
+        hyprctl dispatch movecursor $pos >/dev/null 2>&1 || true
+    else
+        hyprctl dispatch movecursor 1 1 >/dev/null 2>&1 || true
+    fi
 }
 
 wait_for_monitor() {
@@ -239,26 +366,73 @@ wait_for_monitor() {
     return 1
 }
 
+layout_ready() {
+    local file spec name
+    file="$(current_conf)" || return 1
+    while IFS= read -r spec; do
+        [[ -n "$spec" ]] || continue
+        monitor_is_disabled "$spec" && continue
+        name="$(monitor_name "$spec")"
+        monitor_is_live "$name" || return 1
+    done < <(monitor_lines "$file")
+    return 0
+}
+
+workspace_on_monitor() {
+    local ws="$1" mon="$2"
+    hyprctl workspaces -j 2>/dev/null | python3 -c '
+import json, sys
+ws, mon = sys.argv[1], sys.argv[2]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for w in data:
+    name = str(w.get("name") or "")
+    wid = str(w.get("id") if w.get("id") is not None else "")
+    if ws not in (name, wid):
+        continue
+    raise SystemExit(0 if (w.get("monitor") or "") == mon else 1)
+raise SystemExit(1)
+' "$ws" "$mon" 2>/dev/null
+}
+
 workspaces_restored() {
-    local mon="$1"
-    local wanted actual
-    wanted="$(awk -F= '/^workspace=/{print $2}' "$SAVED_WS_FILE" | sort)"
-    [[ -n "$wanted" ]] || return 0
-    actual="$(workspaces_on_monitor "$mon" | sort)"
-    [[ "$wanted" == "$actual" ]]
+    local line ws mon
+    [[ -f "$SAVED_WS_FILE" ]] || return 0
+    while IFS= read -r line; do
+        [[ "$line" == workspace=* ]] || continue
+        ws="${line#workspace=}"
+        mon="${ws##*:}"
+        ws="${ws%:*}"
+        [[ -n "$ws" && -n "$mon" ]] || continue
+        workspace_on_monitor "$ws" "$mon" || return 1
+    done <"$SAVED_WS_FILE"
+    return 0
 }
 
 restore_saved_workspaces_now() {
     [[ -f "$SAVED_WS_FILE" ]] || return 0
-    local mon ws
-    mon="$(awk -F= '/^monitor=/{print $2; exit}' "$SAVED_WS_FILE")"
-    [[ -n "$mon" ]] || return 0
-    wait_for_monitor "$mon" || return 1
-    while IFS= read -r ws; do
-        [[ -n "$ws" ]] || continue
+    local line ws mon
+    while IFS= read -r line; do
+        [[ "$line" == workspace=* ]] || continue
+        ws="${line#workspace=}"
+        mon="${ws##*:}"
+        ws="${ws%:*}"
+        [[ -n "$ws" && -n "$mon" ]] || continue
+        wait_for_monitor "$mon" || return 1
         hyprctl dispatch moveworkspacetomonitor "$ws" "$mon" >/dev/null 2>&1 || true
-    done < <(awk -F= '/^workspace=/{print $2}' "$SAVED_WS_FILE")
-    if workspaces_restored "$mon"; then
+    done <"$SAVED_WS_FILE"
+    while IFS= read -r line; do
+        [[ "$line" == active=* ]] || continue
+        mon="${line#active=}"
+        ws="${mon##*:}"
+        mon="${mon%:*}"
+        [[ -n "$ws" && -n "$mon" ]] || continue
+        hyprctl dispatch focusmonitor "$mon" >/dev/null 2>&1 || true
+        hyprctl dispatch workspace "$ws" >/dev/null 2>&1 || true
+    done <"$SAVED_WS_FILE"
+    if workspaces_restored; then
         rm -f "$SAVED_WS_FILE"
         return 0
     fi
@@ -275,11 +449,10 @@ schedule_workspace_restore() {
         fi
     fi
     (
-        wait_for_unlock
         local i
-        for i in 1 2 3 4; do
+        for i in $(seq 1 16); do
             restore_saved_workspaces_now && break
-            sleep 1
+            sleep 0.4
         done
         rm -f "$RESTORE_WS_PID_FILE"
     ) &
@@ -293,14 +466,10 @@ cmd_apply() {
     need_hypr
     QUIET=1
     with_apply_lock || return 0
-    if [[ "$HOST" == "runewyrm" ]]; then
-        local profile
-        profile="$(current_profile)"
-        [[ -n "$profile" && "$profile" != "default" ]] || profile="desk"
-        apply_runewyrm "$profile"
-    else
-        apply_other_host
-    fi
+    local profile
+    profile="$(current_profile)"
+    apply_profile "$profile"
+    release_apply_lock
     schedule_workspace_restore
 }
 
@@ -308,19 +477,34 @@ cmd_set() {
     local profile="$1"
     need_hypr
     with_apply_lock || return 0
-    if [[ "$HOST" != "runewyrm" ]]; then
-        notify "Profiles desk/theater/workshare are runewyrm-only (this host is ${HOST})"
-        apply_other_host
+    if ! profile_conf "$profile" >/dev/null; then
+        notify "No ${HOST}-${profile}.conf (this host is ${HOST})"
+        apply_profile "$(current_profile)"
+        release_apply_lock
         return 0
     fi
-    apply_runewyrm "$profile"
+    apply_profile "$profile"
+    release_apply_lock
     schedule_workspace_restore
 }
 
+current_conf() {
+    profile_conf "$(current_profile)" || profile_conf "$(default_profile_for_host)"
+}
+
 desk_dp_in_use() {
-    local profile
-    profile="$(current_profile)"
-    [[ "$profile" != "workshare" ]]
+    local file spec name
+    file="$(current_conf)" || return 1
+    while IFS= read -r spec; do
+        name="$(monitor_name "$spec")"
+        case "$name" in
+            DP-2|DP-3)
+                monitor_is_disabled "$spec" && return 1
+                return 0
+                ;;
+        esac
+    done < <(monitor_lines "$file")
+    return 1
 }
 
 dpms_desk_ports() {
@@ -331,10 +515,24 @@ dpms_desk_ports() {
     done
 }
 
-# Blank every panel that should be on. HDMI is then disabled so the TV
-# drops the link. DP layout keywords are not rewritten.
+enable_idle_monitor() {
+    local file spec i
+    file="$(current_conf)" || return 1
+    spec="$(monitor_spec_from_conf "$file" "$RUNEWYRM_IDLE_MONITOR" || true)"
+    [[ -n "$spec" ]] || return 1
+    monitor_is_disabled "$spec" && return 0
+    for i in $(seq 1 12); do
+        keyword_monitor "$spec"
+        dpms on "$RUNEWYRM_IDLE_MONITOR"
+        monitor_is_live "$RUNEWYRM_IDLE_MONITOR" && return 0
+        sleep 0.4
+    done
+    return 1
+}
+
+# HDMI wakes itself from DPMS-only. Disable it after the workspace map is saved.
 idle_off_runewyrm() {
-    save_monitor_workspaces "$RUNEWYRM_IDLE_MONITOR"
+    save_workspace_map
     dpms off "$RUNEWYRM_IDLE_MONITOR"
     dpms_desk_ports off
     sleep 0.2
@@ -346,35 +544,53 @@ idle_off_other() { dpms off; }
 cmd_idle_off() {
     need_hypr
     QUIET=1
+    with_apply_lock || return 0
     case "$HOST" in
         runewyrm) idle_off_runewyrm ;;
         *) idle_off_other ;;
     esac
+    release_apply_lock
 }
 
-# Wake DP with dpms only. Re-enable HDMI for the saved profile. Never
-# keyword-disable DP here (that is what left the desk dark).
 cmd_idle_on() {
     need_hypr
     QUIET=1
     with_apply_lock || return 0
-    dpms on
-    dpms_desk_ports on
+    sleep 1
+    local i file
+    file="$(current_conf || true)"
+    for i in $(seq 1 10); do
+        dpms on
+        dpms_desk_ports on
+        [[ -n "$file" ]] && apply_monitor_conf "$file"
+        if [[ "$HOST" == "runewyrm" ]]; then
+            enable_idle_monitor || true
+        fi
+        layout_ready && break
+        sleep 0.5
+    done
+    restore_saved_workspaces_now || true
+    release_apply_lock
+    schedule_workspace_restore
     if [[ "$HOST" == "runewyrm" ]]; then
-        local profile
-        profile="$(current_profile)"
-        [[ -n "$profile" && "$profile" != "default" ]] || profile="desk"
-        keyword_monitor "$(hdmi_spec_for_profile "$profile")"
-        dpms on "$RUNEWYRM_IDLE_MONITOR"
-        schedule_workspace_restore
+        refresh_cursor "$RUNEWYRM_IDLE_MONITOR"
+    else
+        refresh_cursor
     fi
-    hyprctl dispatch movecursor 1 1 >/dev/null 2>&1 || true
 }
 
 cmd_status() {
+    local file
+    file="$(current_conf || true)"
     printf 'host:            %s\n' "$HOST"
     printf 'saved profile:   %s\n' "$(current_profile)"
+    printf 'conf:            %s\n' "${file:-none}"
+    printf 'lock:            %s\n' "$APPLY_LOCK_FILE"
     printf 'default sink:    %s\n' "$(default_sink)"
+    if [[ -n "$file" ]]; then
+        printf 'monitors:\n'
+        monitor_lines "$file" | sed 's/^/  /'
+    fi
     if [[ -f "$SAVED_WS_FILE" ]]; then
         printf 'pending ws:\n'
         sed 's/^/  /' "$SAVED_WS_FILE"
@@ -382,14 +598,16 @@ cmd_status() {
 }
 
 cmd_list() {
-    if [[ "$HOST" == "runewyrm" ]]; then
-        printf '%s\n' "runewyrm profiles: desk, theater, workshare"
+    local names
+    names="$(host_profiles | paste -sd ', ' -)"
+    if [[ -n "$names" ]]; then
+        printf '%s profiles: %s\n' "$HOST" "$names"
     else
-        printf '%s\n' "${HOST}: default preferred/auto layout"
+        printf '%s: default.conf fallback\n' "$HOST"
     fi
 }
 
-usage() { echo "Usage: display-profile.sh [apply|idle-off|idle-on|restore-ws|status|list|desk|theater|workshare]"; }
+usage() { echo "Usage: display-profile.sh [apply|idle-off|idle-on|restore-ws|status|list|<profile>]"; }
 
 main() {
     local cmd="${1:-apply}"
@@ -400,9 +618,8 @@ main() {
         restore-ws) cmd_restore_ws ;;
         status) cmd_status ;;
         list) cmd_list ;;
-        desk|theater|workshare) cmd_set "$cmd" ;;
         -h|--help|help) usage ;;
-        *) usage >&2; exit 1 ;;
+        *) cmd_set "$cmd" ;;
     esac
 }
 

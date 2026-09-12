@@ -8,11 +8,13 @@ set -euo pipefail
 
 require_user
 
-# Rock kdeconnect-sms is still Qt5 / Kirigami.2.
-# KF5 breeze / breeze-icons file-conflict with plasma6-breeze and
-# kf6-breeze-icons. Color schemes already come from plasma6-breeze.
+# Rock ships plasma6-kdeconnect next to the leftover KF5 kdeconnect
+# package. They own the same locale and plasmoid files.
+install_kf6_or_plain plasma6-kdeconnect kdeconnect
+
+# Rock kdeconnect-sms is still Qt5 / Kirigami.2 on some machines.
+# Color schemes come from plasma6-breeze, not KF5 breeze.
 ensure_packages \
-    kdeconnect \
     android-tools \
     qt5-qtmultimedia \
     kpeoplevcard \
@@ -21,8 +23,6 @@ ensure_packages \
     kf6-qqc2-desktop-style \
     lib64Qt6Multimedia \
     kirigami-addons
-
-ensure_symlink "${CONFIG_SOURCE_DIR}/kdeglobals" "${CONFIG_TARGET_DIR}/kdeglobals"
 
 install_android_udev() {
     local src="${SETUP_FILES_DIR}/kdeconnect/51-android.rules"

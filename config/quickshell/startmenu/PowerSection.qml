@@ -12,9 +12,18 @@ Rectangle {
 
     signal actionTriggered()
 
+    readonly property string sessionCtl: Quickshell.env("HOME") + "/.config/hypr/scripts/session-control.sh"
+
     Process {
         id: powerProc
         command: []
+    }
+
+    function runAction(action) {
+        console.log("power:", action)
+        powerProc.command = ["bash", root.sessionCtl, action]
+        powerProc.startDetached()
+        root.actionTriggered()
     }
 
     RowLayout {
@@ -24,17 +33,16 @@ Rectangle {
 
         Repeater {
             model: ListModel {
-                ListElement { label: "Lock";     icon: ""; cmd: "hyprlock" }
-                ListElement { label: "Logout";   icon: ""; cmd: "hyprctl dispatch exit" }
-                ListElement { label: "Suspend";  icon: ""; cmd: "systemctl suspend" }
-                ListElement { label: "Reboot";   icon: ""; cmd: "systemctl reboot" }
-                ListElement { label: "Shutdown"; icon: ""; cmd: "systemctl poweroff" }
+                ListElement { label: "Lock";     action: "lock" }
+                ListElement { label: "Logout";   action: "logout" }
+                ListElement { label: "Suspend";  action: "suspend" }
+                ListElement { label: "Reboot";   action: "reboot" }
+                ListElement { label: "Shutdown"; action: "shutdown" }
             }
 
             delegate: Rectangle {
                 required property string label
-                required property string icon
-                required property string cmd
+                required property string action
                 required property int index
 
                 Layout.fillWidth: true
@@ -59,12 +67,7 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        console.log("power:", cmd)
-                        powerProc.command = ["sh", "-c", cmd]
-                        powerProc.startDetached()
-                        root.actionTriggered()
-                    }
+                    onClicked: root.runAction(action)
                 }
             }
         }

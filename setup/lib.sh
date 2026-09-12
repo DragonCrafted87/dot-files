@@ -11,22 +11,6 @@ DOTFILES_LIB_LOADED=1
 
 set -euo pipefail
 
-dotfiles_here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SETUP_DIR="${SETUP_DIR:-$dotfiles_here}"
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-
-DOTFILES_USER="${DOTFILES_USER:-dragon}"
-DOTFILES_HOME="${DOTFILES_HOME:-/home/${DOTFILES_USER}}"
-DOTFILES_DIR="${DOTFILES_DIR:-${DOTFILES_HOME}/dot-files}"
-DOTFILES_REPO_URL="${DOTFILES_REPO_URL:-git@github.com:DragonCrafted87/dot-files.git}"
-SSH_KEY_PATH="${SSH_KEY_PATH:-${DOTFILES_HOME}/.ssh/id_ed25519}"
-DOTFILES_BASHRC="${DOTFILES_BASHRC:-hw_bashrc.sh}"
-DOTFILES_TIMEZONE="${DOTFILES_TIMEZONE:-America/Chicago}"
-OMP_INSTALL_DIR="${OMP_INSTALL_DIR:-${DOTFILES_HOME}/bin}"
-CONFIG_SOURCE_DIR="${CONFIG_SOURCE_DIR:-${REPO_ROOT}/config}"
-CONFIG_TARGET_DIR="${CONFIG_TARGET_DIR:-${DOTFILES_HOME}/.config}"
-SETUP_FILES_DIR="${SETUP_FILES_DIR:-${SETUP_DIR}/files}"
-
 log() {
     printf '==> %s\n' "$*"
 }
@@ -39,6 +23,44 @@ die() {
     printf 'error: %s\n' "$*" >&2
     exit 1
 }
+
+dotfiles_here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SETUP_DIR="${SETUP_DIR:-$dotfiles_here}"
+
+_git_toplevel() {
+    git -C "$1" rev-parse --show-toplevel 2>/dev/null || return 1
+}
+
+# Never use bare `git rev-parse` — modules are often run from $HOME.
+if [[ -z "${REPO_ROOT:-}" ]]; then
+    REPO_ROOT="$(_git_toplevel "$SETUP_DIR" || true)"
+fi
+if [[ -z "${REPO_ROOT:-}" ]]; then
+    REPO_ROOT="$(_git_toplevel "$(dirname "$SETUP_DIR")" || true)"
+fi
+if [[ -z "${REPO_ROOT:-}" && -d "${SETUP_DIR}/../bashrc.d" ]]; then
+    REPO_ROOT="$(cd "${SETUP_DIR}/.." && pwd)"
+fi
+
+DOTFILES_USER="${DOTFILES_USER:-dragon}"
+DOTFILES_HOME="${DOTFILES_HOME:-/home/${DOTFILES_USER}}"
+DOTFILES_DIR="${DOTFILES_DIR:-${DOTFILES_HOME}/dot-files}"
+
+if [[ -z "${REPO_ROOT:-}" && -d "${DOTFILES_DIR}/.git" ]]; then
+    REPO_ROOT="$(_git_toplevel "$DOTFILES_DIR" || printf '%s' "$DOTFILES_DIR")"
+fi
+if [[ -z "${REPO_ROOT:-}" ]]; then
+    die "cannot find the dot-files repo root from ${SETUP_DIR} (cwd=$(pwd))"
+fi
+
+DOTFILES_REPO_URL="${DOTFILES_REPO_URL:-git@github.com:DragonCrafted87/dot-files.git}"
+SSH_KEY_PATH="${SSH_KEY_PATH:-${DOTFILES_HOME}/.ssh/id_ed25519}"
+DOTFILES_BASHRC="${DOTFILES_BASHRC:-hw_bashrc.sh}"
+DOTFILES_TIMEZONE="${DOTFILES_TIMEZONE:-America/Chicago}"
+OMP_INSTALL_DIR="${OMP_INSTALL_DIR:-${DOTFILES_HOME}/bin}"
+CONFIG_SOURCE_DIR="${CONFIG_SOURCE_DIR:-${REPO_ROOT}/config}"
+CONFIG_TARGET_DIR="${CONFIG_TARGET_DIR:-${DOTFILES_HOME}/.config}"
+SETUP_FILES_DIR="${SETUP_FILES_DIR:-${SETUP_DIR}/files}"
 
 run() {
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
@@ -198,6 +220,34 @@ ensure_packages() {
     fi
     log "install packages: $*"
     run sudo dnf install -y "$@"
+}
+
+# Rock 6.0 ships plasma6-* names for KF6 apps. The unprefixed names are
+# leftover KF5 packages and file-conflict. Extra args install with the
+# plasma6 package (okular extras, etc).
+install_kf6_or_plain() {
+    local plasma6_name="$1"
+    local plain_name="$2"
+    shift 2
+    local extras=("$@")
+
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        log "${plasma6_name} / ${plain_name} package"
+        return 0
+    fi
+    if rpm -q "$plasma6_name" >/dev/null 2>&1; then
+        log "${plasma6_name} already installed"
+        return 0
+    fi
+    if rpm -q "$plain_name" >/dev/null 2>&1; then
+        log "${plain_name} already installed"
+        return 0
+    fi
+    if dnf list --available "$plasma6_name" >/dev/null 2>&1; then
+        ensure_packages "$plasma6_name" "${extras[@]}"
+    else
+        ensure_packages "$plain_name"
+    fi
 }
 
 ensure_flatpak_remote() {

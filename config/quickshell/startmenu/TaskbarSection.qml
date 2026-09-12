@@ -13,24 +13,32 @@ Rectangle {
 
     signal windowFocused()
     property bool minimizedOnly: true
+    property int refreshReq: 0
+    property int refreshSeen: 0
 
-    readonly property string clientsPath:
-        (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/qs-startmenu-clients.json"
+    readonly property string runtimeDir:
+        Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
 
     ListModel { id: winModel }
 
+    function clientsPath(gen) {
+        return root.runtimeDir + "/qs-startmenu-clients-" + gen + ".json"
+    }
+
     function refresh() {
-        clientsFile.path = ""
-        clientsProc.running = false
-        clientsProc.running = true
+        root.refreshReq++
+        if (!clientsProc.running)
+            refreshKick.start()
     }
 
     function parseClients(raw) {
         winModel.clear()
-        console.log("clients raw length:", raw ? raw.length : 0)
+        if (!raw || !String(raw).trim()) {
+            console.log("clients empty payload")
+            return
+        }
         try {
             const clients = JSON.parse(raw)
-            console.log("clients count:", clients.length)
             const filtered = clients.filter(c => {
                 if (!c || !c.address) return false
                 const ws = (c.workspace && c.workspace.name) ? String(c.workspace.name) : ""
@@ -39,7 +47,6 @@ Rectangle {
                 }
                 return true
             })
-            console.log("filtered count:", filtered.length)
             filtered.sort((a, b) => {
                 const ca = (a.initialClass || a.class || "").toLowerCase()
                 const cb = (b.initialClass || b.class || "").toLowerCase()
@@ -81,26 +88,39 @@ Rectangle {
         root.windowFocused()
     }
 
+    Timer {
+        id: refreshKick
+        interval: 30
+        repeat: false
+        onTriggered: {
+            if (clientsProc.running)
+                return
+            root.refreshSeen = root.refreshReq
+            const path = root.clientsPath(root.refreshSeen)
+            clientsProc.command = [
+                "sh", "-c",
+                "hyprctl clients -j > '" + path + "'"
+            ]
+            clientsProc.running = true
+        }
+    }
+
     Process {
         id: clientsProc
-        command: [
-            "sh", "-c",
-            "hyprctl clients -j > '" + root.clientsPath + "' 2>/dev/null || echo '[]' > '" + root.clientsPath + "'"
-        ]
-        running: true
+        command: ["true"]
+        running: false
         onExited: {
-            clientsFile.path = root.clientsPath
+            const req = root.refreshSeen
+            clientsFile.path = root.clientsPath(req)
             clientsFile.reload()
+            if (root.refreshReq !== req)
+                refreshKick.restart()
         }
     }
 
     FileView {
         id: clientsFile
-        // path assigned after process exits
-        onLoaded: {
-            // text() is a function, not a property
-            root.parseClients(clientsFile.text())
-        }
+        onLoaded: root.parseClients(clientsFile.text())
     }
 
     Process {
@@ -109,6 +129,7 @@ Rectangle {
     }
 
     onMinimizedOnlyChanged: root.refresh()
+    Component.onCompleted: root.refresh()
 
     ColumnLayout {
         anchors.fill: parent

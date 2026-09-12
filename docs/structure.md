@@ -38,11 +38,15 @@ wrapper). That split is fine. Do not merge them.
 Linux records `DOTFILES_ROOT`. One later pass should make Git Bash use
 the same recorded root.
 
-## Hypr docs vs code
+## ~~Hypr docs vs code~~
 
-`config/hypr/conf.d/monitors.d/*.conf` exist, but live apply is
+~~`config/hypr/conf.d/monitors.d/*.conf` exist, but live apply is
 `hyprctl keyword` in `display-profile.sh`. Either generate keywords from
-those files, or treat `monitors.d` as comments-only so they cannot drift.
+those files, or treat `monitors.d` as comments-only so they cannot drift.~~
+
+`display-profile.sh` now parses `monitor=` lines from
+`config/hypr/conf.d/monitors.d/` (`<host>.conf`, `<host>-<profile>.conf`,
+then `default.conf`). Edit the conf, not the script, to change a layout.
 
 ## Package lists
 
@@ -64,8 +68,8 @@ consumed by the modules.
 1. \~~Optional `shell/` folder for the three bashrc entrypoints + `profile`
    - `omp.yaml`.\~~ Dropped `profile` (unused; PATH is in bashrc.d).
 1. List-driven dnf packages, matching winget lists.
-1. Single source for monitor layouts so `monitors.d` and
-   `display-profile.sh` cannot disagree.
+1. ~~Single source for monitor layouts so `monitors.d` and
+   `display-profile.sh` cannot disagree.~~
 
 ## Subdivide module scripts
 

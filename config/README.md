@@ -9,6 +9,11 @@ picks it up.
 and `snippets/` are linked by `configure-vscode`. Linking the whole
 `~/.config/Code` tree would pull tokens out of globalStorage.
 
+`kdeglobals` is the other exception. It is a loose file so a full Plasma
+profile is not overwritten. `configure-mime-defaults` copies or merges
+Breeze Dark from it into `~/.config/kdeglobals` on machines that never
+ran Plasma.
+
 | Folder          | Destination                                                                              |
 | --------------- | ---------------------------------------------------------------------------------------- |
 | `hypr/`         | `~/.config/hypr` — Hyprland, hypridle, hyprlock, display profiles. See `hypr/README.md`. |
