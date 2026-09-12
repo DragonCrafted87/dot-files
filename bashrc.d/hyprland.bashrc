@@ -60,13 +60,11 @@ _hypr_setup_ssh_env() {
     fi
 
     if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
-        local sock="${hypr_root}/${HYPRLAND_INSTANCE_SIGNATURE}"
         if [[ -S "${runtime}/wayland-1" ]]; then
             export WAYLAND_DISPLAY=wayland-1
         elif [[ -S "${runtime}/wayland-0" ]]; then
             export WAYLAND_DISPLAY=wayland-0
         fi
-        unset sock
     fi
 }
 
