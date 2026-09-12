@@ -38,6 +38,11 @@ ensure_packages \
     fonts-ttf-dejavu \
     adobe-source-code-pro-fonts
 
+# Optional on current Rock/OMV; install-hyprshutdown.sh builds it if missing.
+if dnf list --available hyprshutdown >/dev/null 2>&1 || rpm -q hyprshutdown >/dev/null 2>&1; then
+    ensure_packages hyprshutdown
+fi
+
 disable_service sddm.service
 disable_service plasma6-sddm.service
 enable_service ly.service
