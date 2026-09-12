@@ -8,8 +8,9 @@ behind two unmanaged switches.
 ## Existing rack
 
 Open-frame 4-post, **27U**, ~**31 in** rail-to-rail (Amazon `B076VQ8WZQ`).
-No plan to enclose it. Square holes + cage nuts. Ambient air is free; still
-leave 1U gaps so 1U gear is not exhausting into the next lid.
+On **casters**, not lagged down. No plan to enclose it. Square holes + cage
+nuts. Ambient air is free; still leave 1U gaps so 1U gear is not exhausting
+into the next lid.
 
 | Position | What |
 | --- | --- |
@@ -35,6 +36,23 @@ Do not mix rail kits between the RROYJJ, the DL360p, and the future RackChoice
 ```
 
 About 21U used, ~6U spare. Do not pack the two 5U cases against each other.
+
+### DIY crash console (no front-U KVM)
+
+Monitor and keyboard are only for when SSH is dead. Do not buy a 2U/4U rack
+KVM; do not cantilever a VESA arm off one upright on a wheeled frame.
+
+- **Monitor:** reuse the old VESA arm / plate on the **top crossbar**, preferably
+  the **rear** bar so the panel hangs over the rack, not past the front wheels.
+  Two fasteners into the bar (sister a ply or 80/20 pad if the tube is thin).
+  Tilt the screen down. Cable down a rear post, not across the 19" column.
+- **Keyboard:** carpentry shelf spanning the **two side posts** on one side
+  (front and rear uprights). Fold-down / drop-leaf with the hinge inside the
+  wheel rectangle. Mouse on the same leaf. No extra wing past the casters.
+- Lock the wheels before the leaf is down. The 24-bay stays at the bottom as
+  ballast. Do not block RROYJJ intakes or Gen8 exhaust.
+
+Neck height is acceptable because this is break-glass, not a daily desk.
 
 ## Cart / save list
 
