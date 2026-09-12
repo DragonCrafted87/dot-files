@@ -3,6 +3,8 @@ ColorScheme=BreezeDark
 Name=Breeze Dark
 widgetStyle=Fusion
 
+TerminalApplication=kitty
+TerminalService=kitty.desktop
 [Icons]
 Theme=breeze-dark
 
@@ -10,6 +12,7 @@ Theme=breeze-dark
 LookAndFeelPackage=org.kde.breezedark.desktop
 widgetStyle=Fusion
 
+SingleClick=false
 [UiSettings]
 ColorScheme=BreezeDark
 
