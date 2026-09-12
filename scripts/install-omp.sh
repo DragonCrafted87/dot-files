@@ -20,30 +20,35 @@ warn() {
 }
 
 help() {
-    # Display Help
     echo "Installs Oh My Posh"
     echo
-    echo "Syntax: install.sh [-h|d]"
+    echo "Syntax: install-omp.sh [-h|d]"
     echo "options:"
     echo "h     Print this Help."
     echo "d     Specify the installation directory. Defaults to /usr/local/bin or the directory where oh-my-posh is installed."
+    echo
+    echo "Set OMP_FORCE=1 to redownload even when the installed version matches."
+    echo "Set OMP_CHECK_TTL (seconds, default 86400) to control how often GitHub is queried."
     echo
 }
 
 while getopts ":hd:" option; do
    case $option in
-      h) # display Help
+      h)
          help
          exit;;
-      d) # Enter a name
+      d)
          install_dir=$OPTARG;;
-     \?) # Invalid option
+     \?)
          echo "Invalid option command line option. Use -h for help."
          exit 1
    esac
 done
 
 SUPPORTED_TARGETS="linux-386 linux-amd64 linux-arm linux-arm64 darwin-amd64 darwin-arm64 windows-386.exe windows-amd64.exe windows-arm64.exe"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/dot-files/oh-my-posh"
+TAG_CACHE="${CACHE_DIR}/latest-tag"
+CHECK_TTL="${OMP_CHECK_TTL:-86400}"
 
 validate_dependency() {
     if ! command -v "$1" >/dev/null; then
@@ -60,13 +65,10 @@ validate_dependencies() {
 
 set_install_directory() {
     if [ -n "$install_dir" ]; then
-        # expand directory
         install_dir="${install_dir/#\~/$HOME}"
         return 0
     fi
 
-    # check if we have oh-my-posh installed, if so, use the executable directory
-    # to install into and follow symlinks
     if command -v oh-my-posh >/dev/null; then
         posh_dir=$(command -v oh-my-posh)
         real_dir=$(realpath "$posh_dir")
@@ -83,13 +85,11 @@ validate_install_directory() {
         error_exit "Directory ${install_dir} does not exist, set a different directory and try again."
     fi
 
-    # check if we can write to the install directory
     if [ ! -w "$install_dir" ]; then
         error "Cannot write to ${install_dir}. Please set a different directory and try again:"
         error_exit "bash \"${PATH_BASH_SETTINGS}/scripts/install-omp.sh\" -d ${install_dir}"
     fi
 
-    # check if the directory is in the PATH
     good=$(
         IFS=:
         for path in $PATH; do
@@ -103,6 +103,45 @@ validate_install_directory() {
     if [ "${good}" != "1" ]; then
         warn "Installation directory ${install_dir} is not in your \$PATH"
     fi
+}
+
+installed_version() {
+    local bin="$1" raw
+    [ -x "$bin" ] || return 1
+    raw="$("$bin" --version 2>/dev/null || true)"
+    raw="${raw#v}"
+    raw="$(printf '%s' "$raw" | tr -d '[:space:]')"
+    [ -n "$raw" ] || return 1
+    printf '%s' "$raw"
+}
+
+cache_age_ok() {
+    local file="$1" now mtime
+    [ -f "$file" ] || return 1
+    now="$(date +%s)"
+    mtime="$(date -r "$file" +%s 2>/dev/null || stat -c %Y "$file" 2>/dev/null || echo 0)"
+    [ $((now - mtime)) -lt "$CHECK_TTL" ]
+}
+
+latest_release_tag() {
+    local tag body
+    if cache_age_ok "$TAG_CACHE"; then
+        tag="$(tr -d '[:space:]' <"$TAG_CACHE")"
+        if [ -n "$tag" ]; then
+            printf '%s' "$tag"
+            return 0
+        fi
+    fi
+
+    body="$(curl -fsSL https://api.github.com/repos/JanDeDobbeleer/oh-my-posh/releases/latest 2>/dev/null || true)"
+    tag="$(printf '%s' "$body" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)"
+    tag="${tag#v}"
+    if [ -z "$tag" ]; then
+        return 1
+    fi
+    mkdir -p "$CACHE_DIR"
+    printf '%s\n' "$tag" >"$TAG_CACHE"
+    printf '%s' "$tag"
 }
 
 install() {
@@ -125,10 +164,26 @@ install() {
         error_exit "${arch} builds for ${platform} are not available for Oh My Posh"
     fi
 
+    executable=${install_dir}/oh-my-posh
+    current="$(installed_version "$executable" || true)"
+    latest=""
+
+    if [ "${OMP_FORCE:-0}" != "1" ] && [ -n "$current" ]; then
+        latest="$(latest_release_tag || true)"
+        if [ -n "$latest" ] && [ "$current" = "$latest" ]; then
+            info "oh-my-posh ${current} already installed in ${install_dir}; skip download"
+            return 0
+        fi
+        if [ -z "$latest" ]; then
+            info "oh-my-posh ${current} already installed; GitHub version check failed, keep existing binary"
+            return 0
+        fi
+        info "oh-my-posh ${current} → ${latest}"
+    fi
+
     info
     info "Installing oh-my-posh for ${target} in ${install_dir}"
 
-    executable=${install_dir}/oh-my-posh
     url=https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-${target}
 
     info "⬇️  Downloading oh-my-posh from ${url}"
@@ -142,11 +197,16 @@ install() {
 
     chmod +x "$executable"
 
+    current="$(installed_version "$executable" || true)"
+    if [ -n "$current" ]; then
+        mkdir -p "$CACHE_DIR"
+        printf '%s\n' "$current" >"$TAG_CACHE"
+    fi
+
     info "🚀 Installation complete."
     info
     info "You can follow the instructions at https://ohmyposh.dev/docs/installation/prompt"
     info "to setup your shell to use oh-my-posh."
-
 }
 
 detect_arch() {
@@ -167,7 +227,6 @@ detect_arch() {
   printf '%s' "${arch}"
 }
 
-
 detect_platform() {
   platform="$(uname -s | awk '{print tolower($0)}')"
 
@@ -179,7 +238,6 @@ detect_platform() {
 
   printf '%s' "${platform}"
 }
-
 
 detect_extension() {
   platform=$(detect_platform)
