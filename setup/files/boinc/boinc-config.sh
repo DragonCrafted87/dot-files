@@ -44,7 +44,7 @@ load_secret_file() {
 apply_role_prefs() {
     local role prefs_src
     role="$(boinc_role)"
-    if ! prefs_src="$(copy_boinc_prefs active)"; then
+    if ! prefs_src="$(link_boinc_prefs active)"; then
         printf 'error: no prefs XML for role %s in the dot-files repo\n' "$role" >&2
         return 1
     fi
