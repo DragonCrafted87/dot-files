@@ -219,13 +219,17 @@ apps so long-lived Brave/Firefox windows do not park the client.
 RAM limits must use `ram_max_used_idle_pct` / `ram_max_used_busy_pct` /
 `vm_max_used_pct` (percent 0-100). The old `*_frac` tags are ignored.
 
+Flatpak BOINC on Hyprland does not see user idle, so `idle_time_to_run`
+is left at 0 and desktop roles keep `run_if_user_active`. Protection is
+the always-on CPU/RAM caps plus GPU off while the session exists.
+
 Current `global_preferences` overrides:
 
 | Role          | CPU while active | CPU cap | CPU limit | Suspend if other CPU | Idle delay | RAM idle/busy | GPU while active |
 | ------------- | ---------------- | ------- | --------- | -------------------- | ---------- | ------------- | ---------------- |
-| `workstation` | yes              | 50%     | 75%       | 40%                  | 3 min      | 40% / 25%     | no               |
-| `laptop`      | yes              | 50%     | 100%      | 25%                  | 5 min      | 30% / 15%     | no               |
-| `htpc`        | yes              | 80%     | 100%      | 50%                  | 2 min      | 40% / 20%     | no               |
+| `workstation` | yes              | 35%     | 50%       | 20%                  | 0          | 40% / 25%     | no               |
+| `laptop`      | yes              | 30%     | 50%       | 20%                  | 0          | 30% / 15%     | no               |
+| `htpc`        | yes              | 60%     | 80%       | 35%                  | 0          | 40% / 20%     | no               |
 | `server`      | yes              | 80%     | 100%      | 30%                  | 0          | 40% / 30%     | yes              |
 
 None of the roles run on battery. Edit the XML under `files/boinc/prefs/`
