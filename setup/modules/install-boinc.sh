@@ -101,6 +101,7 @@ fi
 ensure_dir "$boinc_dir"
 ensure_dir "${DOTFILES_HOME}/.config/systemd/user"
 ensure_dir /etc/boinc-client || run sudo mkdir -p /etc/boinc-client
+ensure_dir /etc/boinc-client/prefs || run sudo mkdir -p /etc/boinc-client/prefs
 
 install -m 0644 "${src}/boinc-client.service" \
     "${DOTFILES_HOME}/.config/systemd/user/boinc-client.service"
@@ -187,6 +188,12 @@ if [[ "$current_rpc" != "$rpc_password" ]]; then
 fi
 
 install_boinc_file "${src}/cc_config.xml" "${boinc_dir}/cc_config.xml"
+for prefs_role in workstation laptop htpc server; do
+    if [[ -f "${src}/prefs/${prefs_role}.xml" ]]; then
+        install_boinc_file "${src}/prefs/${prefs_role}.xml" \
+            "/etc/boinc-client/prefs/${prefs_role}.xml" 0644 1
+    fi
+done
 install_boinc_file "$prefs_src" "${boinc_dir}/global_prefs_override.xml"
 
 install_boinc_file "$hosts_list" /etc/boinc-client/hosts.list 0644 1
@@ -220,12 +227,9 @@ if command -v firewall-cmd >/dev/null && systemctl is-active --quiet firewalld; 
 fi
 
 log "prefs ${role} from ${prefs_src}"
-if [[ -n "$science_united_user" && -n "$science_united_password" ]]; then
-    log "attach Science United"
-    BOINC_SECRET="$secret" /usr/local/bin/boinc-config.sh || \
-        warn "Science United attach failed; retry with /usr/local/bin/boinc-config.sh"
-else
-    warn "Science United skipped until ${secret} has the login fields"
-fi
+log "apply role prefs and attach Science United"
+BOINC_SECRET="$secret" BOINC_ROLE="$role" BOINC_PREFS_DIR=/etc/boinc-client/prefs \
+    /usr/local/bin/boinc-config.sh || \
+    warn "boinc-config failed; retry with /usr/local/bin/boinc-config.sh"
 log "status: /usr/local/bin/boinc-status.sh"
 log "manager: boincmgr   or   flatpak run edu.berkeley.BOINC"

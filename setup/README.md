@@ -176,6 +176,7 @@ The client is a lingering user unit, not a system daemon:
 ```text
 ~/.config/systemd/user/boinc-client.service
 ~/.var/app/edu.berkeley.BOINC/          data dir
+/etc/boinc-client/prefs/<role>.xml      installed role prefs
 ```
 
 `loginctl enable-linger` keeps it running after logout so servers and
@@ -192,21 +193,40 @@ systemctl --user status boinc-client.service
 ```
 
 Fill `files/boinc/hosts.list` with real hostnames so each client allows
-GUI RPC from the others. Role prefs live in `files/boinc/prefs/<role>.xml`.
+GUI RPC from the others. Role prefs live in `files/boinc/prefs/<role>.xml`
+and are installed to `/etc/boinc-client/prefs/`. The current role from
+`~/.config/dot-files/role` is copied to
+`~/.var/app/edu.berkeley.BOINC/global_prefs_override.xml`.
+
+`/usr/local/bin/boinc-config.sh` always rewrites that override from the
+role XML and tells the client `--read_global_prefs_override`. After
+prefs are applied it attaches Science United if the secret file has a
+login. `BOINC_REPLACE=1` detaches and reattaches.
+
 `~/.config/dot-files/boinc-rpc.password` holds `rpc_password`,
 `science_united_user` (the Science United **email**), and
 `science_united_password`. `utility/transfer-secrets.sh` copies that
-file. The role attaches Science United unattended once those fields are
-set.
+file.
 
 In the manager: Advanced → Select computer → `127.0.0.1` + that
 password. Do not let the manager start a second client; the user unit
 already owns port 31416.
 
 k3s gets `CPUWeight=500`. BOINC gets `CPUWeight=idle`, `Nice=10`, and
-`lower_client_priority`. Wine and Steam pause BOINC; gamescope is left
-out because it is not used here. Per-role prefs cap cores/RAM and
-suspend when other CPU is busy.
+`lower_client_priority`. Wine (`wine`, `wine64`, `wineserver`) pauses
+BOINC via `cc_config.xml` exclusive apps.
+
+Current `global_preferences` overrides:
+
+| Role          | CPU cap | CPU limit | Suspend if other CPU | Idle delay | RAM idle/busy | GPU while active |
+| ------------- | ------- | --------- | -------------------- | ---------- | ------------- | ---------------- |
+| `workstation` | 50%     | 75%       | 40%                  | 3 min      | 40% / 25%     | no               |
+| `laptop`      | 50%     | 100%      | 25%                  | 5 min      | 30% / 15%     | no               |
+| `htpc`        | 80%     | 100%      | 50%                  | 2 min      | 40% / 20%     | no               |
+| `server`      | 80%     | 100%      | 30%                  | 0          | 40% / 30%     | yes              |
+
+None of the roles run on battery. Edit the XML under `files/boinc/prefs/`
+and re-run `install-boinc.sh` or `boinc-config.sh`.
 
 Docker image manager is a standalone placeholder, not part of every server:
 
