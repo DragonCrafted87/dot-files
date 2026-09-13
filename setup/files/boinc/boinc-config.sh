@@ -126,8 +126,9 @@ if attached_to_science_united; then
 fi
 
 if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
-    printf 'error: set science_united_user (email) and science_united_password in %s\n' "$SECRET" >&2
-    exit 1
+    printf 'warning: set science_united_user (email) and science_united_password in %s\n' "$SECRET" >&2
+    printf '         role prefs were applied; Science United attach skipped\n' >&2
+    exit 0
 fi
 
 printf 'attaching to Science United as %s\n' "$science_united_user"
