@@ -105,12 +105,12 @@ boinc_prefs_src() {
     printf '%s\n' "$candidate"
 }
 
-link_boinc_prefs() {
+copy_boinc_prefs() {
     local mode="${1:-active}"
     local src dest
     src="$(boinc_prefs_src "$mode")" || return 1
     dest="${BOINC_DIR}/global_prefs_override.xml"
     mkdir -p "$BOINC_DIR"
-    ln -sfn "$src" "$dest"
+    cp -f "$src" "$dest"
     printf '%s\n' "$src"
 }

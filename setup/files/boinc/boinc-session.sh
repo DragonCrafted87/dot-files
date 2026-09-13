@@ -26,6 +26,6 @@ RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 rpc_password="$(tr -d '[:space:]' <"$RPC_AUTH_FILE")"
 [[ -n "$rpc_password" ]] || exit 0
 
-src="$(link_boinc_prefs "$MODE")" || exit 0
+src="$(copy_boinc_prefs "$MODE")" || exit 0
 boinc_cmd --passwd "$rpc_password" --read_global_prefs_override >/dev/null 2>&1 || true
 printf 'boinc prefs %s -> %s\n' "$MODE" "$src"

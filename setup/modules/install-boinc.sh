@@ -187,8 +187,8 @@ if [[ "$current_rpc" != "$rpc_password" ]]; then
 fi
 
 install_boinc_file "${src}/cc_config.xml" "${boinc_dir}/cc_config.xml"
-log "link ${boinc_dir}/global_prefs_override.xml -> ${prefs_src}"
-ln -sfn "$prefs_src" "${boinc_dir}/global_prefs_override.xml"
+log "copy ${boinc_dir}/global_prefs_override.xml -> ${prefs_src}"
+cp -f "$prefs_src" "${boinc_dir}/global_prefs_override.xml"
 
 install_boinc_file "$hosts_list" /etc/boinc-client/hosts.list 0644 1
 tmp="$(mktemp)"
