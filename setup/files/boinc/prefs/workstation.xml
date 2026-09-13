@@ -1,7 +1,4 @@
 <global_preferences>
-    <!-- Hyprland/Flatpak does not report user idle, so run_if_user_active
-         and idle_time_to_run cannot protect the desktop. Cap cores/RAM
-         instead and keep GPU off. -->
     <run_on_batteries>0</run_on_batteries>
     <run_if_user_active>1</run_if_user_active>
     <run_gpu_if_user_active>0</run_gpu_if_user_active>

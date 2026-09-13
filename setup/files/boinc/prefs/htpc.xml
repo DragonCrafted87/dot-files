@@ -1,6 +1,4 @@
 <global_preferences>
-    <!-- Hyprland idle detection is unreliable; keep GPU off and leave
-         CPU work running at a reduced cap. -->
     <run_on_batteries>0</run_on_batteries>
     <run_if_user_active>1</run_if_user_active>
     <run_gpu_if_user_active>0</run_gpu_if_user_active>

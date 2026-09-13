@@ -1,5 +1,4 @@
 <global_preferences>
-    <!-- Screens are blanked by hypridle. Use the spare cores and GPU. -->
     <run_on_batteries>0</run_on_batteries>
     <run_if_user_active>1</run_if_user_active>
     <run_gpu_if_user_active>1</run_gpu_if_user_active>
