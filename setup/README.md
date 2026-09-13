@@ -213,17 +213,18 @@ password. Do not let the manager start a second client; the user unit
 already owns port 31416.
 
 k3s gets `CPUWeight=500`. BOINC gets `CPUWeight=idle`, `Nice=10`, and
-`lower_client_priority`. Exclusive apps in `cc_config.xml` pause BOINC
-for Wine plus Brave, Chrome, Chromium, Firefox, and VS Code. RAM limits
-must use `ram_max_used_idle_pct` / `ram_max_used_busy_pct` /
+`lower_client_priority`. Wine (`wine`, `wine64`, `wineserver`) pauses
+BOINC via `cc_config.xml` exclusive apps. Browsers are not exclusive
+apps so long-lived Brave/Firefox windows do not park the client.
+RAM limits must use `ram_max_used_idle_pct` / `ram_max_used_busy_pct` /
 `vm_max_used_pct` (percent 0-100). The old `*_frac` tags are ignored.
 
 Current `global_preferences` overrides:
 
 | Role          | CPU while active | CPU cap | CPU limit | Suspend if other CPU | Idle delay | RAM idle/busy | GPU while active |
 | ------------- | ---------------- | ------- | --------- | -------------------- | ---------- | ------------- | ---------------- |
-| `workstation` | no               | 35%     | 50%       | 20%                  | 5 min      | 40% / 25%     | no               |
-| `laptop`      | no               | 40%     | 60%       | 20%                  | 5 min      | 30% / 15%     | no               |
+| `workstation` | yes              | 50%     | 75%       | 40%                  | 3 min      | 40% / 25%     | no               |
+| `laptop`      | yes              | 50%     | 100%      | 25%                  | 5 min      | 30% / 15%     | no               |
 | `htpc`        | yes              | 80%     | 100%      | 50%                  | 2 min      | 40% / 20%     | no               |
 | `server`      | yes              | 80%     | 100%      | 30%                  | 0          | 40% / 30%     | yes              |
 
