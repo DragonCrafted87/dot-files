@@ -3,8 +3,11 @@
 # Resolve boinccmd after the Flatpak install.
 
 BOINC_FLATPAK="${BOINC_FLATPAK:-edu.berkeley.BOINC}"
-BOINC_DIR="${BOINC_DIR:-${DOTFILES_HOME:-/home/dragon}/.var/app/${BOINC_FLATPAK}}"
+OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
+BOINC_DIR="${BOINC_DIR:-${DOTFILES_HOME:-/home/${OWNER}}/.var/app/${BOINC_FLATPAK}}"
 BOINC_HOST="${BOINC_HOST:-127.0.0.1}"
+ROLE_FILE="${BOINC_ROLE_FILE:-/home/${OWNER}/.config/dot-files/role}"
+ROOT_FILE="${DOTFILES_ROOT_FILE:-/home/${OWNER}/.config/dot-files/root}"
 
 find_boinccmd() {
     local candidate
@@ -54,4 +57,60 @@ wait_for_boinc_rpc() {
 boinc_service_active() {
     systemctl --user is-active --quiet boinc-client.service 2>/dev/null \
         || systemctl is-active --quiet boinc-client.service 2>/dev/null
+}
+
+dotfiles_root() {
+    local path
+    if [[ -n "${DOTFILES_ROOT:-}" && -d "$DOTFILES_ROOT/setup/files/boinc/prefs" ]]; then
+        printf '%s\n' "$DOTFILES_ROOT"
+        return 0
+    fi
+    if [[ -f "$ROOT_FILE" ]]; then
+        path="$(tr -d '[:space:]' <"$ROOT_FILE")"
+        if [[ -n "$path" && -d "$path/setup/files/boinc/prefs" ]]; then
+            printf '%s\n' "$path"
+            return 0
+        fi
+    fi
+    path="/home/${OWNER}/dot-files"
+    if [[ -d "$path/setup/files/boinc/prefs" ]]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+    return 1
+}
+
+boinc_role() {
+    local role="${BOINC_ROLE:-${OMV_ROLE:-}}"
+    if [[ -z "$role" && -f "$ROLE_FILE" ]]; then
+        role="$(tr -d '[:space:]' <"$ROLE_FILE")"
+    fi
+    printf '%s\n' "${role:-server}"
+}
+
+boinc_prefs_src() {
+    local mode="${1:-active}"
+    local role repo candidate
+    role="$(boinc_role)"
+    repo="$(dotfiles_root)" || return 1
+    if [[ "$mode" == idle ]]; then
+        candidate="${repo}/setup/files/boinc/prefs/${role}-idle.xml"
+        if [[ -f "$candidate" ]]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    fi
+    candidate="${repo}/setup/files/boinc/prefs/${role}.xml"
+    [[ -f "$candidate" ]] || return 1
+    printf '%s\n' "$candidate"
+}
+
+link_boinc_prefs() {
+    local mode="${1:-active}"
+    local src dest
+    src="$(boinc_prefs_src "$mode")" || return 1
+    dest="${BOINC_DIR}/global_prefs_override.xml"
+    mkdir -p "$BOINC_DIR"
+    ln -sfn "$src" "$dest"
+    printf '%s\n' "$src"
 }
