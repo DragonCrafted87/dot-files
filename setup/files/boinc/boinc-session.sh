@@ -10,7 +10,12 @@ set -euo pipefail
 
 MODE="${1:-}"
 case "$MODE" in
-    active | idle) ;;
+    active)
+        boinc_cmd --set_gpu_mode never
+        ;;
+    idle)
+        boinc_cmd --set_gpu_mode auto
+        ;;
     *)
         printf 'usage: %s active|idle\n' "${0##*/}" >&2
         exit 2
