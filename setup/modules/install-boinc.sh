@@ -27,12 +27,13 @@ boinc_dir="${DOTFILES_HOME}/.var/app/edu.berkeley.BOINC"
 rpc_file="${boinc_dir}/gui_rpc_auth.cfg"
 secret="${DOTFILES_HOME}/.config/dot-files/boinc-rpc.password"
 src="${SETUP_FILES_DIR}/boinc"
+prefs_dir="${src}/prefs"
 role="${OMV_ROLE:-}"
 if [[ -z "$role" && -f "${CONFIG_TARGET_DIR}/dot-files/role" ]]; then
     role="$(tr -d '[:space:]' <"${CONFIG_TARGET_DIR}/dot-files/role")"
 fi
 role="${role:-server}"
-prefs_src="${src}/prefs/${role}.xml"
+prefs_src="${prefs_dir}/${role}.xml"
 [[ -f "$prefs_src" ]] || die "missing role prefs ${prefs_src}"
 
 hosts_list="${src}/hosts.list"
@@ -101,7 +102,6 @@ fi
 ensure_dir "$boinc_dir"
 ensure_dir "${DOTFILES_HOME}/.config/systemd/user"
 ensure_dir /etc/boinc-client || run sudo mkdir -p /etc/boinc-client
-ensure_dir /etc/boinc-client/prefs || run sudo mkdir -p /etc/boinc-client/prefs
 
 install -m 0644 "${src}/boinc-client.service" \
     "${DOTFILES_HOME}/.config/systemd/user/boinc-client.service"
@@ -120,6 +120,11 @@ EOF
 }
 write_wrapper /usr/local/bin/boinccmd boinccmd
 write_wrapper /usr/local/bin/boincmgr boincmgr
+
+# Sandbox cannot follow a symlink into ~/dot-files unless that tree is
+# explicitly allowed. Read-only is enough; idle/active only retargets the link.
+log "flatpak override filesystem ${prefs_dir}:ro"
+flatpak override --user --filesystem="${prefs_dir}:ro" edu.berkeley.BOINC
 
 boinc_changed=0
 install_boinc_file() {
@@ -188,13 +193,9 @@ if [[ "$current_rpc" != "$rpc_password" ]]; then
 fi
 
 install_boinc_file "${src}/cc_config.xml" "${boinc_dir}/cc_config.xml"
-for prefs_role in workstation laptop htpc server; do
-    if [[ -f "${src}/prefs/${prefs_role}.xml" ]]; then
-        install_boinc_file "${src}/prefs/${prefs_role}.xml" \
-            "/etc/boinc-client/prefs/${prefs_role}.xml" 0644 1
-    fi
-done
-install_boinc_file "$prefs_src" "${boinc_dir}/global_prefs_override.xml"
+log "link ${boinc_dir}/global_prefs_override.xml -> ${prefs_src}"
+rm -f "${boinc_dir}/global_prefs_override.xml"
+ln -sfn "$prefs_src" "${boinc_dir}/global_prefs_override.xml"
 
 install_boinc_file "$hosts_list" /etc/boinc-client/hosts.list 0644 1
 tmp="$(mktemp)"
@@ -207,6 +208,7 @@ rm -f "$tmp"
 
 install_boinc_file "${src}/find-boinccmd.sh" /usr/local/bin/find-boinccmd.sh 0644 1
 install_boinc_file "${src}/boinc-config.sh" /usr/local/bin/boinc-config.sh 0755 1
+install_boinc_file "${src}/boinc-session.sh" /usr/local/bin/boinc-session.sh 0755 1
 install_boinc_file "${src}/boinc-status.sh" /usr/local/bin/boinc-status.sh 0755 1
 install_boinc_file "${src}/boinc-status-all.sh" /usr/local/bin/boinc-status-all.sh 0755 1
 
@@ -228,7 +230,7 @@ fi
 
 log "prefs ${role} from ${prefs_src}"
 log "apply role prefs and attach Science United"
-BOINC_SECRET="$secret" BOINC_ROLE="$role" BOINC_PREFS_DIR=/etc/boinc-client/prefs \
+BOINC_SECRET="$secret" BOINC_ROLE="$role" \
     /usr/local/bin/boinc-config.sh || \
     warn "boinc-config failed; retry with /usr/local/bin/boinc-config.sh"
 log "status: /usr/local/bin/boinc-status.sh"

@@ -12,9 +12,11 @@ IOWeight=25
 OOMScoreAdjust=400
 Restart=on-failure
 RestartSec=10
+TimeoutStartSec=180
 WorkingDirectory=%h/.var/app/edu.berkeley.BOINC
 ExecStartPre=/usr/bin/mkdir -p %h/.var/app/edu.berkeley.BOINC
-ExecStart=/usr/bin/flatpak run --command=boinc edu.berkeley.BOINC --dir %h/.var/app/edu.berkeley.BOINC
+ExecStartPre=/bin/sleep 90
+ExecStart=/usr/bin/flatpak run --filesystem=%h/dot-files/setup/files/boinc/prefs:ro --command=boinc edu.berkeley.BOINC --dir %h/.var/app/edu.berkeley.BOINC
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStopPost=/bin/rm -f %h/.var/app/edu.berkeley.BOINC/lockfile
 
