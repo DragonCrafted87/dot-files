@@ -27,12 +27,13 @@ boinc_dir="${DOTFILES_HOME}/.var/app/edu.berkeley.BOINC"
 rpc_file="${boinc_dir}/gui_rpc_auth.cfg"
 secret="${DOTFILES_HOME}/.config/dot-files/boinc-rpc.password"
 src="${SETUP_FILES_DIR}/boinc"
+prefs_dir="${src}/prefs"
 role="${OMV_ROLE:-}"
 if [[ -z "$role" && -f "${CONFIG_TARGET_DIR}/dot-files/role" ]]; then
     role="$(tr -d '[:space:]' <"${CONFIG_TARGET_DIR}/dot-files/role")"
 fi
 role="${role:-server}"
-prefs_src="${src}/prefs/${role}.xml"
+prefs_src="${prefs_dir}/${role}.xml"
 [[ -f "$prefs_src" ]] || die "missing role prefs ${prefs_src}"
 
 hosts_list="${src}/hosts.list"
@@ -120,6 +121,11 @@ EOF
 write_wrapper /usr/local/bin/boinccmd boinccmd
 write_wrapper /usr/local/bin/boincmgr boincmgr
 
+# Sandbox cannot follow a symlink into ~/dot-files unless that tree is
+# explicitly allowed. Read-only is enough; idle/active only retargets the link.
+log "flatpak override filesystem ${prefs_dir}:ro"
+flatpak override --user --filesystem="${prefs_dir}:ro" edu.berkeley.BOINC
+
 boinc_changed=0
 install_boinc_file() {
     local from="$1"
@@ -187,8 +193,9 @@ if [[ "$current_rpc" != "$rpc_password" ]]; then
 fi
 
 install_boinc_file "${src}/cc_config.xml" "${boinc_dir}/cc_config.xml"
-log "copy ${boinc_dir}/global_prefs_override.xml -> ${prefs_src}"
-cp -f "$prefs_src" "${boinc_dir}/global_prefs_override.xml"
+log "link ${boinc_dir}/global_prefs_override.xml -> ${prefs_src}"
+rm -f "${boinc_dir}/global_prefs_override.xml"
+ln -sfn "$prefs_src" "${boinc_dir}/global_prefs_override.xml"
 
 install_boinc_file "$hosts_list" /etc/boinc-client/hosts.list 0644 1
 tmp="$(mktemp)"
