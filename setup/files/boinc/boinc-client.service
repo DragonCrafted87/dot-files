@@ -14,7 +14,7 @@ Restart=on-failure
 RestartSec=10
 WorkingDirectory=%h/.var/app/edu.berkeley.BOINC
 ExecStartPre=/usr/bin/mkdir -p %h/.var/app/edu.berkeley.BOINC
-ExecStart=/usr/bin/flatpak run --command=boinc edu.berkeley.BOINC --dir %h/.var/app/edu.berkeley.BOINC
+ExecStart=/usr/bin/flatpak run --filesystem=%h/dot-files/setup/files/boinc/prefs:ro --command=boinc edu.berkeley.BOINC --dir %h/.var/app/edu.berkeley.BOINC
 ExecReload=/bin/kill -HUP $MAINPID
 ExecStopPost=/bin/rm -f %h/.var/app/edu.berkeley.BOINC/lockfile
 
