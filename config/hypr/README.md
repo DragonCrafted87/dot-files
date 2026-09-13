@@ -53,8 +53,16 @@ Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+T` theater,
 
 `hypridle` calls the wrappers, which call the profile script:
 
-- `idle-display-off.sh` → `display-profile.sh idle-off`
-- `idle-display-on.sh` → `dpms on`, then `display-profile.sh idle-on`
+- `idle-display-off.sh` → `display-profile.sh idle-off`, then
+  `boinc-session.sh idle`
+- `idle-display-on.sh` → `dpms on`, `display-profile.sh idle-on`, then
+  `boinc-session.sh active`
+
+`boinc-session.sh` retargets
+`~/.var/app/edu.berkeley.BOINC/global_prefs_override.xml` at the repo
+file `setup/files/boinc/prefs/<role>.xml` or `<role>-idle.xml` and tells
+the client to reread it. Edit those XML files in git; do not copy them
+under `/etc`.
 
 On runewyrm, idle-off records workspaces on HDMI-A-1, `dpms off` that
 output **and** DP-2/DP-3 when those outputs are not `disable` in the
@@ -63,9 +71,9 @@ active conf, then disables HDMI so the TV drops the link. idle-on
 re-enables HDMI using the HDMI line from that conf, and restores those
 workspaces. theater and workshare leave the desk DPs disabled.
 
-Lock and unlock also run the same off/on pair (`on_lock_cmd` /
-`on_unlock_cmd`) so the desk blanks when hyprlock starts, not only after
-the 420s idle timer.
+Unlock and after-sleep run `idle-display-on.sh` so the desk and the
+active BOINC caps come back together. The 420s listener is what blanks
+HDMI and switches BOINC to idle prefs.
 
 If the DP panels are dark after a bad profile, `display-profile.sh desk`
 brings them back.
