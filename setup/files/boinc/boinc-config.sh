@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Attach this host to Science United using
 # ~/.config/dot-files/boinc-rpc.password.
-# Re-apply files/boinc/prefs/<role>.xml as global_prefs_override.xml.
+# Point global_prefs_override.xml at setup/files/boinc/prefs/<role>.xml.
 # science_united_user must be the Science United email address.
 #   /usr/local/bin/boinc-config.sh
 
@@ -15,8 +15,6 @@ OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
 BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.var/app/edu.berkeley.BOINC}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 SECRET="${BOINC_SECRET:-/home/${OWNER}/.config/dot-files/boinc-rpc.password}"
-ROLE_FILE="${BOINC_ROLE_FILE:-/home/${OWNER}/.config/dot-files/role}"
-PREFS_DEST="${BOINC_DIR}/global_prefs_override.xml"
 
 rpc_password=""
 science_united_user=""
@@ -43,44 +41,14 @@ load_secret_file() {
     fi
 }
 
-resolve_role() {
-    local role="${BOINC_ROLE:-${OMV_ROLE:-}}"
-    if [[ -z "$role" && -f "$ROLE_FILE" ]]; then
-        role="$(tr -d '[:space:]' <"$ROLE_FILE")"
-    fi
-    printf '%s\n' "${role:-server}"
-}
-
-resolve_prefs_src() {
-    local role="$1"
-    local candidate
-    for candidate in \
-        "${BOINC_PREFS_FILE:-}" \
-        "${BOINC_PREFS_DIR:-}/${role}.xml" \
-        "/etc/boinc-client/prefs/${role}.xml" \
-        "/home/${OWNER}/dot-files/setup/files/boinc/prefs/${role}.xml"
-    do
-        [[ -n "$candidate" && -f "$candidate" ]] || continue
-        printf '%s\n' "$candidate"
-        return 0
-    done
-    return 1
-}
-
 apply_role_prefs() {
     local role prefs_src
-    role="$(resolve_role)"
-    if ! prefs_src="$(resolve_prefs_src "$role")"; then
-        printf 'error: no prefs XML for role %s\n' "$role" >&2
-        printf '       expected /etc/boinc-client/prefs/%s.xml\n' "$role" >&2
+    role="$(boinc_role)"
+    if ! prefs_src="$(link_boinc_prefs active)"; then
+        printf 'error: no prefs XML for role %s in the dot-files repo\n' "$role" >&2
         return 1
     fi
-    if [[ -f "$PREFS_DEST" ]] && cmp -s "$prefs_src" "$PREFS_DEST"; then
-        printf 'prefs already match %s (%s)\n' "$role" "$prefs_src"
-    else
-        printf 'applying %s prefs from %s\n' "$role" "$prefs_src"
-        install -m 0644 "$prefs_src" "$PREFS_DEST"
-    fi
+    printf 'applying %s prefs from %s\n' "$role" "$prefs_src"
     "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" \
         --read_global_prefs_override
 }
@@ -132,8 +100,6 @@ if [[ -z "$science_united_user" || -z "$science_united_password" ]]; then
 fi
 
 printf 'attaching to Science United as %s\n' "$science_united_user"
-# acct_mgr attach is async. The first call usually prints "poll status: retry"
-# and returns 0. Keep asking until info shows the URL or we time out.
 attach_out=""
 attach_out="$("$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" \
     --acct_mgr attach "$PROJECT_URL" "$science_united_user" "$science_united_password" 2>&1 || true)"
