@@ -1,9 +1,7 @@
-- replace kate with vscode by default
-- update the systemd make with "ExecStart=/usr/bin/mako --default-timeout 3000 --ignore-timeout 1"
-  - its located at /usr/lib/systemd/user/mako.service
-  - or use the ~/.config/mako/config
-    - width 500 height 200
-    - style more to the blue/purple from the hyprland border settings
-    - max notifications is unlimited
-    - filter out the voicemail notification
+- ~~replace kate with vscode by default~~
+  - `setup/files/mime/mimeapps.list` now defaults text/source MIME to `code.desktop` and drops Kate/KWrite associations. Re-run `configure-mime-defaults` or `update-role`.
+- ~~update the systemd mako with "ExecStart=/usr/bin/mako --default-timeout 3000 --ignore-timeout 1"~~
+  - left the distro unit alone; settings live in `config/mako/config` (`~/.config/mako/config` after `link-user-config`)
+  - width 500 height 200, Hyprland blue/purple border colors, max-visible=-1
+  - hide voicemail toasts by summary/body/app-name regex
 - need to a nice find post power strip surge protector for the rack

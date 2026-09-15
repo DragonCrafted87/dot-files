@@ -1,0 +1,43 @@
+# Linked to ~/.config/mako/config by link-user-config.
+# Do not patch /usr/lib/systemd/user/mako.service; flags belong here.
+
+font=Hack 11
+width=500
+height=200
+anchor=top-right
+margin=12
+padding=12
+border-size=2
+border-radius=10
+layer=overlay
+
+# Hyprland active border: #305cde (blue) -> #560591 (purple)
+background-color=#16122aff
+text-color=#e8e4f0ff
+border-color=#305cdeff
+progress-color=over #560591ff
+
+default-timeout=3000
+ignore-timeout=1
+max-visible=-1
+max-history=50
+
+[urgency=low]
+border-color=#305cdeaa
+
+[urgency=normal]
+border-color=#305cdeff
+
+[urgency=critical]
+border-color=#780606ff
+default-timeout=0
+
+# KDE Connect forwards phone Visual Voicemail / carrier VM toasts.
+[summary~="[Vv]oice[[:space:]]*[Mm]ail"]
+invisible=1
+
+[body~="[Vv]oice[[:space:]]*[Mm]ail"]
+invisible=1
+
+[app-name~="[Vv]oice[[:space:]]*[Mm]ail"]
+invisible=1
