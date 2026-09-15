@@ -33,11 +33,9 @@ border-color=#780606ff
 default-timeout=0
 
 # KDE Connect forwards phone Visual Voicemail / carrier VM toasts.
-[summary~="[Vv]oice[[:space:]]*[Mm]ail"]
+# Only summary~ and body~ accept regex. app-name is exact-match only.
+[summary~=.*[Vv]oice.?[Mm]ail.*]
 invisible=1
 
-[body~="[Vv]oice[[:space:]]*[Mm]ail"]
-invisible=1
-
-[app-name~="[Vv]oice[[:space:]]*[Mm]ail"]
+[body~=.*[Vv]oice.?[Mm]ail.*]
 invisible=1
