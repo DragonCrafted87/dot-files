@@ -9,17 +9,17 @@ Related: [router-rescue.md](router-rescue.md), [network-rack-plan.md](network-ra
 Not microk8s vs k3s. Not Calico vs Flannel. These three:
 
 1. Stable node IPs (DHCP reservations).
-2. MetalLB-style VIPs on `192.168.8.0/24` on the same L2 as LAN (`192.168.0.0/16` on the NIC).
-3. Caddy still at **`192.168.8.11`** (socat target on mist-dragon).
+1. MetalLB-style VIPs on `192.168.8.0/24` on the same L2 as LAN (`192.168.0.0/16` on the NIC).
+1. Caddy still at **`192.168.8.11`** (socat target on mist-dragon).
 
-| Piece | Must stay the same |
-| --- | --- |
-| Nodes | `192.168.0.51` / `.53` / `.54` |
-| VIP pool | `192.168.8.0/24` |
-| Caddy LB | `192.168.8.11` TCP/UDP 80/443 |
-| Minecraft (if still DNATed) | `192.168.8.41` port 25565 |
-| Node default route | DHCP option 121 includes `0.0.0.0/0,192.168.0.1` plus `192.168.8.0/24` and `192.168.100.1` |
-| Site DNS | Unbound `local-zone: stealthdragonland.net typetransparent` + dnsmasq `@domain` A records |
+| Piece                       | Must stay the same                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| Nodes                       | `192.168.0.51` / `.53` / `.54`                                                             |
+| VIP pool                    | `192.168.8.0/24`                                                                           |
+| Caddy LB                    | `192.168.8.11` TCP/UDP 80/443                                                              |
+| Minecraft (if still DNATed) | `192.168.8.41` port 25565                                                                  |
+| Node default route          | DHCP option 121 includes `0.0.0.0/0,192.168.0.1` plus `192.168.8.0/24` and `192.168.100.1` |
+| Site DNS                    | Unbound `local-zone: stealthdragonland.net typetransparent` + dnsmasq `@domain` A records  |
 
 Socat: bind `tun0` address → `192.168.8.11`. If Caddy moves off `.11`, change **one** line in `/etc/init.d/vpn-relay`.
 
@@ -44,8 +44,8 @@ Node name is taken at k3s join. Set FQDN on the new OS **before** installing k3s
 
 Suggested (short labels; keep old amd64nodeN if you prefer):
 
-| IP | FQDN | short |
-| --- | --- | --- |
+| IP           | FQDN                          | short   |
+| ------------ | ----------------------------- | ------- |
 | 192.168.0.51 | `k3s-a.stealthdragonland.net` | `k3s-a` |
 | 192.168.0.53 | `k3s-b.stealthdragonland.net` | `k3s-b` |
 | 192.168.0.54 | `k3s-c.stealthdragonland.net` | `k3s-c` |
@@ -63,7 +63,7 @@ Public DNS should **not** publish these as A records to `192.168.0.x`. Split-hor
 
 Optional Unbound extras (same file as dishy, inside `server:`):
 
-```
+```yml
 local-data: "k3s-a.stealthdragonland.net. 3600 IN A 192.168.0.51"
 local-data: "k3s-b.stealthdragonland.net. 3600 IN A 192.168.0.53"
 local-data: "k3s-c.stealthdragonland.net. 3600 IN A 192.168.0.54"
@@ -110,17 +110,17 @@ Do **not** bother copying kubeconfig, Calico state, or the microk8s snap.
 
 Known LB IPs from the old cluster (re-pin these):
 
-| Service | IP |
-| --- | --- |
+| Service               | IP           |
+| --------------------- | ------------ |
 | caddy-tcp / caddy-udp | 192.168.8.11 |
-| home-assistant | 192.168.8.20 |
-| mqtt | 192.168.8.21 |
-| weather | 192.168.8.22 |
-| jellyfin-tcp | 192.168.8.30 |
-| prayers-tcp | 192.168.8.31 |
+| home-assistant        | 192.168.8.20 |
+| mqtt                  | 192.168.8.21 |
+| weather               | 192.168.8.22 |
+| jellyfin-tcp          | 192.168.8.30 |
+| prayers-tcp           | 192.168.8.31 |
 | minecraft-vpp (+ udp) | 192.168.8.41 |
-| minecraft-redstone | 192.168.8.42 |
-| kimai-tcp | 192.168.8.50 |
+| minecraft-redstone    | 192.168.8.42 |
+| kimai-tcp             | 192.168.8.50 |
 
 Spare VIP `192.168.8.10` can run a second Caddy if old and new clusters overlap for an hour; flip socat when ready.
 
@@ -139,12 +139,12 @@ CNI change (Calico `10.1.0.0/16` + ClusterIP `10.152.183.0/24` → Flannel `10.4
 ## Cutover order
 
 1. Router hostname/DNS updates; OpenWrt VPN/socat/121 left alone.
-2. Copy data off old disks.
-3. Wipe boxes, install OS, set FQDN, confirm DHCP + default + `192.168.8.0/24` route.
-4. Install k3s HA on the same three IPs (`--disable traefik`).
-5. MetalLB with the old pool; recreate Services with `spec.loadBalancerIP` (Caddy `.11` first).
-6. From runewyrm: `nslookup k3s-a.stealthdragonland.net`, `curl -vk https://foundry.stealthdragonland.net/`, then phone LTE.
-7. Only if `.11` is wrong, edit socat target.
+1. Copy data off old disks.
+1. Wipe boxes, install OS, set FQDN, confirm DHCP + default + `192.168.8.0/24` route.
+1. Install k3s HA on the same three IPs (`--disable traefik`).
+1. MetalLB with the old pool; recreate Services with `spec.loadBalancerIP` (Caddy `.11` first).
+1. From runewyrm: `nslookup k3s-a.stealthdragonland.net`, `curl -vk https://foundry.stealthdragonland.net/`, then phone LTE.
+1. Only if `.11` is wrong, edit socat target.
 
 ## Post-cutover checks
 

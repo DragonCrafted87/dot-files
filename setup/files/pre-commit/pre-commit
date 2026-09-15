@@ -18,9 +18,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-    printf 'image %s is missing; run update-role or:\n' "$IMAGE" >&2
-    printf '  docker build -t %s ~/dot-files/setup/files/pre-commit\n' "$IMAGE" >&2
-    exit 1
+    docker build -t "$IMAGE" ~/dot-files/setup/files/pre-commit
 fi
 
 mkdir -p "$CACHE_DIR"
