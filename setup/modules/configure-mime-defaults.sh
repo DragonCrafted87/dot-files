@@ -4,6 +4,7 @@
 # That KDE tag also flips Dolphin 25.04 to single-click and binds
 # double-click to "nothing", so this module pins SingleClick=false.
 # Loose config/kdeglobals is applied here; link-user-config ignores files.
+# Text and source files default to VS Code (code.desktop), not Kate.
 
 set -euo pipefail
 # shellcheck disable=SC1091

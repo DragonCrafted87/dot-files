@@ -1,0 +1,44 @@
+# Linked to ~/.config/mako/config by link-user-config.
+
+font=Hack 11
+width=500
+height=200
+anchor=top-right
+margin=12
+padding=12
+border-size=2
+border-radius=10
+layer=overlay
+
+# Grey panel. Border color follows the Hyprland gradient by urgency:
+# blue #305cde -> purple #560591 -> red #780606.
+background-color=#2b2b2bff
+text-color=#e8e8e8ff
+border-color=#560591ff
+progress-color=over #560591ff
+
+default-timeout=5000
+ignore-timeout=1
+max-visible=-1
+max-history=50
+
+[urgency=low]
+border-color=#305cdeff
+progress-color=over #305cdeff
+
+[urgency=normal]
+border-color=#560591ff
+progress-color=over #560591ff
+
+[urgency=critical]
+border-color=#780606ff
+progress-color=over #780606ff
+default-timeout=0
+
+# KDE Connect forwards phone Visual Voicemail / carrier VM toasts.
+# Only summary~ and body~ accept regex. app-name is exact-match only.
+[summary~=.*[Vv]oice.?[Mm]ail.*]
+invisible=1
+
+[body~=.*[Vv]oice.?[Mm]ail.*]
+invisible=1

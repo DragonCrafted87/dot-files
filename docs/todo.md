@@ -1,9 +1,1 @@
-- replace kate with vscode by default
-- update the systemd make with "ExecStart=/usr/bin/mako --default-timeout 3000 --ignore-timeout 1"
-  - its located at /usr/lib/systemd/user/mako.service
-  - or use the ~/.config/mako/config
-    - width 500 height 200
-    - style more to the blue/purple from the hyprland border settings
-    - max notifications is unlimited
-    - filter out the voicemail notification
 - need to a nice find post power strip surge protector for the rack
