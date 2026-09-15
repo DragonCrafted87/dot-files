@@ -17,15 +17,69 @@ MC1 `TRIG OUT` is a 12 VDC **signal**. A7 `TRIG IN` wants 5–12 V and under 10 
 A7 `TRIG OUT` is 12 VDC and can source **up to 120 mA**. That holds a relay coil.
 It will not run fans.
 
+Do not feed the module coil from the A7 jack. Feed the coil from the fan brick.
+The trigger only drives the optocoupler (~5 mA).
+
+## Relay module (locked)
+
+Buy a generic **1-channel 12 V opto-isolated relay board**. The HiLetgo /
+AEDIKO / SainSmart boards are the same layout. Songle `SRD-12VDC-SL-C` on the
+board is the usual relay.
+
+| Item | Spec |
+| --- | --- |
+| Board | 1 ch, 12 V, optocoupler, H/L jumper, flyback diode on coil |
+| Relay | Songle SRD-12VDC-SL-C or equivalent |
+| Coil | 12 VDC, ~400 Ω, ~30 mA, 0.36 W |
+| Board draw from VCC | ~70–80 mA when pulled in (coil + LED + driver) |
+| Opto IN | 4.5–12 V high, 2–5 mA |
+| Contacts | SPDT, 10 A @ 30 VDC / 250 VAC |
+| Jumper | **H** (high-level trigger) |
+| Load we switch | 12 V fan rail, ~0.5 A worst case. Contacts are not the limit. |
+
+A7 `TRIG OUT` budget is 120 mA. Opto at 5 mA leaves headroom. Do not also hang
+the 80 mA coil on that jack.
+
+### Pins
+
 ```txt
-MC1 TRIG OUT  --3.5mm TS-->  A7 TRIG IN
-A7 TRIG OUT   --3.5mm TS-->  12 V relay coil
-12 V brick    --relay NO-->  all fan +12 V rails
+VCC   +12 V from fan brick (always on)
+GND   brick − and trigger sleeve (common)
+IN    A7 TRIG OUT tip
+COM   brick +12 V
+NO    fan +12 V / NA-FC1 input
+NC    unused
 ```
 
-Relay module with a built-in flyback diode. Isolate the 3.5 mm sleeve from the
-steel chassis so trigger ground does not become a speaker-return loop. Contacts
-switch the brick, never the trigger line.
+### Wiring
+
+```txt
+MC1 TRIG OUT  --3.5mm TS-->  A7 TRIG IN
+
+A7 TRIG OUT tip    -------->  module IN
+A7 TRIG OUT sleeve -------->  module GND
+
+fan brick +12 V    -------->  module VCC
+                       \--->  module COM
+fan brick GND      -------->  module GND
+
+module NO          -------->  NA-FC1 / fan +12 V
+fan GND            -------->  brick GND
+```
+
+3.5 mm TS: tip = +12 V, sleeve = ground. Use a panel jack in a **plastic**
+housing, or isolate a metal jack from any steel. Do not bond trigger sleeve to
+the A7 chassis through the cabinet; that is how you get a speaker-return hum.
+
+Brick stays on the Furman, always plugged in. Green LED on the module can stay
+lit. Red LED / click only when the A7 trigger is high.
+
+### Bench check before it goes in the box
+
+1. Jumper on H.
+2. Brick only: green LED, fans off, no click.
+3. 9 V battery or A7 trigger on IN→GND: click, red LED, fans spin.
+4. Unplug trigger: click off, fans stop. Brick still live.
 
 ## Rear ports
 
@@ -131,7 +185,8 @@ back or slotted.
 | Qty | Part | Why |
 | --- | --- | --- |
 | 2 | 3.5 mm TS cables, 3 ft | MC1→A7 and A7→relay |
-| 1 | 12 V relay module, opto-isolated, flyback on board | enable |
+| 1 | isolated 3.5 mm TS panel jack | trigger into the Furman bay |
+| 1 | 1-ch 12 V opto relay (HiLetgo / AEDIKO class) | enable |
 | 1 | Mean Well GST40A12 or Noctua NV-PS1 | fan PSU, ≥24 W |
 | 2 | Noctua NF-A14 PWM | A7 port |
 | 1 | Noctua NF-A12x25 PWM | MC1 port |
@@ -146,8 +201,10 @@ Four fans at idle are ~4–6 W. The 24 W brick is not the limit; noise is.
 ## Do not
 
 - Power fans from the MC1 trigger jack
+- Power the relay **coil** from the A7 trigger jack
 - Plate the back behind the A7
 - Fan the empty bay above the A7
 - Sit the MC1 or NUC on the A7 lid
 - Share the 27U server-rack circuit with the A7
 - Use 120 V muffin fans
+- Bond the trigger sleeve to a metal chassis jack
