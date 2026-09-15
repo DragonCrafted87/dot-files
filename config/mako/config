@@ -1,5 +1,4 @@
 # Linked to ~/.config/mako/config by link-user-config.
-# Do not patch /usr/lib/systemd/user/mako.service; flags belong here.
 
 font=Hack 11
 width=500
@@ -18,7 +17,7 @@ text-color=#e8e8e8ff
 border-color=#560591ff
 progress-color=over #560591ff
 
-default-timeout=3000
+default-timeout=5000
 ignore-timeout=1
 max-visible=-1
 max-history=50
