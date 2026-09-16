@@ -16,7 +16,8 @@ XPADNEO_URL="${XPADNEO_URL:-https://github.com/atar-axis/xpadneo.git}"
 
 install_build_deps() {
     local pkgs=(dkms curl cabextract git gcc make)
-    local extra cand
+    local extra=()
+    local cand
     for cand in kernel-devel "kernel-devel-$(uname -r)" kernel-headers; do
         if rpm -q "$cand" >/dev/null 2>&1 || dnf list --available "$cand" >/dev/null 2>&1; then
             extra+=("$cand")
