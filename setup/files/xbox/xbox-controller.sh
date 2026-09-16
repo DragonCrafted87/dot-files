@@ -40,12 +40,6 @@ xbox-controller — Xbox Elite helper (xone dongle + xpadneo Bluetooth)
   xbox-controller configure [xpadneo configure.sh args...]
   xbox-controller rebuild
 
-xpadneo configure.sh requires a value:
-  xbox-controller configure --ff_connect_notify=1
-  xbox-controller configure -n 1
-  xbox-controller configure -r 0 -n 1
-
-Bare `configure` or `-n` with no value prints xpadneo's help and exits 1.
 EOF
 }
 
