@@ -247,9 +247,6 @@ load_game_overlay() {
     fi
 }
 
-# Warp the pointer onto the target panel. Do not focusmonitor or inject
-# windowrules: both can steal the Steam launch workspace or apply a bad
-# Hyprland rule that maps no window at all.
 pin_output() {
     local mon="$1" info w h x y cx cy
     [[ -n "$mon" ]] || return 0
@@ -267,6 +264,39 @@ pin_output() {
     hyprctl dispatch movecursor "$cx" "$cy" >/dev/null 2>&1 || true
 }
 
+# Exclusive-fullscreen Wayland clients ignore env and open on output 0.
+# After the window maps, shove it onto the chosen connector.
+pin_watch() {
+    local mon="$1" id="$2"
+    [[ -n "$mon" && -n "$id" ]] || return 0
+    command -v hyprctl >/dev/null 2>&1 || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    (
+        local n addr
+        for n in $(seq 1 40); do
+            sleep 0.5
+            addr="$(hyprctl clients -j 2>/dev/null | python3 -c '
+import json, sys
+want = sys.argv[1]
+try:
+    clients = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(0)
+for c in clients:
+    cls = str(c.get("class") or "")
+    if cls == f"steam_app_{want}" or cls.lower().endswith(".exe"):
+        print(c.get("address") or "")
+        break
+' "$id" 2>/dev/null || true)"
+            [[ -n "$addr" ]] || continue
+            hyprctl dispatch focuswindow "address:${addr}" >/dev/null 2>&1 || true
+            hyprctl dispatch movewindow "mon:${mon}" >/dev/null 2>&1 || true
+            wrap_log "moved ${addr} -> ${mon}"
+            break
+        done
+    ) &
+}
+
 cmd_status() {
     local profile file mon size w h id box
     profile="$(current_profile)"
@@ -277,6 +307,7 @@ cmd_status() {
     printf 'saved profile:   %s\n' "${profile:-none}"
     printf 'conf:            %s\n' "${file:-none}"
     printf 'game output:     %s\n' "${mon:-unresolved}"
+    printf 'gamescope:       %s\n' "${GAMESCOPE:-0}"
     if [[ -n "$mon" ]] && size="$(resolve_size "$mon" || true)" && [[ -n "$size" ]]; then
         w="${size%% *}"
         h="${size#* }"
@@ -296,6 +327,9 @@ apply_proton_env() {
     profile="$(current_profile)"
     file="$(profile_conf "$profile" || true)"
     mon="$(resolve_output || true)"
+    WRAP_MON="$mon"
+    WRAP_W=""
+    WRAP_H=""
 
     export PROTON_FORCE_LARGE_ADDRESS_AWARE="${PROTON_FORCE_LARGE_ADDRESS_AWARE:-1}"
     export PROTON_USE_WOW64="${PROTON_USE_WOW64:-1}"
@@ -304,11 +338,9 @@ apply_proton_env() {
         export PROTON_ENABLE_WAYLAND=1
     fi
 
-    w=""
-    h=""
     if [[ "${SPAN:-0}" == "1" && -n "$file" ]] && box="$(span_box "$file" || true)" && [[ -n "$box" ]]; then
-        w="${box%% *}"
-        h="$(echo "$box" | awk '{print $2}')"
+        WRAP_W="${box%% *}"
+        WRAP_H="$(echo "$box" | awk '{print $2}')"
         unset WAYLANDDRV_PRIMARY_MONITOR || true
     else
         if [[ -n "$mon" ]]; then
@@ -316,17 +348,18 @@ apply_proton_env() {
             export SDL_VIDEO_FULLSCREEN_DISPLAY="$mon"
         fi
         if size="$(resolve_size "$mon" || true)" && [[ -n "$size" ]]; then
-            w="${size%% *}"
-            h="${size#* }"
+            WRAP_W="${size%% *}"
+            WRAP_H="${size#* }"
         fi
         pin_output "$mon" || true
+        pin_watch "$mon" "$(app_id || true)" || true
     fi
 
-    if [[ "${INJECT_SIZE:-0}" == "1" && -n "$w" && -n "$h" ]]; then
-        WRAP_EXTRA_ARGS+=("-w" "$w" "-h" "$h")
+    if [[ "${INJECT_SIZE:-0}" == "1" && -n "$WRAP_W" && -n "$WRAP_H" ]]; then
+        WRAP_EXTRA_ARGS+=("-w" "$WRAP_W" "-h" "$WRAP_H")
     fi
 
-    wrap_log "profile=${profile:-none} output=${mon:-none} size=${w:-?}x${h:-?} app=$(app_id || echo none) wayland=${PROTON_ENABLE_WAYLAND:-} primary=${WAYLANDDRV_PRIMARY_MONITOR:-}"
+    wrap_log "profile=${profile:-none} output=${mon:-none} size=${WRAP_W:-?}x${WRAP_H:-?} app=$(app_id || echo none) wayland=${PROTON_ENABLE_WAYLAND:-} gamescope=${GAMESCOPE:-0}"
 }
 
 usage() {
@@ -336,9 +369,13 @@ usage() {
 main() {
     local cmd="${1:-}"
     WRAP_EXTRA_ARGS=()
+    WRAP_MON=""
+    WRAP_W=""
+    WRAP_H=""
 
     case "$cmd" in
         status)
+            load_game_overlay
             cmd_status
             return 0
             ;;
@@ -359,6 +396,11 @@ main() {
     if [[ "$#" -eq 0 ]]; then
         cmd_status
         return 0
+    fi
+
+    if [[ "${GAMESCOPE:-0}" == "1" ]] && command -v gamescope >/dev/null 2>&1 && [[ -n "$WRAP_MON" && -n "$WRAP_W" && -n "$WRAP_H" ]]; then
+        wrap_log "exec gamescope -O ${WRAP_MON} ${WRAP_W}x${WRAP_H}: $*"
+        exec gamescope -f -W "$WRAP_W" -H "$WRAP_H" -O "$WRAP_MON" -- "$@" "${WRAP_EXTRA_ARGS[@]}"
     fi
 
     wrap_log "exec: $* ${WRAP_EXTRA_ARGS[*]:-}"
