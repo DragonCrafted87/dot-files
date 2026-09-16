@@ -94,10 +94,10 @@ ensure_dkms_for_running_kernel() {
 
 install_helper() {
     local src="${SETUP_FILES_DIR}/xbox/xbox-pad.sh"
-    local dest=/usr/local/bin/xbox-pad
     [[ -f "$src" ]] || return 0
-    log "install ${dest}"
-    run sudo install -m 0755 "$src" "$dest"
+    log "install /usr/local/bin/xbox-controller"
+    run sudo install -m 0755 "$src" /usr/local/bin/xbox-controller
+    run sudo ln -sfn /usr/local/bin/xbox-controller /usr/local/bin/xbox-pad
 }
 
 install_xone() {
@@ -163,4 +163,4 @@ install_xone
 install_xpadneo
 install_helper
 
-log "Xbox helper: xbox-pad status   (xpadneo has no desktop file; it is a kernel module)"
+log "Xbox helper: xbox-controller status"
