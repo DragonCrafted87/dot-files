@@ -2,6 +2,7 @@
 # Status / pairing helper. xpadneo and xone are kernel modules, not apps.
 set -euo pipefail
 
+XPADNEO_DIR="${XPADNEO_DIR:-$HOME/src/xpadneo}"
 cmd="${1:-status}"
 
 status() {
@@ -32,24 +33,37 @@ usage() {
     cat <<'EOF'
 xbox-controller — Xbox Elite helper (xone dongle + xpadneo Bluetooth)
 
-  xbox-controller              status
+  xbox-controller                 status
   xbox-controller status
-  xbox-controller pair-dongle  remind pairing steps
-  xbox-controller pair-bt      bluetoothctl scan reminder
-  xbox-controller configure    xpadneo configure.sh (Bluetooth only)
-  xbox-controller rebuild      dkms install both drivers for this kernel
+  xbox-controller pair-dongle
+  xbox-controller pair-bt
+  xbox-controller configure [xpadneo configure.sh args...]
+  xbox-controller rebuild
 
-xpadneo is hid_xpadneo. There is no desktop launcher. Pair in blueman
-or bluetoothctl, then the module attaches. Configure from:
-  sudo ~/src/xpadneo/configure.sh
+xpadneo configure.sh requires a value:
+  xbox-controller configure --ff_connect_notify=1
+  xbox-controller configure -n 1
+  xbox-controller configure -r 0 -n 1
 
-Dongle path uses xone, not xpadneo. Do not pair the same pad on both.
+Bare `configure` or `-n` with no value prints xpadneo's help and exits 1.
 EOF
+}
+
+run_configure() {
+    local script="${XPADNEO_DIR}/configure.sh"
+    [[ -x "$script" ]] || {
+        echo "missing $script" >&2
+        exit 1
+    }
+    if [[ "$#" -eq 0 ]]; then
+        exec sudo "$script" --help
+    fi
+    exec sudo "$script" "$@"
 }
 
 case "$cmd" in
     -h | --help | help) usage ;;
-    status | "") status ;;
+    status) status ;;
     pair-dongle)
         cat <<'EOF'
 1. Unplug Bluetooth for this pad (bluetoothctl disconnect/remove).
@@ -70,18 +84,12 @@ Then:
   trust XX:XX:XX:XX:XX:XX
   connect XX:XX:XX:XX:XX:XX
 
-lsmod should show hid_xpadneo after it connects. Profiles set in the
-Windows Xbox Accessories app carry over. Default profile (no LED)
-exposes paddles as extra buttons.
+lsmod should show hid_xpadneo after it connects.
 EOF
         ;;
     configure)
-        script="${XPADNEO_DIR:-$HOME/src/xpadneo}/configure.sh"
-        [[ -x "$script" ]] || {
-            echo "missing $script" >&2
-            exit 1
-        }
-        exec sudo "$script"
+        shift
+        run_configure "$@"
         ;;
     rebuild)
         sudo dkms autoinstall
