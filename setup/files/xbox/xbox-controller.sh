@@ -30,14 +30,14 @@ status() {
 
 usage() {
     cat <<'EOF'
-xbox-pad — Xbox Elite helper (xone dongle + xpadneo Bluetooth)
+xbox-controller — Xbox Elite helper (xone dongle + xpadneo Bluetooth)
 
-  xbox-pad              status
-  xbox-pad status
-  xbox-pad pair-dongle  remind pairing steps
-  xbox-pad pair-bt      bluetoothctl scan reminder
-  xbox-pad configure    xpadneo configure.sh (Bluetooth only)
-  xbox-pad rebuild      dkms install both drivers for this kernel
+  xbox-controller              status
+  xbox-controller status
+  xbox-controller pair-dongle  remind pairing steps
+  xbox-controller pair-bt      bluetoothctl scan reminder
+  xbox-controller configure    xpadneo configure.sh (Bluetooth only)
+  xbox-controller rebuild      dkms install both drivers for this kernel
 
 xpadneo is hid_xpadneo. There is no desktop launcher. Pair in blueman
 or bluetoothctl, then the module attaches. Configure from:
@@ -56,7 +56,7 @@ case "$cmd" in
 2. Plug the slim adapter into a rear USB-A port.
 3. Hold the button on the dongle until it blinks.
 4. Hold the pair button on the Elite until the Xbox button blinks.
-5. xbox-pad status  — expect xone_dongle loaded and an Xbox input node.
+5. xbox-controller status  — expect xone_dongle loaded and an Xbox input node.
 EOF
         ;;
     pair-bt)
