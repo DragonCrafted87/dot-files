@@ -68,5 +68,51 @@ _hypr_setup_ssh_env() {
     fi
 }
 
+steam-wrap() {
+    local wrap="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/steam-proton-wrap.sh"
+    local cmd="${1:-status}"
+
+    case "$cmd" in
+        games | windows | running)
+            if ! command -v hyprctl >/dev/null 2>&1; then
+                echo "hyprctl not available" >&2
+                return 1
+            fi
+            hyprctl clients -j 2>/dev/null | python3 -c '
+import json, sys
+try:
+    clients = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+rows = []
+for c in clients:
+    cls = str(c.get("class") or "")
+    title = str(c.get("title") or "")
+    if not (cls.startswith("steam_app_") or cls.lower().endswith(".exe") or "proton" in cls.lower() or "gamescope" in cls.lower()):
+        continue
+    mon = c.get("monitor")
+    at = c.get("at") or [0, 0]
+    size = c.get("size") or [0, 0]
+    print(f"{cls}\tmon={mon}\t{at[0]},{at[1]} {size[0]}x{size[1]}\t{title}")
+'
+            return "${PIPESTATUS[0]}"
+            ;;
+        log)
+            tail -n "${2:-30}" "${XDG_STATE_HOME:-$HOME/.local/state}/hypr/steam-wrap.log"
+            return $?
+            ;;
+    esac
+
+    if [[ ! -x "$wrap" ]]; then
+        echo "missing $wrap" >&2
+        return 1
+    fi
+    if [[ "$#" -eq 0 ]]; then
+        "$wrap" status
+    else
+        "$wrap" "$@"
+    fi
+}
+
 _hypr_setup_ssh_env
 unset -f _hypr_runtime_dir _hypr_pick_instance _hypr_setup_ssh_env
