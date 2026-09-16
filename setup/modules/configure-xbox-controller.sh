@@ -13,8 +13,9 @@ XONE_DIR="${XONE_DIR:-${DOTFILES_HOME}/src/xone}"
 XPADNEO_DIR="${XPADNEO_DIR:-${DOTFILES_HOME}/src/xpadneo}"
 XONE_URL="${XONE_URL:-https://github.com/medusalix/xone.git}"
 XPADNEO_URL="${XPADNEO_URL:-https://github.com/atar-axis/xpadneo.git}"
+KERNEL="$(uname -r)"
 
-# uname -r looks like 6.14.2-desktop-3omv2590 or 6.14.2-desktop-gcc-3omv2590.
+# uname -r looks like 6.14.2-desktop-3omv2590 or 6.15.0-desktop-0.rc2.3omv2590.
 # DKMS needs kernel-<flavor>-devel, not kernel-headers (those are glibc only).
 running_kernel_devel_packages() {
     local rel flavor pkg
@@ -24,7 +25,10 @@ running_kernel_devel_packages() {
     if [[ "$rel" == *desktop-gcc* ]]; then
         flavor="desktop-gcc"
     fi
-    for pkg in "kernel-${flavor}-devel" "kernel-${flavor}-devel-$(uname -r)" kernel-devel; do
+    for pkg in \
+        "kernel-${flavor}-devel" \
+        "kernel-rc-${flavor}-devel" \
+        kernel-devel; do
         if rpm -q "$pkg" >/dev/null 2>&1 || dnf list --available "$pkg" >/dev/null 2>&1; then
             printf '%s\n' "$pkg"
         fi
@@ -39,8 +43,8 @@ install_build_deps() {
         extra+=(steam-devices)
     fi
     ensure_packages "${pkgs[@]}" "${extra[@]}"
-    if [[ ! -e "/lib/modules/$(uname -r)/build" ]]; then
-        die "DKMS headers missing for $(uname -r). Install kernel-desktop-devel (or kernel-desktop-gcc-devel if that is the running flavor)."
+    if [[ ! -e "/lib/modules/${KERNEL}/build" ]]; then
+        die "DKMS headers missing for ${KERNEL}. Install kernel-desktop-devel or kernel-rc-desktop-devel."
     fi
 }
 
@@ -63,12 +67,37 @@ clean_broken_xone() {
     fi
 }
 
-xone_is_installed() {
-    lsmod | awk '{print $1}' | grep -qx xone_gip && return 0
-    if [[ -d /var/lib/dkms/xone ]]; then
-        find /var/lib/dkms/xone -mindepth 1 -maxdepth 1 -type d ! -name unknown | grep -q . && return 0
+dkms_module_version() {
+    local name="$1"
+    dkms status "$name" 2>/dev/null | awk -F'[,/ ]+' '
+        $1 == name && $2 != "unknown" { print $2; exit }
+    ' name="$name"
+}
+
+dkms_has_kernel() {
+    local name="$1"
+    dkms status "$name" 2>/dev/null | grep -F "$KERNEL" | grep -qi installed
+}
+
+ensure_dkms_for_running_kernel() {
+    local name="$1"
+    local ver
+    ver="$(dkms_module_version "$name" || true)"
+    [[ -n "$ver" ]] || return 0
+    if dkms_has_kernel "$name"; then
+        log "${name} already built for ${KERNEL}"
+        return 0
     fi
-    return 1
+    log "dkms install ${name}/${ver} for ${KERNEL}"
+    run sudo dkms install -m "$name" -v "$ver" -k "$KERNEL"
+}
+
+install_helper() {
+    local src="${SETUP_FILES_DIR}/xbox/xbox-pad.sh"
+    local dest=/usr/local/bin/xbox-pad
+    [[ -f "$src" ]] || return 0
+    log "install ${dest}"
+    run sudo install -m 0755 "$src" "$dest"
 }
 
 install_xone() {
@@ -79,14 +108,15 @@ install_xone() {
     fi
     git -C "$XONE_DIR" fetch --tags --force >/dev/null 2>&1 || true
     clean_broken_xone
-    if xone_is_installed; then
-        log "xone already present"
-    else
+    if [[ -z "$(dkms_module_version xone || true)" ]]; then
         log "install xone dkms from ${XONE_DIR}"
-        # install.sh copies cwd and versions with git describe --tags.
         run sudo git config --global --add safe.directory "$XONE_DIR" || true
         run sudo bash -lc "cd $(printf '%q' "$XONE_DIR") && ./install.sh --release"
+    else
+        log "xone dkms tree present"
     fi
+    ensure_dkms_for_running_kernel xone
+    run sudo modprobe xone-dongle || true
     if [[ ! -f /lib/firmware/xow_dongle.bin && ! -f /usr/lib/firmware/xow_dongle.bin ]]; then
         log "fetch Xbox wireless dongle firmware"
         if [[ -x /usr/local/bin/xone-get-firmware.sh ]]; then
@@ -108,20 +138,29 @@ install_xpadneo() {
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         return 0
     fi
-    if [[ -d /var/lib/dkms/xpadneo ]] || lsmod | awk '{print $1}' | grep -qx hid_xpadneo; then
-        log "xpadneo already present"
-        return 0
+    local neo_name=""
+    if dkms status hid-xpadneo >/dev/null 2>&1 && [[ -n "$(dkms_module_version hid-xpadneo || true)" ]]; then
+        neo_name=hid-xpadneo
+    elif dkms status xpadneo >/dev/null 2>&1 && [[ -n "$(dkms_module_version xpadneo || true)" ]]; then
+        neo_name=xpadneo
     fi
-    if [[ -x "${XPADNEO_DIR}/install.sh" ]]; then
+    if [[ -z "$neo_name" && -x "${XPADNEO_DIR}/install.sh" ]]; then
         log "install xpadneo (Bluetooth Elite paddles / profiles)"
         run sudo bash -lc "cd $(printf '%q' "$XPADNEO_DIR") && ./install.sh"
+        if [[ -n "$(dkms_module_version hid-xpadneo || true)" ]]; then
+            neo_name=hid-xpadneo
+        else
+            neo_name=xpadneo
+        fi
     fi
+    [[ -n "$neo_name" ]] && ensure_dkms_for_running_kernel "$neo_name"
+    run sudo modprobe hid-xpadneo || true
 }
 
 install_build_deps
 ensure_input_groups
 install_xone
 install_xpadneo
+install_helper
 
-log "Xbox controller: unplug the dongle, reboot if this was the first DKMS build,"
-log "then plug the dongle in, hold the controller pair button until it blinks."
+log "Xbox helper: xbox-pad status   (xpadneo has no desktop file; it is a kernel module)"
