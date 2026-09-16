@@ -1,1 +1,0 @@
-- need to a nice find post power strip surge protector for the rack
