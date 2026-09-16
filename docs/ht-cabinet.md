@@ -23,19 +23,19 @@ The trigger only drives the optocoupler (~5 mA).
 ## Relay module (locked)
 
 Buy a generic **1-channel 12 V opto-isolated relay board**. The HiLetgo /
-AEDIKO / SainSmart boards are the same layout. Songle `SRD-12VDC-SL-C` on the
+AEDIKO / SainSmart boards are the same layout. Single, Dongle `SRD-12VDC-SL-C` on the
 board is the usual relay.
 
-| Item | Spec |
-| --- | --- |
-| Board | 1 ch, 12 V, optocoupler, H/L jumper, flyback diode on coil |
-| Relay | Songle SRD-12VDC-SL-C or equivalent |
-| Coil | 12 VDC, ~400 Ω, ~30 mA, 0.36 W |
-| Board draw from VCC | ~70–80 mA when pulled in (coil + LED + driver) |
-| Opto IN | 4.5–12 V high, 2–5 mA |
-| Contacts | SPDT, 10 A @ 30 VDC / 250 VAC |
-| Jumper | **H** (high-level trigger) |
-| Load we switch | 12 V fan rail, ~0.5 A worst case. Contacts are not the limit. |
+| Item                | Spec                                                          |
+| ------------------- | ------------------------------------------------------------- |
+| Board               | 1 ch, 12 V, optocoupler, H/L jumper, flyback diode on coil    |
+| Relay               | Single, Dongle SRD-12VDC-SL-C or equivalent                   |
+| Coil                | 12 VDC, ~400 Ω, ~30 mA, 0.36 W                                |
+| Board draw from VCC | ~70–80 mA when pulled in (coil + LED + driver)                |
+| Opto IN             | 4.5–12 V high, 2–5 mA                                         |
+| Contacts            | SPDT, 10 A @ 30 VDC / 250 VAC                                 |
+| Jumper              | **H** (high-level trigger)                                    |
+| Load we switch      | 12 V fan rail, ~0.5 A worst case. Contacts are not the limit. |
 
 A7 `TRIG OUT` budget is 120 mA. Opto at 5 mA leaves headroom. Do not also hang
 the 80 mA coil on that jack.
@@ -77,9 +77,9 @@ lit. Red LED / click only when the A7 trigger is high.
 ### Bench check before it goes in the box
 
 1. Jumper on H.
-2. Brick only: green LED, fans off, no click.
-3. 9 V battery or A7 trigger on IN→GND: click, red LED, fans spin.
-4. Unplug trigger: click off, fans stop. Brick still live.
+1. Brick only: green LED, fans off, no click.
+1. 9 V battery or A7 trigger on IN→GND: click, red LED, fans spin.
+1. Unplug trigger: click off, fans stop. Brick still live.
 
 ## Rear ports
 
@@ -103,13 +103,13 @@ do not saw on plywood.
 
 ### Which bays get fans
 
-| Bay | Gear | Rear |
-| --- | --- | --- |
-| 1 bottom | A7 | two NF-A14 PWM, exhaust out. This is the heat source. |
-| 2 | empty chimney | slat only, no fan. Lets the A7 plume keep rising. |
-| 3 | MC1 | one NF-A12x25 PWM, low RPM. HDMI farm lives in this trough. |
-| 4 | NUC + brick | one NF-A9 or A12, mostly to dump NUC heat out the back. |
-| 5 spare | Furman | slat + trough, no fan unless something hot lands here. |
+| Bay      | Gear          | Rear                                                        |
+| -------- | ------------- | ----------------------------------------------------------- |
+| 1 bottom | A7            | two NF-A14 PWM, exhaust out. This is the heat source.       |
+| 2        | empty chimney | slat only, no fan. Lets the A7 plume keep rising.           |
+| 3        | MC1           | one NF-A12x25 PWM, low RPM. HDMI farm lives in this trough. |
+| 4        | NUC + brick   | one NF-A9 or A12, mostly to dump NUC heat out the back.     |
+| 5 spare  | Furman        | slat + trough, no fan unless something hot lands here.      |
 
 All powered fans sit on one 12 V rail behind the relay. One NA-FC1 on the PWM
 line caps every fan at the same quiet speed. First-pass target ~800–1000 RPM.
@@ -182,19 +182,19 @@ back or slotted.
 
 ## Parts to buy first (before wood)
 
-| Qty | Part | Why |
-| --- | --- | --- |
-| 2 | 3.5 mm TS cables, 3 ft | MC1→A7 and A7→relay |
-| 1 | isolated 3.5 mm TS panel jack | trigger into the Furman bay |
-| 1 | 1-ch 12 V opto relay (HiLetgo / AEDIKO class) | enable |
-| 1 | Mean Well GST40A12 or Noctua NV-PS1 | fan PSU, ≥24 W |
-| 2 | Noctua NF-A14 PWM | A7 port |
-| 1 | Noctua NF-A12x25 PWM | MC1 port |
-| 1 | Noctua NF-A9 PWM or second A12 | NUC port |
-| 1 | Noctua NA-FC1 | speed cap |
-| 2 | Noctua NA-YC1 splitters | one PWM tree |
-| 4 | 3 in locking casters, 100 lb each | roll + vac height |
-| 1 | Furman PST-8 | cabinet strip |
+| Qty | Part                                          | Why                         |
+| --- | --------------------------------------------- | --------------------------- |
+| 2   | 3.5 mm TS cables, 3 ft                        | MC1→A7 and A7→relay         |
+| 1   | isolated 3.5 mm TS panel jack                 | trigger into the Furman bay |
+| 1   | 1-ch 12 V opto relay (HiLetgo / AEDIKO class) | enable                      |
+| 1   | Mean Well GST40A12 or Noctua NV-PS1           | fan PSU, ≥24 W              |
+| 2   | Noctua NF-A14 PWM                             | A7 port                     |
+| 1   | Noctua NF-A12x25 PWM                          | MC1 port                    |
+| 1   | Noctua NF-A9 PWM or second A12                | NUC port                    |
+| 1   | Noctua NA-FC1                                 | speed cap                   |
+| 2   | Noctua NA-YC1 splitters                       | one PWM tree                |
+| 4   | 3 in locking casters, 100 lb each             | roll + vac height           |
+| 1   | Furman PST-8                                  | cabinet strip               |
 
 Four fans at idle are ~4–6 W. The 24 W brick is not the limit; noise is.
 
