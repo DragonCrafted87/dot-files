@@ -14,19 +14,35 @@ XPADNEO_DIR="${XPADNEO_DIR:-${DOTFILES_HOME}/src/xpadneo}"
 XONE_URL="${XONE_URL:-https://github.com/medusalix/xone.git}"
 XPADNEO_URL="${XPADNEO_URL:-https://github.com/atar-axis/xpadneo.git}"
 
+# uname -r looks like 6.14.2-desktop-3omv2590 or 6.14.2-desktop-gcc-3omv2590.
+# DKMS needs kernel-<flavor>-devel, not kernel-headers (those are glibc only).
+running_kernel_devel_packages() {
+    local rel flavor pkg
+    rel="$(uname -r)"
+    flavor="${rel#*-}"
+    flavor="${flavor%%-*}"
+    if [[ "$rel" == *desktop-gcc* ]]; then
+        flavor="desktop-gcc"
+    fi
+    for pkg in "kernel-${flavor}-devel" "kernel-${flavor}-devel-$(uname -r)" kernel-devel; do
+        if rpm -q "$pkg" >/dev/null 2>&1 || dnf list --available "$pkg" >/dev/null 2>&1; then
+            printf '%s\n' "$pkg"
+        fi
+    done
+}
+
 install_build_deps() {
     local pkgs=(dkms curl cabextract git gcc make)
     local extra=()
     local cand
-    for cand in kernel-devel "kernel-devel-$(uname -r)" kernel-headers; do
-        if rpm -q "$cand" >/dev/null 2>&1 || dnf list --available "$cand" >/dev/null 2>&1; then
-            extra+=("$cand")
-        fi
-    done
+    mapfile -t extra < <(running_kernel_devel_packages)
     if dnf list --available steam-devices >/dev/null 2>&1 || rpm -q steam-devices >/dev/null 2>&1; then
         extra+=(steam-devices)
     fi
     ensure_packages "${pkgs[@]}" "${extra[@]}"
+    if [[ ! -e "/lib/modules/$(uname -r)/build" ]]; then
+        die "DKMS headers missing for $(uname -r). Install kernel-desktop-devel (or kernel-desktop-gcc-devel if that is the running flavor)."
+    fi
 }
 
 ensure_input_groups() {
