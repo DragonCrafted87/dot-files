@@ -34,7 +34,6 @@ running_kernel_devel_packages() {
 install_build_deps() {
     local pkgs=(dkms curl cabextract git gcc make)
     local extra=()
-    local cand
     mapfile -t extra < <(running_kernel_devel_packages)
     if dnf list --available steam-devices >/dev/null 2>&1 || rpm -q steam-devices >/dev/null 2>&1; then
         extra+=(steam-devices)
@@ -56,17 +55,37 @@ ensure_input_groups() {
     done
 }
 
+clean_broken_xone() {
+    if [[ -d /usr/src/xone-unknown || -d /var/lib/dkms/xone/unknown ]]; then
+        log "remove broken xone/unknown DKMS tree"
+        run sudo dkms remove -m xone -v unknown --all || true
+        run sudo rm -rf /usr/src/xone-unknown /var/lib/dkms/xone/unknown
+    fi
+}
+
+xone_is_installed() {
+    lsmod | awk '{print $1}' | grep -qx xone_gip && return 0
+    if [[ -d /var/lib/dkms/xone ]]; then
+        find /var/lib/dkms/xone -mindepth 1 -maxdepth 1 -type d ! -name unknown | grep -q . && return 0
+    fi
+    return 1
+}
+
 install_xone() {
     ensure_dir "$(dirname "$XONE_DIR")"
     ensure_repo "$XONE_URL" "$XONE_DIR"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         return 0
     fi
-    if ! lsmod | awk '{print $1}' | grep -qx xone_gip && [[ ! -d /var/lib/dkms/xone ]]; then
-        log "install xone dkms"
-        run sudo "${XONE_DIR}/install.sh" --release
-    else
+    git -C "$XONE_DIR" fetch --tags --force >/dev/null 2>&1 || true
+    clean_broken_xone
+    if xone_is_installed; then
         log "xone already present"
+    else
+        log "install xone dkms from ${XONE_DIR}"
+        # install.sh copies cwd and versions with git describe --tags.
+        run sudo git config --global --add safe.directory "$XONE_DIR" || true
+        run sudo bash -lc "cd $(printf '%q' "$XONE_DIR") && ./install.sh --release"
     fi
     if [[ ! -f /lib/firmware/xow_dongle.bin && ! -f /usr/lib/firmware/xow_dongle.bin ]]; then
         log "fetch Xbox wireless dongle firmware"
@@ -95,7 +114,7 @@ install_xpadneo() {
     fi
     if [[ -x "${XPADNEO_DIR}/install.sh" ]]; then
         log "install xpadneo (Bluetooth Elite paddles / profiles)"
-        run sudo "${XPADNEO_DIR}/install.sh"
+        run sudo bash -lc "cd $(printf '%q' "$XPADNEO_DIR") && ./install.sh"
     fi
 }
 
