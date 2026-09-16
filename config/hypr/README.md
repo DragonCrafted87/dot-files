@@ -49,6 +49,25 @@ the git-linked tree).
 Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+T` theater,
 `SUPER+SHIFT+W` workshare.
 
+## Steam / Proton
+
+`scripts/steam-proton-wrap.sh` is the shared launch wrapper. It reads the
+saved display profile and aims Proton at the largest enabled output in
+that layout, so the same Steam launch option works on the desk ultrawide,
+the theater TV, and the laptop panel.
+
+```bash
+~/.config/hypr/scripts/steam-proton-wrap.sh %command%
+```
+
+Title-specific env lives in `steam-games/<SteamAppId>.conf`. See
+`steam-games/README.md`. After `update-dot-files` the script is already
+at `~/.config/hypr/scripts/` because this whole tree is linked.
+
+Swap to theater first (`SUPER+SHIFT+T`), then launch. The wrap script
+will see HDMI-only and use the live TV mode (1080p when that is what the
+set reports).
+
 ## Idle
 
 `hypridle` calls the wrappers, which call the profile script:
