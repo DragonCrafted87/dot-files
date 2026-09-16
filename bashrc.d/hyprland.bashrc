@@ -88,7 +88,7 @@ rows = []
 for c in clients:
     cls = str(c.get("class") or "")
     title = str(c.get("title") or "")
-    if not (cls.startswith("steam_app_") or cls.lower().endswith(".exe") or "proton" in cls.lower()):
+    if not (cls.startswith("steam_app_") or cls.lower().endswith(".exe") or "proton" in cls.lower() or "gamescope" in cls.lower()):
         continue
     mon = c.get("monitor")
     at = c.get("at") or [0, 0]
