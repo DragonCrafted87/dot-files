@@ -241,6 +241,30 @@ load_game_overlay() {
     fi
 }
 
+# Wine-Wayland and many engines fullscreen the output under the cursor.
+pin_output() {
+    local mon="$1" info w h x y cx cy id
+    [[ -n "$mon" ]] || return 0
+    command -v hyprctl >/dev/null 2>&1 || return 0
+    [[ "${PIN_OUTPUT:-1}" == "1" ]] || return 0
+
+    hyprctl dispatch focusmonitor "$mon" >/dev/null 2>&1 || true
+    if info="$(live_monitor_info "$mon" || true)" && [[ -n "$info" ]]; then
+        w="$(echo "$info" | awk '{print $1}')"
+        h="$(echo "$info" | awk '{print $2}')"
+        x="$(echo "$info" | awk '{print $4}')"
+        y="$(echo "$info" | awk '{print $5}')"
+        cx=$((x + w / 2))
+        cy=$((y + h / 2))
+        hyprctl dispatch movecursor "$cx" "$cy" >/dev/null 2>&1 || true
+    fi
+
+    id="$(app_id || true)"
+    if [[ -n "$id" ]]; then
+        hyprctl keyword windowrulev2 "monitor ${mon}, class:^(steam_app_${id})$" >/dev/null 2>&1 || true
+    fi
+}
+
 cmd_status() {
     local profile file mon size w h id box
     profile="$(current_profile)"
@@ -287,11 +311,13 @@ apply_proton_env() {
     else
         if [[ -n "$mon" ]]; then
             export WAYLANDDRV_PRIMARY_MONITOR="$mon"
+            export SDL_VIDEO_FULLSCREEN_DISPLAY="$mon"
         fi
         if size="$(resolve_size "$mon" || true)" && [[ -n "$size" ]]; then
             w="${size%% *}"
             h="${size#* }"
         fi
+        pin_output "$mon"
     fi
 
     if [[ "${INJECT_SIZE:-0}" == "1" && -n "$w" && -n "$h" ]]; then
