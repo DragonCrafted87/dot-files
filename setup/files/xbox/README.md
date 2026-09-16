@@ -12,10 +12,10 @@ Wired USB often already works with in-tree `xpad`. The **dongle does not**.
 ## Pair the dongle
 
 1. Unplug Xbox devices before the first install, then reboot after DKMS builds.
-2. Plug the adapter into a USB-A port on the machine (avoid cheap hubs).
-3. Hold the button on the dongle until its LED blinks.
-4. Hold the pair button on the Elite until the Xbox button blinks.
-5. Both LEDs go solid when paired.
+1. Plug the adapter into a USB-A port on the machine (avoid cheap hubs).
+1. Hold the button on the dongle until its LED blinks.
+1. Hold the pair button on the Elite until the Xbox button blinks.
+1. Both LEDs go solid when paired.
 
 Check:
 
