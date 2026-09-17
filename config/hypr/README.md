@@ -66,7 +66,7 @@ the git-linked tree).
 Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+S` single (auto theater /
 workshare from the HDMI-switch EDID).
 
-`SUPER+[0-9]` runs `scripts/switch-workspace.sh`. If that workspace is
+`SUPER+[0-9]` runs `scripts/switch-workspace.py`. If that workspace is
 already on a monitor, focus moves there. If it is hidden, the workspace
 moves to the monitor under the cursor.
 
