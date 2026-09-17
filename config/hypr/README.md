@@ -60,8 +60,6 @@ the git-linked tree).
 ~/.config/hypr/scripts/display-switch.sh restore
 ~/.config/hypr/scripts/display-switch.sh desk
 ~/.config/hypr/scripts/display-switch.sh single
-~/.config/hypr/scripts/display-switch.sh theater
-~/.config/hypr/scripts/display-switch.sh workshare
 ~/.config/hypr/scripts/display-switch.sh status
 ```
 
