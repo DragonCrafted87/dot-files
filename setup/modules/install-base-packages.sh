@@ -18,6 +18,7 @@ ensure_packages \
     openssh-server \
     tmux \
     htop \
+    nvtop \
     fastfetch \
     jq \
     nano \
@@ -33,4 +34,5 @@ ensure_packages \
     fwupd \
     cifs-utils \
     nfs-utils \
-    samba-client
+    samba-client \
+    inotify-tools
