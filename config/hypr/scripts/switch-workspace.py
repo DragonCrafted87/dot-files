@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 """Focus a workspace, or move a hidden one onto the cursor monitor."""
 
 import json
@@ -76,8 +77,7 @@ def main(argv):
         [
             "hyprctl",
             "--batch",
-            "dispatch moveworkspacetomonitor %s %s; dispatch workspace %s"
-            % (workspace, target, workspace),
+            f"dispatch moveworkspacetomonitor {workspace} {target}; dispatch workspace {workspace}",
         ]
     )
     return 0
