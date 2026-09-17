@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Audio half of display-profile. Sourced from display-profile.sh or run
 # alone: display-audio.sh theater|desk|workshare|stereo|status
+#
+# Host/profile sinks and cards live in conf.d/audio.d/<host>-<profile>.conf.
+# This script has no hostname-specific defaults.
 set -euo pipefail
 
 HOST="${HOST:-$(hostname -s 2>/dev/null || hostname)}"
@@ -8,9 +11,6 @@ SCRIPT_DIR="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 AUDIO_D="${AUDIO_D:-${SCRIPT_DIR}/../conf.d/audio.d}"
 STATE_DIR="${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/hypr}"
 PROFILE_FILE="${PROFILE_FILE:-${STATE_DIR}/display-profile}"
-SAVED_SINK_FILE="${SAVED_SINK_FILE:-${STATE_DIR}/desk-audio-sink}"
-THEATER_SINK_MATCH="${THEATER_SINK_MATCH:-hdmi-surround71-extra3}"
-DESK_SINK_MATCH="${DESK_SINK_MATCH:-pci-0000_18_00.6.iec958-stereo}"
 SINK_MATCH=""
 SINK_FALLBACK=""
 CARD=""
@@ -45,6 +45,11 @@ card_has_profile() {
     '
 }
 
+audio_conf_file() {
+    local profile="$1"
+    printf '%s\n' "${AUDIO_D}/${HOST}-${profile}.conf"
+}
+
 load_audio_conf() {
     local profile="$1" file
     SINK_MATCH=""
@@ -52,10 +57,11 @@ load_audio_conf() {
     CARD=""
     CARD_PROFILE=""
     CARD_PROFILE_FALLBACK=""
-    file="${AUDIO_D}/${HOST}-${profile}.conf"
-    [[ -f "$file" ]] || return 0
+    file="$(audio_conf_file "$profile")"
+    [[ -f "$file" ]] || return 1
     # shellcheck disable=SC1090
     . "$file"
+    return 0
 }
 
 set_card_profile() {
@@ -106,48 +112,40 @@ current_display_profile() {
 
 apply_audio_profile() {
     local profile="$1" sink="" tries=0
-    load_audio_conf "$profile"
-    case "$profile" in
-        theater)
-            SINK_MATCH="${SINK_MATCH:-$THEATER_SINK_MATCH}"
-            SINK_FALLBACK="${SINK_FALLBACK:-hdmi-stereo-extra3}"
-            CARD="${CARD:-alsa_card.pci-0000_03_00.1}"
-            CARD_PROFILE="${CARD_PROFILE:-hdmi-surround71-extra3}"
-            CARD_PROFILE_FALLBACK="${CARD_PROFILE_FALLBACK:-hdmi-stereo-extra3}"
-            ;;
-        desk | workshare)
-            SINK_MATCH="${SINK_MATCH:-$DESK_SINK_MATCH}"
-            ;;
-        stereo)
-            CARD="${CARD:-alsa_card.pci-0000_03_00.1}"
-            CARD_PROFILE="hdmi-stereo-extra3"
-            SINK_MATCH="hdmi-stereo-extra3"
-            SINK_FALLBACK="hdmi-stereo-extra3"
-            ;;
-    esac
+    if ! load_audio_conf "$profile"; then
+        return 0
+    fi
+    if [[ -z "${SINK_MATCH:-}" && -z "${CARD:-}" ]]; then
+        return 0
+    fi
     command -v pactl >/dev/null 2>&1 || {
         audio_notify "pactl missing; audio not switched" "rgb(de3030)"
         return 1
     }
-    if [[ "$profile" == theater || "$profile" == stereo ]]; then
+    if [[ -n "${CARD:-}" && -n "${CARD_PROFILE:-}" ]]; then
         ensure_card_profile || true
         while ((tries < 8)); do
             sink="$(find_sink "$SINK_MATCH" || true)"
             [[ -n "$sink" ]] && break
-            sink="$(find_sink "$SINK_FALLBACK" || true)"
-            [[ -n "$sink" ]] && break
+            if [[ -n "${SINK_FALLBACK:-}" ]]; then
+                sink="$(find_sink "$SINK_FALLBACK" || true)"
+                [[ -n "$sink" ]] && break
+            fi
             sleep 0.5
             tries=$((tries + 1))
             ensure_card_profile || true
         done
     else
         sink="$(find_sink "$SINK_MATCH" || true)"
+        if [[ -z "$sink" && -n "${SINK_FALLBACK:-}" ]]; then
+            sink="$(find_sink "$SINK_FALLBACK" || true)"
+        fi
     fi
     if [[ -z "$sink" ]]; then
         audio_notify "Audio failed (no sink for ${SINK_MATCH:-?} / ${SINK_FALLBACK:-none})" "rgb(de3030)"
         return 1
     fi
-    if [[ "$profile" == theater && "$sink" != *surround71* ]]; then
+    if [[ "${CARD_PROFILE:-}" == *surround71* && "$sink" != *surround71* ]]; then
         audio_notify "HDMI 7.1 not live; using stereo. Reboot if you need 7.1." "rgb(de9f30)"
     fi
     set_sink "$sink"
@@ -168,8 +166,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
             printf 'default: %s\n' "$(default_sink)"
             list_sinks | sed 's/^/  /'
             ;;
-        theater | desk | workshare | stereo) apply_audio_profile "$cmd" ;;
         restore) restore_profile_audio "${2:-}" ;;
-        *) echo "Usage: display-audio.sh [status|theater|desk|workshare|stereo|restore]" >&2; exit 2 ;;
+        *) apply_audio_profile "$cmd" ;;
     esac
 fi
