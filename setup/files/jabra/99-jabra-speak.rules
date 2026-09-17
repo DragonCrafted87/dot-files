@@ -1,0 +1,2 @@
+# Jabra Speak HID so the session can read volume/mute reports.
+KERNEL=="hidraw*", ATTRS{idVendor}=="0b0e", MODE="0660", GROUP="video", TAG+="uaccess"
