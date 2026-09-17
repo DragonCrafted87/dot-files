@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Audio half of display-profile. Sourced from display-profile.sh or run
-# alone: display-audio.sh theater|desk|status
+# alone: display-audio.sh theater|desk|workshare|stereo|status
 set -euo pipefail
 
 HOST="${HOST:-$(hostname -s 2>/dev/null || hostname)}"
 SCRIPT_DIR="${SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 AUDIO_D="${AUDIO_D:-${SCRIPT_DIR}/../conf.d/audio.d}"
 STATE_DIR="${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/hypr}"
+PROFILE_FILE="${PROFILE_FILE:-${STATE_DIR}/display-profile}"
 SAVED_SINK_FILE="${SAVED_SINK_FILE:-${STATE_DIR}/desk-audio-sink}"
 THEATER_SINK_MATCH="${THEATER_SINK_MATCH:-hdmi-surround71-extra3}"
-DESK_SINK_MATCH="${DESK_SINK_MATCH:-Jabra_Speak_710}"
+DESK_SINK_MATCH="${DESK_SINK_MATCH:-pci-0000_18_00.6.iec958-stereo}"
 SINK_MATCH=""
 SINK_FALLBACK=""
 CARD=""
@@ -95,15 +96,12 @@ set_sink() {
     audio_notify "Audio → ${sink}"
 }
 
-save_current_sink() {
-    local sink
-    sink="$(default_sink)"
-    [[ -n "$sink" ]] || return 0
-    if [[ -n "$THEATER_SINK_MATCH" ]] && grep -Fiq "$THEATER_SINK_MATCH" <<<"$sink"; then
-        return 0
+current_display_profile() {
+    if [[ -f "$PROFILE_FILE" ]]; then
+        tr -d '[:space:]' <"$PROFILE_FILE"
+    else
+        echo ""
     fi
-    mkdir -p "$STATE_DIR"
-    printf '%s\n' "$sink" >"$SAVED_SINK_FILE"
 }
 
 apply_audio_profile() {
@@ -116,17 +114,22 @@ apply_audio_profile() {
             CARD="${CARD:-alsa_card.pci-0000_03_00.1}"
             CARD_PROFILE="${CARD_PROFILE:-hdmi-surround71-extra3}"
             CARD_PROFILE_FALLBACK="${CARD_PROFILE_FALLBACK:-hdmi-stereo-extra3}"
-            save_current_sink
             ;;
         desk | workshare)
             SINK_MATCH="${SINK_MATCH:-$DESK_SINK_MATCH}"
+            ;;
+        stereo)
+            CARD="${CARD:-alsa_card.pci-0000_03_00.1}"
+            CARD_PROFILE="hdmi-stereo-extra3"
+            SINK_MATCH="hdmi-stereo-extra3"
+            SINK_FALLBACK="hdmi-stereo-extra3"
             ;;
     esac
     command -v pactl >/dev/null 2>&1 || {
         audio_notify "pactl missing; audio not switched" "rgb(de3030)"
         return 1
     }
-    if [[ "$profile" == theater ]]; then
+    if [[ "$profile" == theater || "$profile" == stereo ]]; then
         ensure_card_profile || true
         while ((tries < 8)); do
             sink="$(find_sink "$SINK_MATCH" || true)"
@@ -139,13 +142,9 @@ apply_audio_profile() {
         done
     else
         sink="$(find_sink "$SINK_MATCH" || true)"
-        if [[ -z "$sink" && -f "$SAVED_SINK_FILE" ]]; then
-            sink="$(tr -d '[:space:]' <"$SAVED_SINK_FILE")"
-            list_sinks | grep -Fxq "$sink" || sink=""
-        fi
     fi
     if [[ -z "$sink" ]]; then
-        audio_notify "Theater/desk audio failed (no sink for ${SINK_MATCH:-?} / ${SINK_FALLBACK:-none}). Reboot if HDMI 7.1 is missing." "rgb(de3030)"
+        audio_notify "Audio failed (no sink for ${SINK_MATCH:-?} / ${SINK_FALLBACK:-none})" "rgb(de3030)"
         return 1
     fi
     if [[ "$profile" == theater && "$sink" != *surround71* ]]; then
@@ -154,14 +153,23 @@ apply_audio_profile() {
     set_sink "$sink"
 }
 
+restore_profile_audio() {
+    local profile
+    profile="${1:-$(current_display_profile)}"
+    [[ -n "$profile" ]] || profile=desk
+    apply_audio_profile "$profile"
+}
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     cmd="${1:-status}"
     case "$cmd" in
         status)
+            printf 'profile: %s\n' "$(current_display_profile)"
             printf 'default: %s\n' "$(default_sink)"
             list_sinks | sed 's/^/  /'
             ;;
-        theater | desk | workshare) apply_audio_profile "$cmd" ;;
-        *) echo "Usage: display-audio.sh [status|theater|desk|workshare]" >&2; exit 2 ;;
+        theater | desk | workshare | stereo) apply_audio_profile "$cmd" ;;
+        restore) restore_profile_audio "${2:-}" ;;
+        *) echo "Usage: display-audio.sh [status|theater|desk|workshare|stereo|restore]" >&2; exit 2 ;;
     esac
 fi
