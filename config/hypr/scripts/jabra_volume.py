@@ -13,15 +13,26 @@ import time
 JABRA_VENDOR = 0x0B0E
 EVENT_FORMAT = "llHHi"
 EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
+EV_SYN = 0
 EV_KEY = 1
+EV_REL = 2
+EV_ABS = 3
+EV_MSC = 4
 KEY_MUTE = 113
 KEY_VOLUMEDOWN = 114
 KEY_VOLUMEUP = 115
+REL_HWHEEL = 6
+REL_DIAL = 7
+REL_WHEEL = 8
+REL_WHEEL_HI_RES = 11
+REL_HWHEEL_HI_RES = 12
+ABS_WHEEL = 8
+ABS_MISC = 0x28
 EVIOCGRAB = 0x40044590
 
 
 def usage():
-    print("Usage: jabra_volume.py raise|lower|mute|watch|status", file=sys.stderr)
+    print("Usage: jabra_volume.py raise|lower|mute|watch|dump|status", file=sys.stderr)
     raise SystemExit(1)
 
 
@@ -101,6 +112,7 @@ def apply(action):
         subprocess.check_call(["wpctl", "set-mute", sink, "toggle"])
     else:
         return 1
+    print(f"jabra {action} sink={sink}", flush=True)
     return 0
 
 
@@ -112,16 +124,27 @@ def grab(fd):
         return False
 
 
-def handle_event(event):
+def handle_event(event, debug=False):
     _sec, _usec, ev_type, code, value = event
-    if ev_type != EV_KEY or value != 1:
+    if debug and ev_type != EV_SYN:
+        print(f"event type={ev_type} code={code} value={value}", flush=True)
+    if ev_type == EV_KEY and value in {1, 2}:
+        if code == KEY_VOLUMEUP:
+            apply("raise")
+        elif code == KEY_VOLUMEDOWN:
+            apply("lower")
+        elif code == KEY_MUTE:
+            apply("mute")
         return
-    if code == KEY_VOLUMEUP:
-        apply("raise")
-    elif code == KEY_VOLUMEDOWN:
-        apply("lower")
-    elif code == KEY_MUTE:
-        apply("mute")
+    if ev_type == EV_REL and value:
+        if code in {REL_WHEEL, REL_DIAL, REL_HWHEEL, REL_WHEEL_HI_RES, REL_HWHEEL_HI_RES}:
+            apply("raise" if value > 0 else "lower")
+        return
+    if ev_type == EV_ABS and code in {ABS_WHEEL, ABS_MISC}:
+        if value > 0:
+            apply("raise")
+        elif value < 0:
+            apply("lower")
 
 
 def open_devices():
@@ -138,7 +161,7 @@ def open_devices():
     return opened
 
 
-def watch():
+def watch(debug=False):
     devices = {}
     known = set()
     print("watching Jabra Speak buttons for the Jabra sink", flush=True)
@@ -155,12 +178,17 @@ def watch():
         ready, _, _ = select.select(list(devices), [], [], 1.0)
         for fd in ready:
             try:
-                blob = os.read(fd, EVENT_SIZE * 8)
+                blob = os.read(fd, EVENT_SIZE * 16)
             except OSError:
                 known = set()
                 continue
+            if debug and blob:
+                print(f"raw {len(blob)} bytes {blob[:EVENT_SIZE].hex()}", flush=True)
             for offset in range(0, len(blob) // EVENT_SIZE * EVENT_SIZE, EVENT_SIZE):
-                handle_event(struct.unpack(EVENT_FORMAT, blob[offset : offset + EVENT_SIZE]))
+                handle_event(
+                    struct.unpack(EVENT_FORMAT, blob[offset : offset + EVENT_SIZE]),
+                    debug=debug,
+                )
 
 
 def print_status():
@@ -183,8 +211,11 @@ def main(argv):
         return apply(command)
     if command == "status":
         return print_status()
+    if command == "dump":
+        watch(debug=True)
+        return 0
     if command == "watch":
-        watch()
+        watch(debug=False)
         return 0
     usage()
     return 1
