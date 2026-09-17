@@ -72,7 +72,7 @@ ensure_card_profile() {
         set_card_profile "$card" "$preferred" && return 0
     fi
     if [[ -n "$fallback" ]] && card_has_profile "$card" "$fallback"; then
-        audio_notify "Theater audio: ${preferred:-7.1} missing, using ${fallback}" rgb(de9f30)
+        audio_notify "Theater audio: ${preferred:-7.1} missing, using ${fallback}" "rgb(de9f30)"
         set_card_profile "$card" "$fallback" && return 0
     fi
     return 1
@@ -123,7 +123,7 @@ apply_audio_profile() {
             ;;
     esac
     command -v pactl >/dev/null 2>&1 || {
-        audio_notify "pactl missing; audio not switched" rgb(de3030)
+        audio_notify "pactl missing; audio not switched" "rgb(de3030)"
         return 1
     }
     if [[ "$profile" == theater ]]; then
@@ -145,11 +145,11 @@ apply_audio_profile() {
         fi
     fi
     if [[ -z "$sink" ]]; then
-        audio_notify "Theater/desk audio failed (no sink for ${SINK_MATCH:-?} / ${SINK_FALLBACK:-none}). Reboot if HDMI 7.1 is missing." rgb(de3030)
+        audio_notify "Theater/desk audio failed (no sink for ${SINK_MATCH:-?} / ${SINK_FALLBACK:-none}). Reboot if HDMI 7.1 is missing." "rgb(de3030)"
         return 1
     fi
     if [[ "$profile" == theater && "$sink" != *surround71* ]]; then
-        audio_notify "HDMI 7.1 not live; using stereo. Reboot if you need 7.1." rgb(de9f30)
+        audio_notify "HDMI 7.1 not live; using stereo. Reboot if you need 7.1." "rgb(de9f30)"
     fi
     set_sink "$sink"
 }
