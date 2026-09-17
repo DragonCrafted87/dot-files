@@ -1,4 +1,4 @@
-"""Apply Jabra Speak 710 buttons only to the Jabra PipeWire sink."""
+"""Apply Jabra Speak 710 controls only to the Jabra PipeWire sink."""
 
 import fcntl
 import glob
@@ -17,7 +17,6 @@ EV_SYN = 0
 EV_KEY = 1
 EV_REL = 2
 EV_ABS = 3
-EV_MSC = 4
 KEY_MUTE = 113
 KEY_VOLUMEDOWN = 114
 KEY_VOLUMEUP = 115
@@ -29,6 +28,7 @@ REL_HWHEEL_HI_RES = 12
 ABS_WHEEL = 8
 ABS_MISC = 0x28
 EVIOCGRAB = 0x40044590
+HIDIOCGRAWINFO = 0x80084803
 
 
 def usage():
@@ -61,6 +61,35 @@ def jabra_event_nodes():
         if vendor != JABRA_VENDOR and "jabra" not in product_name.lower():
             continue
         nodes.append((f"/dev/input/{event_name}", product_name))
+    return nodes
+
+
+def hid_ids(uevent):
+    vendor = None
+    product = None
+    for line in uevent.splitlines():
+        if not line.startswith("HID_ID="):
+            continue
+        parts = line.split("=", 1)[1].split(":")
+        if len(parts) >= 3:
+            vendor = parse_hex(parts[1])
+            product = parse_hex(parts[2])
+    return vendor, product
+
+
+def jabra_hidraw_nodes():
+    nodes = []
+    for uevent_path in glob.glob("/sys/class/hidraw/hidraw*/device/uevent"):
+        hidraw = os.path.basename(os.path.dirname(os.path.dirname(uevent_path)))
+        uevent = read_text(uevent_path)
+        vendor, product = hid_ids(uevent)
+        name = ""
+        for line in uevent.splitlines():
+            if line.startswith("HID_NAME="):
+                name = line.split("=", 1)[1]
+        if vendor != JABRA_VENDOR and "jabra" not in name.lower():
+            continue
+        nodes.append((f"/dev/{hidraw}", name or f"{vendor:04x}:{product:04x}" if vendor else hidraw))
     return nodes
 
 
@@ -124,10 +153,10 @@ def grab(fd):
         return False
 
 
-def handle_event(event, debug=False):
+def handle_evdev(event, debug=False):
     _sec, _usec, ev_type, code, value = event
     if debug and ev_type != EV_SYN:
-        print(f"event type={ev_type} code={code} value={value}", flush=True)
+        print(f"evdev type={ev_type} code={code} value={value}", flush=True)
     if ev_type == EV_KEY and value in {1, 2}:
         if code == KEY_VOLUMEUP:
             apply("raise")
@@ -147,7 +176,34 @@ def handle_event(event, debug=False):
             apply("lower")
 
 
-def open_devices():
+def decode_hid(report, previous, debug=False):
+    if debug:
+        print(f"hidraw {report.hex()}", flush=True)
+    if not report:
+        return previous
+    current = report[1] if len(report) > 1 else report[0]
+    prev = previous[1] if previous and len(previous) > 1 else (previous[0] if previous else 0)
+    risen = current & ~prev
+    if risen & 0x02:
+        apply("raise")
+    elif risen & 0x01:
+        apply("lower")
+    elif risen & 0x04:
+        apply("mute")
+    elif previous and report != previous and not risen:
+        # Rotary reports often change a later byte instead of the consumer bits.
+        if len(report) >= 3 and previous and len(previous) >= 3 and report[2] != previous[2]:
+            delta = report[2] - previous[2]
+            if delta > 128:
+                delta -= 256
+            elif delta < -128:
+                delta += 256
+            if delta:
+                apply("raise" if delta > 0 else "lower")
+    return report
+
+
+def open_watchers():
     opened = {}
     for path, name in jabra_event_nodes():
         try:
@@ -156,50 +212,71 @@ def open_devices():
             print(f"{path}: {exc}", file=sys.stderr)
             continue
         grabbed = grab(fd)
-        print(f"watching {path} ({name}) grab={'yes' if grabbed else 'no'}", flush=True)
-        opened[fd] = path
+        print(f"evdev {path} ({name}) grab={'yes' if grabbed else 'no'}", flush=True)
+        opened[fd] = ("evdev", path)
+    for path, name in jabra_hidraw_nodes():
+        try:
+            fd = os.open(path, os.O_RDWR | os.O_NONBLOCK)
+        except OSError:
+            try:
+                fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+            except OSError as exc:
+                print(f"{path}: {exc}", file=sys.stderr)
+                continue
+        print(f"hidraw {path} ({name})", flush=True)
+        opened[fd] = ("hidraw", path)
     return opened
 
 
 def watch(debug=False):
     devices = {}
-    known = set()
-    print("watching Jabra Speak buttons for the Jabra sink", flush=True)
+    last_hid = {}
+    known = None
+    print("watching Jabra Speak HID and evdev for the Jabra sink", flush=True)
     while True:
-        current = {path for path, _name in jabra_event_nodes()}
-        if current != known:
+        signature = tuple(jabra_event_nodes() + jabra_hidraw_nodes())
+        if signature != known:
             for fd in list(devices):
                 os.close(fd)
-            devices = open_devices()
-            known = set(devices.values())
+            devices = open_watchers()
+            last_hid = {}
+            known = signature
         if not devices:
             time.sleep(1.0)
             continue
         ready, _, _ = select.select(list(devices), [], [], 1.0)
         for fd in ready:
+            kind, path = devices[fd]
             try:
-                blob = os.read(fd, EVENT_SIZE * 16)
+                blob = os.read(fd, 64 if kind == "hidraw" else EVENT_SIZE * 16)
             except OSError:
-                known = set()
+                known = None
                 continue
-            if debug and blob:
-                print(f"raw {len(blob)} bytes {blob[:EVENT_SIZE].hex()}", flush=True)
-            for offset in range(0, len(blob) // EVENT_SIZE * EVENT_SIZE, EVENT_SIZE):
-                handle_event(
-                    struct.unpack(EVENT_FORMAT, blob[offset : offset + EVENT_SIZE]),
-                    debug=debug,
-                )
+            if not blob:
+                continue
+            if kind == "evdev":
+                for offset in range(0, len(blob) // EVENT_SIZE * EVENT_SIZE, EVENT_SIZE):
+                    handle_evdev(
+                        struct.unpack(EVENT_FORMAT, blob[offset : offset + EVENT_SIZE]),
+                        debug=debug,
+                    )
+                continue
+            last_hid[path] = decode_hid(blob, last_hid.get(path), debug=debug)
 
 
 def print_status():
-    nodes = jabra_event_nodes()
     sink = jabra_sink_id()
     print(f"jabra_sink={sink or 'none'}")
+    nodes = jabra_event_nodes()
+    hid = jabra_hidraw_nodes()
     if not nodes:
         print("jabra_input=none")
-        return 0
     for path, name in nodes:
         print(f"jabra_input={path} {name}")
+    if not hid:
+        print("jabra_hidraw=none")
+    for path, name in hid:
+        print(f"jabra_hidraw={path} {name}")
     return 0
 
 
