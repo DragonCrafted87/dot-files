@@ -14,6 +14,7 @@ GAMES_D="${SCRIPT_DIR}/../steam-games"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 PROFILE_FILE="${STATE_DIR}/display-profile"
 WRAP_LOG="${STATE_DIR}/steam-wrap.log"
+AUDIO_SH="${SCRIPT_DIR}/display-audio.sh"
 
 trim() {
     local s="$1"
@@ -35,26 +36,30 @@ current_profile() {
     fi
 }
 
+restore_profile_audio() {
+    [[ "${GAME_AUDIO:-}" == "stereo" ]] || return 0
+    [[ -x "$AUDIO_SH" ]] || return 0
+    "$AUDIO_SH" restore "$(current_profile)" >/dev/null 2>&1 || true
+    wrap_log "audio restored $(current_profile)"
+}
+
+apply_game_audio() {
+    [[ "${GAME_AUDIO:-}" == "stereo" ]] || return 0
+    [[ -x "$AUDIO_SH" ]] || return 0
+    wrap_log "audio stereo for game"
+    "$AUDIO_SH" stereo || true
+}
+
 profile_conf() {
-    local profile="${1:-}"
-    local file
+    local profile="${1:-}" file
     if [[ -n "$profile" && "$profile" != default ]]; then
         file="${MONITORS_D}/${HOST}-${profile}.conf"
-        [[ -f "$file" ]] && {
-            printf '%s\n' "$file"
-            return 0
-        }
+        [[ -f "$file" ]] && { printf '%s\n' "$file"; return 0; }
     fi
     file="${MONITORS_D}/${HOST}.conf"
-    [[ -f "$file" ]] && {
-        printf '%s\n' "$file"
-        return 0
-    }
+    [[ -f "$file" ]] && { printf '%s\n' "$file"; return 0; }
     file="${MONITORS_D}/default.conf"
-    [[ -f "$file" ]] && {
-        printf '%s\n' "$file"
-        return 0
-    }
+    [[ -f "$file" ]] && { printf '%s\n' "$file"; return 0; }
     return 1
 }
 
@@ -75,14 +80,8 @@ monitor_lines() {
     done <"$file"
 }
 
-monitor_name() {
-    printf '%s\n' "${1%%,*}"
-}
-
-monitor_is_disabled() {
-    local spec="$1"
-    [[ "${spec#*,}" == disable ]]
-}
+monitor_name() { printf '%s\n' "${1%%,*}"; }
+monitor_is_disabled() { [[ "${1#*,}" == disable ]]; }
 
 mode_pixels() {
     local spec="$1" rest mode w h
@@ -220,10 +219,7 @@ resolve_size() {
 app_id() {
     local id
     for id in "${SteamAppId:-}" "${SteamGameId:-}" "${STEAM_COMPAT_APP_ID:-}"; do
-        [[ -n "$id" && "$id" != "0" ]] && {
-            printf '%s\n' "$id"
-            return 0
-        }
+        [[ -n "$id" && "$id" != "0" ]] && { printf '%s\n' "$id"; return 0; }
     done
     return 1
 }
@@ -264,8 +260,6 @@ pin_output() {
     hyprctl dispatch movecursor "$cx" "$cy" >/dev/null 2>&1 || true
 }
 
-# Exclusive-fullscreen Wayland clients ignore env and open on output 0.
-# After the window maps, shove it onto the chosen connector.
 pin_watch() {
     local mon="$1" id="$2"
     [[ -n "$mon" && -n "$id" ]] || return 0
@@ -308,6 +302,7 @@ cmd_status() {
     printf 'conf:            %s\n' "${file:-none}"
     printf 'game output:     %s\n' "${mon:-unresolved}"
     printf 'gamescope:       %s\n' "${GAMESCOPE:-0}"
+    printf 'game audio:      %s\n' "${GAME_AUDIO:-default}"
     if [[ -n "$mon" ]] && size="$(resolve_size "$mon" || true)" && [[ -n "$size" ]]; then
         w="${size%% *}"
         h="${size#* }"
@@ -323,21 +318,18 @@ cmd_status() {
 }
 
 apply_proton_env() {
-    local mon size w h file profile box
+    local mon size file profile box
     profile="$(current_profile)"
     file="$(profile_conf "$profile" || true)"
     mon="$(resolve_output || true)"
     WRAP_MON="$mon"
     WRAP_W=""
     WRAP_H=""
-
     export PROTON_FORCE_LARGE_ADDRESS_AWARE="${PROTON_FORCE_LARGE_ADDRESS_AWARE:-1}"
     export PROTON_USE_WOW64="${PROTON_USE_WOW64:-1}"
-
     if [[ "${NO_PROTON_WAYLAND:-0}" != "1" && "${PROTON_ENABLE_WAYLAND:-1}" != "0" ]]; then
         export PROTON_ENABLE_WAYLAND=1
     fi
-
     if [[ "${SPAN:-0}" == "1" && -n "$file" ]] && box="$(span_box "$file" || true)" && [[ -n "$box" ]]; then
         WRAP_W="${box%% *}"
         WRAP_H="$(echo "$box" | awk '{print $2}')"
@@ -354,35 +346,24 @@ apply_proton_env() {
         pin_output "$mon" || true
         pin_watch "$mon" "$(app_id || true)" || true
     fi
-
     if [[ "${INJECT_SIZE:-0}" == "1" && -n "$WRAP_W" && -n "$WRAP_H" ]]; then
         WRAP_EXTRA_ARGS+=("-w" "$WRAP_W" "-h" "$WRAP_H")
     fi
-
-    wrap_log "profile=${profile:-none} output=${mon:-none} size=${WRAP_W:-?}x${WRAP_H:-?} app=$(app_id || echo none) wayland=${PROTON_ENABLE_WAYLAND:-} gamescope=${GAMESCOPE:-0}"
+    wrap_log "profile=${profile:-none} output=${mon:-none} size=${WRAP_W:-?}x${WRAP_H:-?} app=$(app_id || echo none) wayland=${PROTON_ENABLE_WAYLAND:-} gamescope=${GAMESCOPE:-0} audio=${GAME_AUDIO:-default}"
 }
 
-usage() {
-    echo "Usage: steam-proton-wrap.sh [status|help] [command...]"
-}
+usage() { echo "Usage: steam-proton-wrap.sh [status|help] [command...]"; }
 
 main() {
-    local cmd="${1:-}"
+    local cmd="${1:-}" rc=0
     WRAP_EXTRA_ARGS=()
     WRAP_MON=""
     WRAP_W=""
     WRAP_H=""
 
     case "$cmd" in
-        status)
-            load_game_overlay
-            cmd_status
-            return 0
-            ;;
-        -h | --help | help)
-            usage
-            return 0
-            ;;
+        status) load_game_overlay; cmd_status; return 0 ;;
+        -h | --help | help) usage; return 0 ;;
     esac
 
     load_game_overlay
@@ -398,13 +379,20 @@ main() {
         return 0
     fi
 
+    apply_game_audio
+    trap restore_profile_audio EXIT
+
     if [[ "${GAMESCOPE:-0}" == "1" ]] && command -v gamescope >/dev/null 2>&1 && [[ -n "$WRAP_MON" && -n "$WRAP_W" && -n "$WRAP_H" ]]; then
-        wrap_log "exec gamescope -O ${WRAP_MON} ${WRAP_W}x${WRAP_H}: $*"
-        exec gamescope -f -W "$WRAP_W" -H "$WRAP_H" -O "$WRAP_MON" -- "$@" "${WRAP_EXTRA_ARGS[@]}"
+        wrap_log "run gamescope -O ${WRAP_MON} ${WRAP_W}x${WRAP_H}: $*"
+        gamescope -f -W "$WRAP_W" -H "$WRAP_H" -O "$WRAP_MON" -- "$@" "${WRAP_EXTRA_ARGS[@]}" || rc=$?
+    else
+        wrap_log "run: $* ${WRAP_EXTRA_ARGS[*]:-}"
+        "$@" "${WRAP_EXTRA_ARGS[@]}" || rc=$?
     fi
 
-    wrap_log "exec: $* ${WRAP_EXTRA_ARGS[*]:-}"
-    exec "$@" "${WRAP_EXTRA_ARGS[@]}"
+    restore_profile_audio
+    trap - EXIT
+    exit "$rc"
 }
 
 main "$@"
