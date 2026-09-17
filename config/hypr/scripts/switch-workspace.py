@@ -22,11 +22,17 @@ def hyprctl_json(*args):
 def same_workspace(active, workspace):
     if not isinstance(active, dict):
         return False
-    return str(active.get("id", "")) == workspace or str(active.get("name", "")) == workspace
+    return (
+        str(active.get("id", "")) == workspace
+        or str(active.get("name", "")) == workspace
+    )
 
 
 def workspace_is_visible(monitors, workspace):
-    return any(same_workspace(monitor.get("activeWorkspace"), workspace) for monitor in monitors)
+    return any(
+        same_workspace(monitor.get("activeWorkspace"), workspace)
+        for monitor in monitors
+    )
 
 
 def cursor_position():
