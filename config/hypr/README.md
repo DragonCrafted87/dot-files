@@ -6,9 +6,7 @@ layouts live in `conf.d/monitors.d/` and are the source of truth.
 layout from `monitors.conf` on disk.
 
 Startup applies the last profile once (`exec-once`). Reloads do not
-re-run apply, so `keyword monitor` cannot loop the compositor. A
-background `watch` job then follows HDMI-switch EDID while a single-output
-profile is active.
+re-run apply, so `keyword monitor` cannot loop the compositor.
 
 File names:
 
@@ -30,9 +28,11 @@ against `hyprctl monitors` description/make/model on `SWITCH_PORT`.
 | `workshare` | `runewyrm-workshare.conf` | DP-2 and DP-3 disabled; HDMI AOC 2560x1440@143.91   | same soundbar as desk          |
 
 Theater and workshare share `HDMI-A-1`. `SUPER+SHIFT+T` runs `single`,
-which reads the panel currently on that port and picks theater (ELMO) or
-workshare (AOC). Flipping the HDMI switch while already in one of those
-profiles does the same thing automatically.
+which reads the panel currently on that port, picks theater (ELMO) or
+workshare (AOC), and daemonizes `display-switch.sh watch`. That watcher
+blocks on `inotifywait` for `/sys/class/drm/card0-HDMI-A-1/{status,edid}`
+and re-selects the profile when the HDMI switch changes the panel.
+`SUPER+SHIFT+D` (desk) kills the watcher. It is not an `exec-once` loop.
 
 Desk still uses its own bind because that is the triple-head layout, not
 "whatever is on HDMI."
@@ -54,12 +54,12 @@ the git-linked tree).
 ## Swap profiles
 
 ```bash
-~/.config/hypr/scripts/display-profile.sh desk
-~/.config/hypr/scripts/display-profile.sh single
+~/.config/hypr/scripts/display-switch.sh desk
+~/.config/hypr/scripts/display-switch.sh single
+~/.config/hypr/scripts/display-switch.sh status
 ~/.config/hypr/scripts/display-profile.sh theater
 ~/.config/hypr/scripts/display-profile.sh workshare
 ~/.config/hypr/scripts/display-profile.sh apply
-~/.config/hypr/scripts/display-profile.sh status
 ```
 
 Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+T` single (auto theater /
