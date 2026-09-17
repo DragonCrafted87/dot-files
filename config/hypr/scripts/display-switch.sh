@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # HDMI-switch helper for hosts with SINGLE_PROFILES in hosts.d/<host>.conf.
-# Detects the panel on SWITCH_PORT and runs display-profile.sh <profile>.
+# Owns saved profile state. Calls display-profile.sh and display-audio.sh.
 # Watch is daemonized only while a single-output profile is active.
 set -euo pipefail
 
@@ -10,7 +10,7 @@ PROFILE_SH="${SCRIPT_DIR}/display-profile.sh"
 MONITORS_D="${SCRIPT_DIR}/../conf.d/monitors.d"
 HOSTS_D="${SCRIPT_DIR}/../conf.d/hosts.d"
 AUDIO_SH="${SCRIPT_DIR}/display-audio.sh"
-STATE_DIR="${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/hypr}"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 PROFILE_FILE="${STATE_DIR}/display-profile"
 WATCH_PID_FILE="${STATE_DIR}/display-switch.pid"
 
@@ -50,6 +50,11 @@ load_host_conf() {
 
 current_profile() {
     if [[ -f "$PROFILE_FILE" ]]; then tr -d '[:space:]' <"$PROFILE_FILE"; else echo ""; fi
+}
+
+save_profile() {
+    mkdir -p "$STATE_DIR"
+    printf '%s\n' "$1" >"$PROFILE_FILE"
 }
 
 profile_match_desc() {
@@ -153,13 +158,14 @@ is_single_profile() {
     return 1
 }
 
-apply_detected() {
+apply_profile() {
     local profile="${1:-}"
     [[ -n "$profile" ]] || return 1
     "$PROFILE_SH" "$profile"
     if [[ -x "$AUDIO_SH" ]]; then
         "$AUDIO_SH" "$profile" || true
     fi
+    save_profile "$profile"
 }
 
 watch_pid() {
@@ -194,8 +200,6 @@ start_watch() {
         return 1
     fi
     mkdir -p "$STATE_DIR"
-    # New session so Hyprland does not keep the bind/exec waiting, and so
-    # stop_watch can kill the inotifywait child with the process group.
     setsid "$0" watch </dev/null >/dev/null 2>&1 &
     echo $! >"$WATCH_PID_FILE"
 }
@@ -239,7 +243,7 @@ cmd_watch() {
         [[ "$fp" == disconnected:* || "$fp" == missing:* ]] && continue
         detected="$(detect_single_profile || true)"
         [[ -n "$detected" ]] || continue
-        apply_detected "$detected" || true
+        apply_profile "$detected" || true
     done
     rm -f "$WATCH_PID_FILE"
 }
@@ -252,21 +256,35 @@ cmd_single() {
         echo "display-switch: no HDMI panel matched on ${HOST}" >&2
         return 1
     fi
-    apply_detected "$profile"
+    apply_profile "$profile"
     start_watch
 }
 
 cmd_desk() {
     stop_watch
-    "$PROFILE_SH" desk
-    if [[ -x "$AUDIO_SH" ]]; then
-        "$AUDIO_SH" desk || true
-    fi
+    apply_profile desk
 }
 
-cmd_restore_watch() {
-    is_single_profile "$(current_profile)" || return 0
-    start_watch
+cmd_set() {
+    local profile="$1"
+    if is_single_profile "$profile"; then
+        apply_profile "$profile"
+        start_watch
+        return 0
+    fi
+    stop_watch
+    apply_profile "$profile"
+}
+
+cmd_restore() {
+    local profile
+    profile="$(current_profile)"
+    [[ -n "$profile" ]] || profile=desk
+    if is_single_profile "$profile"; then
+        cmd_set "$profile"
+    else
+        cmd_desk
+    fi
 }
 
 cmd_status() {
@@ -286,22 +304,23 @@ cmd_status() {
 }
 
 usage() {
-    echo "Usage: display-switch.sh [single|desk|watch|start-watch|stop-watch|restore-watch|status|detect]"
+    echo "Usage: display-switch.sh [restore|single|desk|watch|status|detect|<profile>]"
 }
 
 main() {
     load_host_conf
-    case "${1:-single}" in
-        single|hdmi|"") cmd_single ;;
+    case "${1:-restore}" in
+        restore|apply) cmd_restore ;;
+        single|hdmi) cmd_single ;;
         desk) cmd_desk ;;
         watch) cmd_watch ;;
         start-watch) start_watch ;;
         stop-watch|stop) stop_watch ;;
-        restore-watch) cmd_restore_watch ;;
+        restore-watch) start_watch ;;
         status) cmd_status ;;
         detect) detect_single_profile ;;
         -h|--help|help) usage ;;
-        *) usage >&2; return 2 ;;
+        *) cmd_set "$1" ;;
     esac
 }
 
