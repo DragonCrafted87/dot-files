@@ -16,8 +16,8 @@ These scripts implement workstation monitor and sink switching:
 | `scripts/display-audio.sh` | PipeWire/Pulse default sink and card profile |
 | `scripts/idle-display-off.sh` / `idle-display-on.sh` | Lock/sleep wrappers around `display-profile.sh` idle commands |
 
-`conf.d/monitors.conf` MUST contain only a fallback `monitor =` rule and
-startup `exec-once`. Host layouts MUST live in `conf.d/monitors.d/`.
+`conf.d/monitors.conf` MUST contain only startup `exec-once`. It MUST NOT
+contain a `monitor =` rule. Host layouts MUST live in `conf.d/monitors.d/`.
 Audio policy MUST live in `conf.d/audio.d/`. Port and switch metadata
 MUST live in `conf.d/hosts.d/<hostname>.conf`.
 
@@ -146,10 +146,13 @@ Applies only when `hosts.d/<host>.conf` defines `SWITCH_PORT` and
 
 1. `monitors.conf` MUST `exec-once` only
    `display-switch.sh restore`.
-2. Hyprland reload MUST NOT re-run restore or apply. `keyword monitor`
+2. `monitors.conf` MUST NOT contain any `monitor =` rule. A wildcard
+   `monitor = , highrr, auto, 1` is re-parsed on `hyprctl reload` and
+   re-autoplaces outputs, which shuffles order and positions.
+3. Hyprland reload MUST NOT re-run restore or apply. `keyword monitor`
    during reload can disable DP outputs and loop the compositor.
-3. `display-profile.sh apply` as `exec-once` MUST NOT exist.
-4. A delayed second `exec-once` for audio MUST NOT exist; `restore`
+4. `display-profile.sh apply` as `exec-once` MUST NOT exist.
+5. A delayed second `exec-once` for audio MUST NOT exist; `restore`
    already applies audio. (HDMI ELD may still lag; `display-audio.sh`
    SHOULD be idempotent so the user can rerun it.)
 
@@ -195,6 +198,8 @@ Applies only when `hosts.d/<host>.conf` defines `SWITCH_PORT` and
    hypridle cannot interleave `keyword monitor`.
 5. Watch stop MUST kill the process group of the PID file, then remove
    the PID file.
+6. `monitors.d/default.conf` MAY keep a wildcard rule because it is only
+   applied through `keyword monitor`, not sourced on reload.
 
 ## Commands
 
