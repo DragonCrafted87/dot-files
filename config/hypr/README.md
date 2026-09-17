@@ -1,12 +1,15 @@
 # Hostname display profiles for Hyprland
 
+Behavioral rules for the scripts live in [`REQUIREMENTS.md`](REQUIREMENTS.md).
+This file is the host map and operator cheat sheet.
+
 The linked `~/.config/hypr` tree is shared across machines. Host-specific
 layouts live in `conf.d/monitors.d/` and are the source of truth.
-`scripts/display-profile.sh` parses those files and applies `hyprctl keyword monitor` so a laptop never inherits runewyrm's triple-head
-layout from `monitors.conf` on disk.
+`display-profile.sh` applies `hyprctl keyword monitor` from those files.
+`display-switch.sh` owns the saved profile and calls `display-audio.sh`.
 
-Startup applies the last profile once (`exec-once`). Reloads do not
-re-run apply, so `keyword monitor` cannot loop the compositor.
+Startup runs `display-switch.sh restore` once (`exec-once`). Reloads do
+not re-run restore.
 
 File names:
 
@@ -54,12 +57,12 @@ the git-linked tree).
 ## Swap profiles
 
 ```bash
+~/.config/hypr/scripts/display-switch.sh restore
 ~/.config/hypr/scripts/display-switch.sh desk
 ~/.config/hypr/scripts/display-switch.sh single
+~/.config/hypr/scripts/display-switch.sh theater
+~/.config/hypr/scripts/display-switch.sh workshare
 ~/.config/hypr/scripts/display-switch.sh status
-~/.config/hypr/scripts/display-profile.sh theater
-~/.config/hypr/scripts/display-profile.sh workshare
-~/.config/hypr/scripts/display-profile.sh apply
 ```
 
 Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+S` single (auto theater /
@@ -112,13 +115,13 @@ Unlock and after-sleep run `idle-display-on.sh` so the desk and the
 active BOINC caps come back together. The 420s listener is what blanks
 HDMI and switches BOINC to idle prefs.
 
-If the DP panels are dark after a bad profile, `display-profile.sh desk`
+If the DP panels are dark after a bad profile, `display-switch.sh desk`
 brings them back.
 
 ## Audio
 
 `scripts/display-audio.sh` reads `conf.d/audio.d/<host>-<profile>.conf`.
-`display-profile.sh` sources it and applies audio after the layout.
+`display-switch.sh` calls it after the layout.
 
 On runewyrm:
 
