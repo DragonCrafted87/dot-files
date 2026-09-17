@@ -21,13 +21,13 @@ against `hyprctl monitors` description/make/model on `SWITCH_PORT`.
 
 ## Profiles (runewyrm)
 
-| Profile     | File                      | Monitors                                            | Audio                          |
-| ----------- | ------------------------- | --------------------------------------------------- | ------------------------------ |
-| `desk`      | `runewyrm-desk.conf`      | DP-2 + DP-3 + HDMI-A-1 (AOC)                        | onboard S/PDIF soundbar        |
-| `theater`   | `runewyrm-theater.conf`   | DP-2 and DP-3 disabled; HDMI ELMO MC1 1920x1080@60  | GPU HDMI 7.1, stereo fallback  |
-| `workshare` | `runewyrm-workshare.conf` | DP-2 and DP-3 disabled; HDMI AOC 2560x1440@143.91   | same soundbar as desk          |
+| Profile     | File                      | Monitors                                           | Audio                         |
+| ----------- | ------------------------- | -------------------------------------------------- | ----------------------------- |
+| `desk`      | `runewyrm-desk.conf`      | DP-2 + DP-3 + HDMI-A-1 (AOC)                       | onboard S/PDIF soundbar       |
+| `theater`   | `runewyrm-theater.conf`   | DP-2 and DP-3 disabled; HDMI ELMO MC1 1920x1080@60 | GPU HDMI 7.1, stereo fallback |
+| `workshare` | `runewyrm-workshare.conf` | DP-2 and DP-3 disabled; HDMI AOC 2560x1440@143.91  | same soundbar as desk         |
 
-Theater and workshare share `HDMI-A-1`. `SUPER+SHIFT+T` runs `single`,
+Theater and workshare share `HDMI-A-1`. `SUPER+SHIFT+S` runs `single`,
 which reads the panel currently on that port, picks theater (ELMO) or
 workshare (AOC), and daemonizes `display-switch.sh watch`. That watcher
 blocks on `inotifywait` for `/sys/class/drm/card0-HDMI-A-1/{status,edid}`
@@ -62,7 +62,7 @@ the git-linked tree).
 ~/.config/hypr/scripts/display-profile.sh apply
 ```
 
-Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+T` single (auto theater /
+Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+S` single (auto theater /
 workshare from the HDMI-switch EDID).
 
 ## Steam / Proton
@@ -80,7 +80,7 @@ Title-specific env lives in `steam-games/<SteamAppId>.conf`. See
 `steam-games/README.md`. After `update-dot-files` the script is already
 at `~/.config/hypr/scripts/` because this whole tree is linked.
 
-Swap to theater first (`SUPER+SHIFT+T` with the ELMO on the switch), then
+Swap to theater first (`SUPER+SHIFT+S` with the ELMO on the switch), then
 launch. The wrap script will see HDMI-only and use the live TV mode.
 
 ## Idle
