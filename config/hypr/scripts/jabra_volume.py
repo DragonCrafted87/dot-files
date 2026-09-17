@@ -1,5 +1,6 @@
 """Apply Jabra Speak 710 buttons only to the Jabra PipeWire sink."""
 
+import fcntl
 import glob
 import json
 import os
@@ -9,7 +10,7 @@ import subprocess
 import sys
 import time
 
-JABRA_VENDOR = "0b0e"
+JABRA_VENDOR = 0x0B0E
 EVENT_FORMAT = "llHHi"
 EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 EV_KEY = 1
@@ -32,16 +33,23 @@ def read_text(path):
         return ""
 
 
+def parse_hex(value):
+    try:
+        return int(value, 16)
+    except ValueError:
+        return None
+
+
 def jabra_event_nodes():
     nodes = []
     for name_path in glob.glob("/sys/class/input/event*/device/name"):
         event_dir = os.path.dirname(os.path.dirname(name_path))
         event_name = os.path.basename(event_dir)
-        vendor = read_text(os.path.join(os.path.dirname(name_path), "id", "vendor")).lower()
-        product_name = read_text(name_path).lower()
-        if vendor.lstrip("0x") != JABRA_VENDOR and "jabra" not in product_name:
+        vendor = parse_hex(read_text(os.path.join(os.path.dirname(name_path), "id", "vendor")))
+        product_name = read_text(name_path)
+        if vendor != JABRA_VENDOR and "jabra" not in product_name.lower():
             continue
-        nodes.append((f"/dev/input/{event_name}", read_text(name_path)))
+        nodes.append((f"/dev/input/{event_name}", product_name))
     return nodes
 
 
@@ -80,15 +88,6 @@ def jabra_sink_id():
     return None
 
 
-def wpctl_jabra(*args):
-    sink = jabra_sink_id()
-    if sink is None:
-        print("no Jabra sink", file=sys.stderr)
-        return 1
-    subprocess.check_call(["wpctl", *args, sink, *args[3:] if False else []])
-    return 0
-
-
 def apply(action):
     sink = jabra_sink_id()
     if sink is None:
@@ -107,8 +106,6 @@ def apply(action):
 
 def grab(fd):
     try:
-        import fcntl
-
         fcntl.ioctl(fd, EVIOCGRAB, 1)
         return True
     except OSError:
@@ -143,15 +140,15 @@ def open_devices():
 
 def watch():
     devices = {}
-    last_scan = 0.0
+    known = set()
     print("watching Jabra Speak buttons for the Jabra sink", flush=True)
     while True:
-        now = time.monotonic()
-        if now - last_scan >= 2.0:
+        current = {path for path, _name in jabra_event_nodes()}
+        if current != known:
             for fd in list(devices):
                 os.close(fd)
             devices = open_devices()
-            last_scan = now
+            known = set(devices.values())
         if not devices:
             time.sleep(1.0)
             continue
@@ -160,6 +157,7 @@ def watch():
             try:
                 blob = os.read(fd, EVENT_SIZE * 8)
             except OSError:
+                known = set()
                 continue
             for offset in range(0, len(blob) // EVENT_SIZE * EVENT_SIZE, EVENT_SIZE):
                 handle_event(struct.unpack(EVENT_FORMAT, blob[offset : offset + EVENT_SIZE]))
