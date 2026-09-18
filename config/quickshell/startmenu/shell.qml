@@ -12,7 +12,7 @@ ShellRoot {
     property bool menuOpen: false
     property bool chromeVisible: true
 
-    property int menuBaseW: 172
+    property int menuBaseW: 380
     property int menuH: 720
     property int menuMarginLeft: 8
     property int menuMarginTop: 8
@@ -35,7 +35,7 @@ ShellRoot {
         const w = mon.width || 1920
         root.monitorWidth = w
         root.menuH = Math.max(420, Math.min(h - 16, Math.round(h * 0.88)))
-        root.menuBaseW = Math.max(168, Math.min(220, Math.round(w * 0.12)))
+        root.menuBaseW = Math.max(380, Math.min(460, Math.round(w * 0.22)))
     }
 
     function openAtCursor() {
@@ -211,7 +211,8 @@ ShellRoot {
 
                 PowerSection {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.max(48, Math.round(root.menuH * 0.07))
+                    Layout.preferredHeight: 52
+                    Layout.minimumHeight: 48
                     Layout.maximumHeight: 64
                     onActionTriggered: root.closeMenu()
                 }
