@@ -1,0 +1,2 @@
+# Logitech Litra Glow USB HID. Session user needs hidraw write access.
+KERNEL=="hidraw*", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c900", MODE="0660", GROUP="video", TAG+="uaccess"
