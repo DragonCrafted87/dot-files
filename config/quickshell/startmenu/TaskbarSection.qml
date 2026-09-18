@@ -13,6 +13,7 @@ Rectangle {
 
     signal windowFocused()
     property bool minimizedOnly: true
+    property int targetWorkspaceId: 1
     property int refreshReq: 0
     property int refreshSeen: 0
 
@@ -69,17 +70,17 @@ Rectangle {
 
     function restoreWindow(address) {
         if (!address) return
+        const ws = root.targetWorkspaceId || 1
         restoreProc.command = [
             "sh", "-c",
-            'addr="' + address + '"; ' +
-            'target_ws=$(hyprctl monitors -j | jq -r ".[0].activeWorkspace.id"); ' +
+            'addr="' + address + '"; ws="' + ws + '"; ' +
             'hyprctl --batch "' +
-            "dispatch movetoworkspacesilent $target_ws,address:$addr; " +
+            "dispatch movetoworkspace $ws,address:$addr; " +
             "dispatch focuswindow address:$addr; " +
             "dispatch togglespecialworkspace minimized" +
             '"; ' +
             'sleep 0.08; ' +
-            'current_special=$(hyprctl monitors -j | jq -r ".[0].specialWorkspace.name // \\"\\""); ' +
+            'current_special=$(hyprctl activeworkspace -j | jq -r ".name // \\"\\""); ' +
             'if echo "$current_special" | grep -q minimized; then ' +
             '  hyprctl dispatch togglespecialworkspace minimized; ' +
             'fi'

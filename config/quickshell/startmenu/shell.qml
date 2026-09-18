@@ -10,23 +10,37 @@ import Quickshell.Services.Pipewire
 ShellRoot {
     id: root
     property bool menuOpen: false
+    property bool chromeVisible: true
 
-    property int menuW: 380
-    property int menuH: 1080
+    property int menuBaseW: 172
+    property int menuW: 172
+    property int menuH: 720
     property int menuMarginLeft: 8
     property int menuMarginTop: 8
+    property int openWorkspaceId: 1
 
     readonly property string cursorPath:
         (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/qs-startmenu-cursor.txt"
 
+    function sizeForMonitor(mon) {
+        const h = mon.height || 1080
+        const w = mon.width || 1920
+        root.menuH = Math.max(420, Math.min(h - 16, Math.round(h * 0.88)))
+        root.menuBaseW = Math.max(168, Math.min(220, Math.round(w * 0.12)))
+    }
+
     function openAtCursor() {
+        root.chromeVisible = true
         cursorProc.running = false
         cursorProc.running = true
     }
 
+    function closeMenu() {
+        root.menuOpen = false
+        root.chromeVisible = true
+    }
+
     function applyCursorPlacement(raw) {
-        // raw: first line "x, y" from hyprctl cursorpos
-        // rest: monitors JSON
         const wasOpen = root.menuOpen
         try {
             const lines = raw.trim().split("\n")
@@ -47,30 +61,35 @@ ShellRoot {
                 return
             }
 
-            // cursor relative to focused monitor
+            root.sizeForMonitor(mon)
+            root.openWorkspaceId = (mon.activeWorkspace && mon.activeWorkspace.id)
+                ? mon.activeWorkspace.id
+                : 1
+
             let localX = globalX - mon.x
             let localY = globalY - mon.y
             const monW = mon.width
             const monH = mon.height
+            const flyoutExtra = 256
+            const maxW = root.menuBaseW + flyoutExtra
 
-            // place menu top-left near cursor; clamp so it stays on screen
             let left = localX
             let top = localY
-            if (left + root.menuW > monW)
-                left = Math.max(0, monW - root.menuW - 8)
+            if (left + maxW > monW)
+                left = Math.max(8, monW - maxW - 8)
             if (top + root.menuH > monH)
-                top = Math.max(0, monH - root.menuH - 8)
+                top = Math.max(8, monH - root.menuH - 8)
             if (left < 0) left = 8
             if (top < 0) top = 8
 
             root.menuMarginLeft = left
             root.menuMarginTop = top
             root.menuOpen = true
+            root.chromeVisible = true
             if (wasOpen)
                 taskbarSection.refresh()
         } catch (e) {
             console.log("cursor place error:", e)
-
             root.menuMarginLeft = 8
             root.menuMarginTop = 8
             root.menuOpen = true
@@ -83,12 +102,12 @@ ShellRoot {
         target: "startmenu"
         function toggle(): void {
             if (root.menuOpen)
-                root.menuOpen = false
+                root.closeMenu()
             else
                 root.openAtCursor()
         }
         function open(): void { root.openAtCursor() }
-        function close(): void { root.menuOpen = false }
+        function close(): void { root.closeMenu() }
     }
 
     Process {
@@ -131,7 +150,7 @@ ShellRoot {
             top: root.menuMarginTop
         }
 
-        width: root.menuW
+        width: Math.max(root.menuBaseW, appsSection.implicitWidth + 20)
         height: root.menuH
         color: "transparent"
 
@@ -142,8 +161,9 @@ ShellRoot {
             color: "#1e1e2e"
             border.color: "#45475a"
             border.width: 1
-            focus: root.menuOpen
-            Keys.onEscapePressed: root.menuOpen = false
+            visible: root.chromeVisible
+            focus: root.menuOpen && root.chromeVisible
+            Keys.onEscapePressed: root.closeMenu()
 
             ColumnLayout {
                 anchors.fill: parent
@@ -151,31 +171,42 @@ ShellRoot {
                 spacing: 8
 
                 AppsSection {
+                    id: appsSection
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.preferredHeight: 340
-                    onAppLaunched: root.menuOpen = false
+                    Layout.minimumHeight: 160
+                    Layout.preferredHeight: Math.round(root.menuH * 0.46)
+                    openWorkspaceId: root.openWorkspaceId
+                    categoryWidth: Math.max(132, root.menuBaseW - 24)
+                    onAppLaunched: root.closeMenu()
                 }
 
                 TaskbarSection {
                     id: taskbarSection
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 140
+                    Layout.fillHeight: true
+                    Layout.minimumHeight: 72
+                    Layout.preferredHeight: Math.round(root.menuH * 0.2)
+                    Layout.maximumHeight: Math.round(root.menuH * 0.28)
                     minimizedOnly: true
-                    onWindowFocused: root.menuOpen = false
+                    targetWorkspaceId: root.openWorkspaceId
+                    onWindowFocused: root.closeMenu()
                 }
 
                 TraySection {
                     id: traySection
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 150
+                    Layout.preferredHeight: Math.max(110, Math.round(root.menuH * 0.18))
+                    Layout.maximumHeight: Math.round(root.menuH * 0.26)
                     menuWindow: menuWindow
+                    onTrayMenuRequested: root.chromeVisible = false
                 }
 
                 PowerSection {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 56
-                    onActionTriggered: root.menuOpen = false
+                    Layout.preferredHeight: Math.max(48, Math.round(root.menuH * 0.07))
+                    Layout.maximumHeight: 64
+                    onActionTriggered: root.closeMenu()
                 }
             }
         }
@@ -183,8 +214,11 @@ ShellRoot {
 
     onMenuOpenChanged: {
         if (root.menuOpen) {
+            root.chromeVisible = true
             taskbarSection.refresh()
             traySection.refreshStats()
+        } else {
+            root.chromeVisible = true
         }
     }
 }

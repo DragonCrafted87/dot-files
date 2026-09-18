@@ -14,6 +14,7 @@ Rectangle {
     border.width: 1
 
     property var menuWindow
+    signal trayMenuRequested()
 
     readonly property string runtimeDir:
         Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
@@ -30,7 +31,6 @@ Rectangle {
     function refreshClock() {
         const now = new Date()
         clockText = Qt.formatDateTime(now, "HH:mm:ss")
-        // ISO-style date: 2026-07-29
         dateText = Qt.formatDateTime(now, "yyyy-MM-dd")
     }
 
@@ -52,7 +52,13 @@ Rectangle {
         }
     }
 
-    // refresh when section is created; shell can also call refreshStats on menu open
+    function showItemMenu(item, mouseArea, mouse) {
+        if (!item || !root.menuWindow) return
+        const p = mouseArea.mapToItem(null, mouse.x, mouse.y)
+        root.trayMenuRequested()
+        item.display(root.menuWindow, Math.round(p.x), Math.round(p.y))
+    }
+
     Component.onCompleted: {
         refreshClock()
         refreshStats()
@@ -123,7 +129,6 @@ Rectangle {
         anchors.margins: 8
         spacing: 6
 
-        // ── 1. tray icons ──
         Row {
             Layout.fillWidth: true
             spacing: 4
@@ -178,17 +183,15 @@ Rectangle {
 
                         onClicked: mouse => {
                             if (mouse.button === Qt.LeftButton) {
-                                if (modelData.onlyMenu && root.menuWindow) {
-                                    const p = mapToItem(null, mouse.x, mouse.y)
-                                    modelData.display(root.menuWindow, Math.round(p.x), Math.round(p.y))
+                                if (modelData.onlyMenu) {
+                                    root.showItemMenu(modelData, trayMouse, mouse)
                                 } else {
                                     modelData.activate()
                                 }
                             } else if (mouse.button === Qt.MiddleButton) {
                                 modelData.secondaryActivate()
-                            } else if (mouse.button === Qt.RightButton && root.menuWindow) {
-                                const p = mapToItem(null, mouse.x, mouse.y)
-                                modelData.display(root.menuWindow, Math.round(p.x), Math.round(p.y))
+                            } else if (mouse.button === Qt.RightButton) {
+                                root.showItemMenu(modelData, trayMouse, mouse)
                             }
                         }
 
@@ -198,7 +201,6 @@ Rectangle {
             }
         }
 
-        // ── 2. volume ──
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
@@ -208,16 +210,17 @@ Rectangle {
                 const a = sinkAudio
                 if (!a) return 0
                 const v = a.volume
-                return (typeof v === "number" && isFinite(v)) ? Math.max(0, Math.min(1, v)) : 0
+                return (typeof v === "number" && isFinite(v)) ? Math.max(0, v) : 0
             }
             readonly property bool muted: sinkAudio ? !!sinkAudio.muted : true
+            readonly property bool over: vol > 1
 
             Text {
                 text: {
                     if (!parent.sinkAudio || parent.muted || parent.vol === 0) return "MUTE"
                     return "VOL"
                 }
-                color: "#cdd6f4"
+                color: parent.over ? "#f38ba8" : "#cdd6f4"
                 font.pixelSize: 11
                 font.family: "sans-serif"
                 Layout.preferredWidth: 36
@@ -241,9 +244,9 @@ Rectangle {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: parent.width * (parent.parent.muted ? 0 : parent.parent.vol)
+                    width: parent.width * Math.min(1, parent.parent.muted ? 0 : parent.parent.vol)
                     radius: parent.radius
-                    color: "#89b4fa"
+                    color: parent.parent.over ? "#f38ba8" : "#89b4fa"
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -251,14 +254,14 @@ Rectangle {
                     onClicked: mouse => {
                         const a = parent.parent.sinkAudio
                         if (!a) return
-                        a.volume = Math.max(0, Math.min(1, mouse.x / width))
+                        a.volume = Math.max(0, Math.min(1.5, mouse.x / width))
                         a.muted = false
                     }
                     onPositionChanged: mouse => {
                         if (!pressed) return
                         const a = parent.parent.sinkAudio
                         if (!a) return
-                        a.volume = Math.max(0, Math.min(1, mouse.x / width))
+                        a.volume = Math.max(0, Math.min(1.5, mouse.x / width))
                         a.muted = false
                     }
                 }
@@ -267,9 +270,9 @@ Rectangle {
             Text {
                 text: !parent.sinkAudio ? "--%"
                       : Math.round((parent.muted ? 0 : parent.vol) * 100) + "%"
-                color: "#a6adc8"
+                color: parent.over ? "#f38ba8" : "#a6adc8"
                 font.pixelSize: 11
-                Layout.preferredWidth: 36
+                Layout.preferredWidth: 40
                 horizontalAlignment: Text.AlignRight
             }
         }
@@ -280,7 +283,6 @@ Rectangle {
             color: "#313244"
         }
 
-        // ── 3. stats (plain labels, no nerd icons) ──
         Flow {
             Layout.fillWidth: true
             spacing: 12
@@ -307,7 +309,6 @@ Rectangle {
             }
         }
 
-        // ── 4. time + ISO date ──
         RowLayout {
             Layout.fillWidth: true
             Text {
