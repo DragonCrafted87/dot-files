@@ -13,11 +13,19 @@ ShellRoot {
     property bool chromeVisible: true
 
     property int menuBaseW: 172
-    property int menuW: 172
     property int menuH: 720
     property int menuMarginLeft: 8
     property int menuMarginTop: 8
     property int openWorkspaceId: 1
+    property int monitorWidth: 1920
+    property int flyoutWidth: 260
+    property int flyoutGap: 8
+
+    readonly property bool flyoutOpen: menuOpen && chromeVisible && appsSection.flyoutOpen
+    readonly property bool flyoutOnLeft: (menuMarginLeft + menuBaseW + flyoutGap + flyoutWidth) > (monitorWidth - 8)
+    readonly property int flyoutMarginLeft: flyoutOnLeft
+        ? Math.max(8, menuMarginLeft - flyoutWidth - flyoutGap)
+        : (menuMarginLeft + menuBaseW + flyoutGap)
 
     readonly property string cursorPath:
         (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/qs-startmenu-cursor.txt"
@@ -25,6 +33,7 @@ ShellRoot {
     function sizeForMonitor(mon) {
         const h = mon.height || 1080
         const w = mon.width || 1920
+        root.monitorWidth = w
         root.menuH = Math.max(420, Math.min(h - 16, Math.round(h * 0.88)))
         root.menuBaseW = Math.max(168, Math.min(220, Math.round(w * 0.12)))
     }
@@ -70,13 +79,11 @@ ShellRoot {
             let localY = globalY - mon.y
             const monW = mon.width
             const monH = mon.height
-            const flyoutExtra = 256
-            const maxW = root.menuBaseW + flyoutExtra
 
             let left = localX
             let top = localY
-            if (left + maxW > monW)
-                left = Math.max(8, monW - maxW - 8)
+            if (left + root.menuBaseW > monW)
+                left = Math.max(8, monW - root.menuBaseW - 8)
             if (top + root.menuH > monH)
                 top = Math.max(8, monH - root.menuH - 8)
             if (left < 0) left = 8
@@ -150,7 +157,7 @@ ShellRoot {
             top: root.menuMarginTop
         }
 
-        width: Math.max(root.menuBaseW, appsSection.implicitWidth + 20)
+        width: root.menuBaseW
         height: root.menuH
         color: "transparent"
 
@@ -196,8 +203,8 @@ ShellRoot {
                 TraySection {
                     id: traySection
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.max(110, Math.round(root.menuH * 0.18))
-                    Layout.maximumHeight: Math.round(root.menuH * 0.26)
+                    Layout.preferredHeight: Math.max(128, Math.round(root.menuH * 0.2))
+                    Layout.maximumHeight: Math.round(root.menuH * 0.28)
                     menuWindow: menuWindow
                     onTrayMenuRequested: root.chromeVisible = false
                 }
@@ -209,6 +216,32 @@ ShellRoot {
                     onActionTriggered: root.closeMenu()
                 }
             }
+        }
+    }
+
+    PanelWindow {
+        id: flyoutWindow
+        visible: root.flyoutOpen
+        exclusionMode: ExclusionMode.Ignore
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "qs-startmenu-flyout"
+
+        anchors {
+            left: true
+            top: true
+        }
+        margins {
+            left: root.flyoutMarginLeft
+            top: root.menuMarginTop
+        }
+
+        width: root.flyoutWidth
+        height: root.menuH
+        color: "transparent"
+
+        AppsFlyout {
+            anchors.fill: parent
+            controller: appsSection
         }
     }
 

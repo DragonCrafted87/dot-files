@@ -309,20 +309,20 @@ Rectangle {
             }
         }
 
-        RowLayout {
+        Column {
             Layout.fillWidth: true
+            spacing: 0
+
             Text {
                 text: root.clockText
                 color: "#89b4fa"
-                font.pixelSize: 14
-                font.bold: false
+                font.pixelSize: 22
+                font.bold: true
             }
             Text {
                 text: root.dateText
                 color: "#89b4fa"
-                font.pixelSize: 14
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignRight
+                font.pixelSize: 12
             }
         }
     }
