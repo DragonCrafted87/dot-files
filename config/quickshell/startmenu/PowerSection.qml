@@ -9,6 +9,7 @@ Rectangle {
     color: "#181825"
     border.color: "#313244"
     border.width: 1
+    implicitHeight: 52
 
     signal actionTriggered()
 
@@ -28,8 +29,8 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 8
-        spacing: 4
+        anchors.margins: 6
+        spacing: 6
 
         Repeater {
             model: ListModel {
@@ -47,19 +48,20 @@ Rectangle {
 
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.minimumWidth: Math.max(64, labelText.implicitWidth + 12)
+                Layout.preferredWidth: Math.max(72, labelText.implicitWidth + 16)
+                Layout.minimumHeight: 32
                 radius: 6
                 color: powerMouse.containsMouse ? "#313244" : "transparent"
 
-                Column {
+                Text {
+                    id: labelText
                     anchors.centerIn: parent
-                    spacing: 2
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: label
-                        color: index === 4 ? "#f38ba8" : "#a6adc8"
-                        font.pixelSize: 14
-                    }
+                    text: label
+                    color: index === 4 ? "#f38ba8" : "#a6adc8"
+                    font.pixelSize: 12
+                    elide: Text.ElideNone
+                    wrapMode: Text.NoWrap
                 }
 
                 MouseArea {
