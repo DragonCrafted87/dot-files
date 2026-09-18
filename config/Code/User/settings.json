@@ -20,7 +20,7 @@
         }
     ],
     "redhat.telemetry.enabled": false,
-   "git.useIntegratedAskPass": true,
+    "git.useIntegratedAskPass": true,
     "git.terminalAuthentication": true,
     "git.autofetch": true,
     "remote.SSH.enableX11Forwarding": false,
@@ -307,4 +307,9 @@
         "**/.forgejo/workflows/*.yaml"
     ],
     "qt-core.showWelcomePageOnActivation": false,
+    "githubPullRequests.autoRepositoryDetection": true,
+    "githubPullRequests.deleteBranchAfterMerge": true,
+    "githubPullRequests.focusedMode": "overview",
+    "githubPullRequests.neverIgnoreDefaultBranch": true,
+    "githubPullRequests.notifications": "pullRequests",
 }
