@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Guvcview
+GenericName=Webcam and camera capture
+Comment=Preview and capture photos and video from a webcam or UVC camera
+TryExec=guvcview
+Exec=guvcview
+Icon=guvcview
+Terminal=false
+StartupNotify=true
+Categories=AudioVideo;Video;Graphics;Photography;
+Keywords=photo;photograph;picture;still;camera;webcam;webcamera;video;videocam;uvc;v4l2;capture;recording;insta360;
+X-DotFiles=1

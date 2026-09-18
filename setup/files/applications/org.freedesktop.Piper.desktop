@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Piper
+GenericName=Logitech gaming mouse settings
+Comment=Configure Logitech, SteelSeries, and other gaming mice (DPI, buttons, LEDs)
+TryExec=piper
+Exec=piper
+Icon=org.freedesktop.Piper
+Terminal=false
+StartupNotify=true
+Categories=GTK;Utility;Settings;HardwareSettings;
+Keywords=logitech;logi;ghub;g-hub;g502;gpro;gaming;mouse;mice;dpi;ratbag;libratbag;steelseries;roccat;glorious;
+X-DotFiles=1

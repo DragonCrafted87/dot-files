@@ -13,6 +13,17 @@ Rectangle {
 
     signal appLaunched()
 
+    function appSearchBlob(a) {
+        const keywords = Array.isArray(a.keywords) ? a.keywords.join(" ") : (a.keywords || "")
+        return [
+            a.name || "",
+            a.genericName || "",
+            a.comment || "",
+            a.id || "",
+            keywords
+        ].join(" ").toLowerCase()
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 8
@@ -132,10 +143,7 @@ Rectangle {
                                 if (!cats.includes(selectedCat)) return false
                             }
                             if (!q) return true
-                            const name = (a.name || "").toLowerCase()
-                            const generic = (a.genericName || "").toLowerCase()
-                            const comment = (a.comment || "").toLowerCase()
-                            return name.includes(q) || generic.includes(q) || comment.includes(q)
+                            return root.appSearchBlob(a).includes(q)
                         }).sort((a, b) => (a.name || "").localeCompare(b.name || ""))
                     }
                 }
