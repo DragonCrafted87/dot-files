@@ -19,28 +19,28 @@ ShellRoot {
     }
 
     function readSink() {
-        const a = Pipewire.defaultAudioSink?.audio
+        const a = Pipewire.defaultAudioSink?.audio;
         if (!a) {
-            root.volume = 0
-            root.muted = true
-            return
+            root.volume = 0;
+            root.muted = true;
+            return;
         }
-        const v = a.volume
-        root.volume = (typeof v === "number" && isFinite(v)) ? Math.max(0, v) : 0
-        root.muted = !!a.muted
+        const v = a.volume;
+        root.volume = (typeof v === "number" && isFinite(v)) ? Math.max(0, v) : 0;
+        root.muted = !!a.muted;
     }
 
     Connections {
         target: Pipewire.defaultAudioSink?.audio ?? null
         function onVolumeChanged() {
-            root.readSink()
-            root.shouldShow = true
-            hideTimer.restart()
+            root.readSink();
+            root.shouldShow = true;
+            hideTimer.restart();
         }
         function onMutedChanged() {
-            root.readSink()
-            root.shouldShow = true
-            hideTimer.restart()
+            root.readSink();
+            root.shouldShow = true;
+            hideTimer.restart();
         }
     }
 
@@ -63,11 +63,11 @@ ShellRoot {
 
             anchors {
                 top: true
-                right: true
+                left: true
             }
             margins {
                 top: 24
-                right: 24
+                left: 24
             }
 
             width: 44
@@ -87,7 +87,7 @@ ShellRoot {
 
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: root.muted ? "MUTE" : Math.round(root.volume * 100) + "%"
+                        text: root.muted ? "MUTE" : Math.round(root.volume * 1000) / 10 + "%"
                         color: root.overDrive ? "#f38ba8" : "#cdd6f4"
                         font.pixelSize: 11
                         font.bold: root.overDrive
@@ -104,8 +104,8 @@ ShellRoot {
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
                             height: {
-                                const shown = root.muted ? 0 : Math.min(root.volume, 1.5)
-                                return parent.height * (shown / 1.5)
+                                const shown = root.muted ? 0 : Math.min(root.volume, 1.5);
+                                return parent.height * (shown / 1.5);
                             }
                             radius: 8
                             color: root.overDrive ? "#f38ba8" : (root.muted ? "#45475a" : "#89b4fa")
