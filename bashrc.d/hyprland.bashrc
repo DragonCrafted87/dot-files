@@ -146,7 +146,7 @@ hyprlock-restore() {
     printf 'hyprlock relaunched on instance %s; switch back to the graphical TTY and unlock\n' "$instance"
 }
 
-qs-restart() {
+hyprland-restart-quickshell() {
     local starter="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/startmenu.sh"
 
     pkill -f 'qs -c startmenu' >/dev/null 2>&1 || true
