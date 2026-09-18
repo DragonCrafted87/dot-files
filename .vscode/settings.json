@@ -1,0 +1,20 @@
+{
+    "[yaml]": {
+        "editor.defaultFormatter": "redhat.vscode-yaml",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "editor.autoIndent": "keep"
+    },
+    "[github-actions-workflow]": {
+        "editor.defaultFormatter": "redhat.vscode-yaml",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "editor.autoIndent": "keep"
+    },
+    "yaml.format.enable": true,
+    "yaml.format.singleQuote": false,
+    "yaml.format.proseWrap": "preserve",
+    "yaml.format.printWidth": 120
+}
