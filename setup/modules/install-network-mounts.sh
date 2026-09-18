@@ -21,8 +21,10 @@ run install -m 0644 "$src_unit" "${DOTFILES_HOME}/.config/systemd/user/network-m
 
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
     systemctl --user daemon-reload
+    # Drop the old default.target enablement from linger-at-boot.
+    systemctl --user disable network-mounts.service >/dev/null 2>&1 || true
+    systemctl --user enable network-mounts.service
 fi
-enable_user_service network-mounts.service
 
 if [[ ! -f "${DOTFILES_HOME}/.smbcredentials" || ! -f "${DOTFILES_HOME}/.config/rclone/rclone.conf" ]]; then
     warn "smb/rclone secrets are not on this machine yet"

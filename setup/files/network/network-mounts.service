@@ -1,16 +1,21 @@
 [Unit]
 Description=Mount CIFS, NFS, and rclone network shares
-After=network-online.target
+Documentation=file://%h/dot-files/setup/files/network/mount-network.sh
+# Linger starts default.target at boot, long before Hyprland/uwsm and
+# before calligraphy-wyrm is a reliable CIFS target. Bind to the session
+# so this runs when the desktop is actually up.
+After=graphical-session.target network-online.target nss-lookup.target
 Wants=network-online.target
+PartOf=graphical-session.target
 
 [Service]
 Type=oneshot
 ExecStart=%h/bin/mount-network.sh
 RemainAfterExit=yes
-TimeoutStartSec=60
+TimeoutStartSec=180
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=network-mounts
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target
