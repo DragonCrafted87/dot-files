@@ -41,7 +41,8 @@ ensure_packages \
     piper \
     qalculate-gtk \
     aria2 \
-    android-tools
+    android-tools \
+    guvcview
 
 # Rock 6.0 ships plasma6-okular (KF6) and a leftover KF5 package still
 # named okular. Installing the old name conflicts with the KF6 files.
