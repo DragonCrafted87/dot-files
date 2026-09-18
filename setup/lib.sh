@@ -61,8 +61,8 @@ OMP_INSTALL_DIR="${OMP_INSTALL_DIR:-${DOTFILES_HOME}/bin}"
 CONFIG_SOURCE_DIR="${CONFIG_SOURCE_DIR:-${REPO_ROOT}/config}"
 CONFIG_TARGET_DIR="${CONFIG_TARGET_DIR:-${DOTFILES_HOME}/.config}"
 SETUP_FILES_DIR="${SETUP_FILES_DIR:-${SETUP_DIR}/files}"
-DOTFILES_STATE_DIR="${DOTFILES_STATE_DIR:-${CONFIG_TARGET_DIR}/dot-files}"
-DOTFILES_QS_RESTART_FLAG="${DOTFILES_QS_RESTART_FLAG:-${DOTFILES_STATE_DIR}/need-qs-restart}"
+# Cross-module flags belong in /tmp, not ~/.config/dot-files.
+DOTFILES_QS_RESTART_FLAG="${DOTFILES_QS_RESTART_FLAG:-/tmp/dot-files-$(id -u)-need-qs-restart}"
 
 run() {
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
@@ -372,7 +372,6 @@ ensure_systemd_dropin() {
 
 # Modules run in a subprocess, so a restart request has to survive on disk.
 request_qs_restart() {
-    ensure_dir "$DOTFILES_STATE_DIR"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         log "dry-run: would flag qs restart (${DOTFILES_QS_RESTART_FLAG})"
         return 0
