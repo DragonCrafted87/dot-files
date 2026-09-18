@@ -5,6 +5,8 @@
 #
 # hyprlock-restore: run from another TTY after hyprlock dies and the
 # session-lock crash overlay is on the graphical VT.
+#
+# qs-restart: kill and relaunch startmenu + volume-osd.
 
 if is_windows 2>/dev/null; then
     return 0 2>/dev/null || true
@@ -142,6 +144,22 @@ hyprlock-restore() {
         return 1
     }
     printf 'hyprlock relaunched on instance %s; switch back to the graphical TTY and unlock\n' "$instance"
+}
+
+hyprland-restart-quickshell() {
+    local starter="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/startmenu.sh"
+
+    pkill -f 'qs -c startmenu' >/dev/null 2>&1 || true
+    pkill -f 'qs -c volume-osd' >/dev/null 2>&1 || true
+    sleep 0.3
+
+    if [[ -x "$starter" ]]; then
+        nohup "$starter" >/dev/null 2>&1 &
+    else
+        nohup qs -c startmenu -d -n >/dev/null 2>&1 &
+    fi
+    nohup qs -c volume-osd -d -n >/dev/null 2>&1 &
+    printf 'restarted qs startmenu and volume-osd\n'
 }
 
 _hypr_setup_ssh_env

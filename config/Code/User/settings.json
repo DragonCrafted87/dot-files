@@ -312,4 +312,5 @@
     "githubPullRequests.focusedMode": "overview",
     "githubPullRequests.neverIgnoreDefaultBranch": true,
     "githubPullRequests.notifications": "pullRequests",
+    "yaml.format.singleQuote": true,
 }

@@ -13,7 +13,7 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     env:
-            # Local `pre-commit run` still runs the full set.
+      # Local `pre-commit run` still runs the full set.
       SKIP: check-executables-have-shebangs,check-shebang-scripts-are-executable
     steps:
     - uses: actions/checkout@v4
