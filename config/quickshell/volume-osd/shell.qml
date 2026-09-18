@@ -5,7 +5,6 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.Pipewire
 import Quickshell.Wayland
-import Quickshell.Widgets
 
 ShellRoot {
     id: root
@@ -71,8 +70,8 @@ ShellRoot {
                 right: 24
             }
 
-            implicitWidth: 44
-            implicitHeight: 220
+            width: 44
+            height: 220
 
             Rectangle {
                 anchors.fill: parent
