@@ -2,6 +2,9 @@
 # hyprctl talks to a UNIX socket under $XDG_RUNTIME_DIR/hypr/$HIS/.
 # Local terminals inherit those vars from the compositor. SSH sessions
 # usually do not, so reconstruct them when Hyprland is running here.
+#
+# hyprlock-restore: run from another TTY after hyprlock dies and the
+# session-lock crash overlay is on the graphical VT.
 
 if is_windows 2>/dev/null; then
     return 0 2>/dev/null || true
@@ -112,6 +115,33 @@ for c in clients:
     else
         "$wrap" "$@"
     fi
+}
+
+# Official recovery when hyprlock crashes and Hyprland shows the
+# session-lock restore overlay. Switch to another TTY, login, run this,
+# then switch back and unlock.
+hyprlock-restore() {
+    if ! command -v hyprctl >/dev/null 2>&1; then
+        printf 'hyprctl not available\n' >&2
+        return 1
+    fi
+    if ! command -v hyprlock >/dev/null 2>&1; then
+        printf 'hyprlock not available\n' >&2
+        return 1
+    fi
+
+    local instance="${1:-0}"
+
+    hyprctl --instance "$instance" 'keyword misc:allow_session_lock_restore 1' || {
+        printf 'failed to enable session lock restore on instance %s\n' "$instance" >&2
+        return 1
+    }
+    killall -9 hyprlock 2>/dev/null || true
+    hyprctl --instance "$instance" 'dispatch exec hyprlock' || {
+        printf 'failed to relaunch hyprlock on instance %s\n' "$instance" >&2
+        return 1
+    }
+    printf 'hyprlock relaunched on instance %s; switch back to the graphical TTY and unlock\n' "$instance"
 }
 
 _hypr_setup_ssh_env
