@@ -112,3 +112,5 @@ if [[ "$do_reset" -eq 1 ]]; then
         log "review the extras list, then rerun with --reset --force to actually remove them"
     fi
 fi
+
+restart_qs_if_needed
