@@ -48,6 +48,13 @@ Do not merge `scripts/` and `setup/files/`.
   script.
 - `configure-litra-glow` installs hidraw udev for Logitech Litra Glow
   (`046d:c900`) and adds the user to `video`.
+- Modules run in a subprocess (`bash module.sh`), so env vars do not
+  survive back to `role.sh`. Cross-module flags and other short-lived
+  files go in `/tmp` (example:
+  `/tmp/dot-files-<uid>-need-qs-restart`). Do not write throwaway state
+  under `~/.config/dot-files/`.
+- `request_qs_restart` sets that flag. `role.sh` calls
+  `restart_qs_if_needed` at the end of an `update-role` / role run.
 
 ## Hyprland (`config/hypr`)
 
