@@ -25,16 +25,16 @@ in `docs/structure.md`.
 
 ## Layout
 
-| Path | Role |
-| --- | --- |
-| `shell/` | Linux / Git Bash / root bashrc entrypoints, Oh My Posh theme |
-| `bashrc.d/` | Sourced snippets. Must stay at repo root (`DOTFILES_ROOT` is parent of this dir) |
-| `config/` | Linked into `~/.config` |
-| `setup/` | Role installer: `role.sh`, `roles.conf`, `modules/`, `files/` |
-| `scripts/` | User helpers (ffmpeg, dictation). Not installed by roles |
-| `setup/files/` | Files roles install (udev, BOINC prefs, CUPS, pre-commit wrapper) |
-| `windows/` | Winget lists and PowerShell |
-| `docs/` | Notes, not executed |
+| Path           | Role                                                                             |
+| -------------- | -------------------------------------------------------------------------------- |
+| `shell/`       | Linux / Git Bash / root bashrc entrypoints, Oh My Posh theme                     |
+| `bashrc.d/`    | Sourced snippets. Must stay at repo root (`DOTFILES_ROOT` is parent of this dir) |
+| `config/`      | Linked into `~/.config`                                                          |
+| `setup/`       | Role installer: `role.sh`, `roles.conf`, `modules/`, `files/`                    |
+| `scripts/`     | User helpers (ffmpeg, dictation). Not installed by roles                         |
+| `setup/files/` | Files roles install (udev, BOINC prefs, CUPS, pre-commit wrapper)                |
+| `windows/`     | Winget lists and PowerShell                                                      |
+| `docs/`        | Notes, not executed                                                              |
 
 Do not merge `scripts/` and `setup/files/`.
 
@@ -149,12 +149,12 @@ pre-commit run --all-files
 
 ## Hardware map (runewyrm)
 
-| Device | Where |
-| --- | --- |
-| Desk soundbar | onboard S/PDIF, default sink |
-| Jabra Speak 710 | USB FS `5-2.1`, calls |
-| Insta360 Link | USB HS `5-2.2`, V4L2 `/dev/video0`, MJPG |
-| Litra Glow pair | USB `5-2.3` and `5-2.4`, `046d:c900` |
+| Device                  | Where                                               |
+| ----------------------- | --------------------------------------------------- |
+| Desk soundbar           | onboard S/PDIF, default sink                        |
+| Jabra Speak 710         | USB FS `5-2.1`, calls                               |
+| Insta360 Link           | USB HS `5-2.2`, V4L2 `/dev/video0`, MJPG            |
+| Litra Glow pair         | USB `5-2.3` and `5-2.4`, `046d:c900`                |
 | Valve Index / 3D camera | other controller (`16:00.0`), ignore for desk calls |
 
 PipeWire is 1.4.x + WirePlumber. Volume CLI is `wpctl`.
