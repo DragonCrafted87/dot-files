@@ -50,6 +50,8 @@ mount_rclone() {
     log "mounting rclone ${RCLONE_REMOTE}:${RCLONE_SHARE} -> ${target}"
     if rclone mount "${RCLONE_REMOTE}:${RCLONE_SHARE}" "$target" \
         --vfs-cache-mode full \
+        --vfs-cache-max-age 1m \
+        --vfs-write-back 5s \
         --daemon; then
         sleep 1
         if is_mounted "$target"; then
