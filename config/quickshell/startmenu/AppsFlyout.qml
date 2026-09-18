@@ -13,6 +13,7 @@ Rectangle {
     property var controller
     property string title: controller ? controller.flyoutTitle : ""
     property string refreshKey: controller ? (controller.filterCat + "|" + controller.searchText) : ""
+    readonly property int rowStep: 36
 
     ColumnLayout {
         anchors.fill: parent
@@ -32,12 +33,31 @@ Rectangle {
             Layout.fillHeight: true
             clip: true
             spacing: 2
+            boundsBehavior: Flickable.StopAtBounds
+            flickDeceleration: 10000
+            maximumFlickVelocity: 8000
             model: ScriptModel {
                 values: {
                     const _k = root.refreshKey
                     if (!root.controller)
                         return []
                     return root.controller.collectApps()
+                }
+            }
+
+            function scrollRows(dir) {
+                const maxY = Math.max(0, contentHeight - height)
+                contentY = Math.max(0, Math.min(maxY, contentY + (dir * root.rowStep)))
+            }
+
+            WheelHandler {
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: event => {
+                    const delta = event.angleDelta.y !== 0 ? event.angleDelta.y : event.pixelDelta.y
+                    if (delta === 0)
+                        return
+                    appList.scrollRows(delta > 0 ? -1 : 1)
+                    event.accepted = true
                 }
             }
 
