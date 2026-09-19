@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Hyprland (source 0.56.2)
+Comment=Hyprland v0.56.2 built into /opt/hyprland-0.56.2 (does not replace the OpenMandriva package)
+Exec=/opt/hyprland-0.56.2/bin/start-hyprland-source
+TryExec=/opt/hyprland-0.56.2/bin/Hyprland
+DesktopNames=Hyprland
+Type=Application
