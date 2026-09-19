@@ -175,8 +175,8 @@ configure_multimc() {
     done
     [[ -n "$bin" ]] || return 0
 
-    local icon_src="${SETUP_FILES_DIR}/multimc/multimc.svg"
-    local icon_dest="${DOTFILES_HOME}/.local/share/icons/hicolor/scalable/apps/multimc.svg"
+    local icon_src="${SETUP_FILES_DIR}/multimc/multimc.png"
+    local icon_dest="${DOTFILES_HOME}/.local/share/icons/hicolor/scalable/apps/multimc.png"
     if [[ -f "$icon_src" && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
         ensure_dir "$(dirname "$icon_dest")"
         install -m 0644 "$icon_src" "$icon_dest"
