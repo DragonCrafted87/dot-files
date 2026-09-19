@@ -60,11 +60,11 @@ strip_grub_theme_from_cfg() {
     local cfg="$1"
     [[ -f "$cfg" ]] || return 0
     log "strip OM theme/background/missing fonts from ${cfg}"
-    sudo sed -i -E \
-        '/loadfont .*themes\/OpenMandriva/d;'
-        '/background_image/d;'
-        '/^[[:space:]]*set theme=/d;'
-        '/^[[:space:]]*export theme/d' \
+    sudo sed -i \
+        -e '/loadfont .*themes\/OpenMandriva/d' \
+        -e '/background_image/d' \
+        -e '/^[[:space:]]*set theme=/d' \
+        -e '/^[[:space:]]*export theme/d' \
         "$cfg"
 }
 
@@ -106,8 +106,6 @@ if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
 fi
 
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && -f /etc/default/grub ]]; then
-    # Firmware on this box loads /boot/grub2/grub.cfg. Do not create a
-    # second cfg under EFI just because the directory exists.
     cfg="/boot/grub2/grub.cfg"
     log "grub2-mkconfig -o ${cfg}"
     sudo grub2-mkconfig -o "$cfg"
