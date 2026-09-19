@@ -107,6 +107,34 @@ Copy secrets onto a new box without going through `init-remote.sh`:
 ~/dot-files/setup/utility/transfer-secrets.sh dragon@newbox.lan
 ```
 
+## Hyprland from source
+
+`install-hyprland-session` keeps the OpenMandriva Hyprland rpms and the
+stock Ly session. `install-hyprland-source` (workstation / laptop / htpc)
+then builds Hyprland **v0.56.2** plus the hypr* ecosystem into
+`/opt/hyprland-0.56.2` so the two stacks do not share libraries or
+binaries.
+
+Ly extra session: **Hyprland (source 0.56.2)**. Desktop file lives in
+`/etc/ly/custom-sessions/` and `/usr/share/wayland-sessions/` under the
+name `hyprland-source.desktop`, never overwriting the distro
+`hyprland.desktop`. The wrapper
+`/opt/hyprland-0.56.2/bin/start-hyprland-source` prepends the prefix to
+`PATH` / `LD_LIBRARY_PATH` only for that session.
+
+OpenMandriva has no single published dep list. The module translates the
+Fedora set from [Hyprland discussion #284](https://github.com/hyprwm/Hyprland/discussions/284)
+plus current cmake/Qt6 pieces, using the same `pick_pkg` fallbacks as
+MakeMKV.
+
+```bash
+~/dot-files/setup/modules/install-hyprland-source.sh
+HYPRLAND_SOURCE_FORCE=1 ~/dot-files/setup/modules/install-hyprland-source.sh
+```
+
+Override prefix or a tag (`HYPRLAND_TAG`, `AQUAMARINE_TAG`, …) in the
+environment. Sources cache under `~/.cache/hyprland-source`.
+
 ## KDE Connect / GrapheneOS SMS
 
 `install-kdeconnect` is on workstation (and therefore laptop). It
