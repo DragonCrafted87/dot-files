@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Host gtk-3.0 is a symlink into ~/dot-files. bwrap follows it and then
+# refuses to replace the real directory. Deny both the XDG name and the
+# resolved repo path.
+set -euo pipefail
+exec /usr/bin/flatpak run \
+    --nofilesystem=xdg-config/gtk-3.0 \
+    --nofilesystem=xdg-config/gtk-4.0 \
+    --nofilesystem="${HOME}/.config/gtk-3.0" \
+    --nofilesystem="${HOME}/.config/gtk-4.0" \
+    --nofilesystem="${HOME}/dot-files/config/gtk-3.0" \
+    --nofilesystem="${HOME}/dot-files/config/gtk-4.0" \
+    --env=GTK_THEME=Adwaita:dark \
+    --command=boincmgr edu.berkeley.BOINC "$@"
