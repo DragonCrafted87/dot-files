@@ -61,10 +61,6 @@ if new != text:
 PY
 }
 
-# --- Tango icon theme (2009 official tarball, public domain) ------------
-# There is no maintained OS-agnostic package. Rock does not ship
-# tango-icon-theme. We fetch the last upstream release and inherit
-# breeze-dark so missing modern names still resolve.
 install_tango_icons() {
     local dest="${DOTFILES_HOME}/.local/share/icons/Tango"
     local cache="${DOTFILES_HOME}/.cache/dot-files"
@@ -179,6 +175,16 @@ configure_multimc() {
     done
     [[ -n "$bin" ]] || return 0
 
+    local icon_src="${SETUP_FILES_DIR}/multimc/multimc.svg"
+    local icon_dest="${DOTFILES_HOME}/.local/share/icons/hicolor/scalable/apps/multimc.svg"
+    if [[ -f "$icon_src" && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+        ensure_dir "$(dirname "$icon_dest")"
+        install -m 0644 "$icon_src" "$icon_dest"
+        if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+            gtk-update-icon-cache -f "${DOTFILES_HOME}/.local/share/icons/hicolor" >/dev/null 2>&1 || true
+        fi
+    fi
+
     local desk="/tmp/multimc.desktop"
     cat >"$desk" <<EOF
 [Desktop Entry]
@@ -186,7 +192,7 @@ Type=Application
 Name=MultiMC
 Comment=Minecraft launcher
 Exec=${bin}
-Icon=minecraft
+Icon=multimc
 Terminal=false
 Categories=Game;
 StartupNotify=true
@@ -218,7 +224,9 @@ snippet = src.read_text().strip()
 text = dest.read_text()
 lines = []
 for line in text.splitlines():
-    if 'oor:name="TangoDark"' in line or ("CurrentColorScheme" in line and "TangoDark" in line):
+    if "TangoDark" in line or "ApplicationAppearance" in line or (
+        "SymbolStyle" in line and "sifr_dark" in line
+    ):
         continue
     lines.append(line)
 text = "\n".join(lines)
@@ -227,7 +235,7 @@ if "</oor:items>" not in text:
 text = text.replace("</oor:items>", snippet + "\n</oor:items>")
 dest.write_text(text if text.endswith("\n") else text + "\n")
 PY
-    log "LibreOffice TangoDark color scheme"
+    log "LibreOffice TangoDark + Appearance=Dark"
 }
 
 configure_okular() {
@@ -241,12 +249,19 @@ configure_okular() {
 configure_brave_theme() {
     local flags="${CONFIG_TARGET_DIR}/brave-flags.conf"
     ensure_dir "$(dirname "$flags")"
+    local want=(
+        '--force-dark-mode'
+        '--ozone-platform=x11'
+        '--ozone-platform-hint=x11'
+    )
     if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
         touch "$flags"
-        if ! grep -Fqx '--force-dark-mode' "$flags"; then
-            log "brave flag --force-dark-mode"
-            printf '%s\n' '--force-dark-mode' >>"$flags"
-        fi
+        for flag in "${want[@]}"; do
+            if ! grep -Fqx "$flag" "$flags"; then
+                log "brave flag ${flag}"
+                printf '%s\n' "$flag" >>"$flags"
+            fi
+        done
     fi
     local src="${SETUP_FILES_DIR}/brave/tango-dark.json"
     local dest="/etc/brave/policies/managed/tango-dark.json"
