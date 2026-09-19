@@ -131,8 +131,13 @@ clear_gtk_fs() {
     local scope="$1"
     shift
     log "flatpak override ${scope} $* nofilesystem gtk-3.0/4.0"
-    flatpak override "$scope" --nofilesystem=xdg-config/gtk-3.0 "$@" || true
-    flatpak override "$scope" --nofilesystem=xdg-config/gtk-4.0 "$@" || true
+    if [[ "$scope" == "--system" ]]; then
+        sudo flatpak override "$scope" --nofilesystem=xdg-config/gtk-3.0 "$@" || true
+        sudo flatpak override "$scope" --nofilesystem=xdg-config/gtk-4.0 "$@" || true
+    else
+        flatpak override "$scope" --nofilesystem=xdg-config/gtk-3.0 "$@" || true
+        flatpak override "$scope" --nofilesystem=xdg-config/gtk-4.0 "$@" || true
+    fi
 }
 clear_gtk_fs --user
 clear_gtk_fs --user edu.berkeley.BOINC
