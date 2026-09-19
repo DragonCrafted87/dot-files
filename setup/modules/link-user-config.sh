@@ -38,10 +38,9 @@ for source_path in "${config_dirs[@]}"; do
             ;;
     esac
 
-    # gtk dirs that are real directories break Flatpak. Force symlink.
     if [[ "$dest_name" == gtk-3.0 || "$dest_name" == gtk-4.0 ]]; then
         if [[ -d "$dest_path" && ! -L "$dest_path" ]]; then
-            local backup="${dest_path}.bak.$(date +%F-%H%M%S)"
+            backup="${dest_path}.bak.$(date +%F-%H%M%S)"
             log "gtk dir is not a symlink; move ${dest_path} -> ${backup}"
             run mv "$dest_path" "$backup"
         fi
