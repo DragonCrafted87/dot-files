@@ -89,6 +89,19 @@ else
 fi
 
 require_user
+
+# Fresh Rock root has no git. Do this before modules so update-role and
+# lib helpers work after a reinstall + LVM home attach.
+if ! command -v git >/dev/null 2>&1; then
+    log "bootstrap git (missing on this root)"
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        printf 'dry-run: sudo dnf install -y git\n'
+    else
+        sudo dnf install -y git
+        command -v git >/dev/null 2>&1 || die "git is still missing after dnf install"
+    fi
+fi
+
 ensure_hostname "${hostname_arg}"
 record_role "$role"
 
