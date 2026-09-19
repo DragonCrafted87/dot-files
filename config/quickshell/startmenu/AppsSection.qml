@@ -119,6 +119,29 @@ Rectangle {
         root.appLaunched()
     }
 
+    function desktopFileCandidates(entry) {
+        if (!entry) return []
+        let id = String(entry.id || "")
+        if (!id) return []
+        if (!id.endsWith(".desktop"))
+            id = id + ".desktop"
+        const home = Quickshell.env("HOME") || ""
+        return [
+            home + "/.local/share/applications/" + id,
+            "/usr/local/share/applications/" + id,
+            "/usr/share/applications/" + id
+        ]
+    }
+
+    function openDesktopFile(entry) {
+        const paths = root.desktopFileCandidates(entry)
+        if (!paths.length) return
+        const quoted = paths.map(p => "'" + p.replace(/'/g, "'\\''") + "'").join(" ")
+        const opener = "sh -c 'for f in " + quoted + "; do if [ -f \"$f\" ]; then exec ${EDITOR:-nano} \"$f\"; fi; done'"
+        Hyprland.dispatch("exec kitty --class desktop-file -e " + opener)
+        root.appLaunched()
+    }
+
     function openCategory(cat, label) {
         root.hoveredCat = cat
         root.hoveredLabel = label

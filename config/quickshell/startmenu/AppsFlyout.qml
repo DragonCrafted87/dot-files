@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Widgets
 
@@ -93,8 +94,23 @@ Rectangle {
                     id: appMouse
                     anchors.fill: parent
                     hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.controller.launchOrSwitch(modelData)
+                    onClicked: event => {
+                        if (event.button === Qt.RightButton) {
+                            appMenu.popup()
+                            return
+                        }
+                        root.controller.launchOrSwitch(modelData)
+                    }
+                }
+
+                Menu {
+                    id: appMenu
+                    MenuItem {
+                        text: "Open desktop file"
+                        onTriggered: root.controller.openDesktopFile(modelData)
+                    }
                 }
             }
 
