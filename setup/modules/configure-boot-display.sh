@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 1080p GRUB menu and a larger virtual-console font so the firmware
-# screens are readable on HiDPI panels.
+# screens are readable on HiDPI panels. GRUB menu colors and the VT
+# 16-color palette follow Kitty Tango Dark.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -44,6 +45,9 @@ set_grub_key() {
 set_grub_key GRUB_GFXMODE 1920x1080
 set_grub_key GRUB_GFXPAYLOAD_LINUX keep
 set_grub_key GRUB_TERMINAL_OUTPUT gfxterm
+# Tango: light-gray on black menu, white on blue highlight (color4).
+set_grub_key GRUB_COLOR_NORMAL '"light-gray/black"'
+set_grub_key GRUB_COLOR_HIGHLIGHT '"white/blue"'
 
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && -f /etc/default/grub ]]; then
     cfg=""
@@ -77,4 +81,49 @@ else
             printf 'FONT=%s\n' "$font" | sudo tee -a "$vconsole" >/dev/null
         fi
     fi
+fi
+
+# Linux console 16-color palette (setvtrgb). Matches Kitty Tango Dark.
+palette_src="${SETUP_FILES_DIR}/vconsole/tango-dark.rgb"
+palette_dest="/etc/vconsole-palette"
+if [[ -f "$palette_src" ]]; then
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        log "dry-run: install ${palette_dest}"
+    else
+        if [[ ! -f "$palette_dest" ]] || ! cmp -s "$palette_src" "$palette_dest"; then
+            log "install ${palette_dest}"
+            sudo install -m 0644 "$palette_src" "$palette_dest"
+        fi
+        if command -v setvtrgb >/dev/null 2>&1; then
+            for n in 1 2 3 7; do
+                if [[ -c "/dev/tty${n}" ]]; then
+                    sudo setvtrgb "$palette_dest" <"/dev/tty${n}" >/dev/null 2>&1 || true
+                fi
+            done
+        fi
+    fi
+fi
+
+# Plymouth: only retarget an already-installed splash. Do not pull in a
+# new initramfs stack. tango-icon-theme / a Tango Plymouth theme are not
+# in Rock repos.
+if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+    current="$(plymouth-set-default-theme 2>/dev/null || true)"
+    target=""
+    for name in breeze-dark breeze spinner; do
+        if plymouth-set-default-theme --list 2>/dev/null | grep -qx "$name"; then
+            target="$name"
+            break
+        fi
+    done
+    if [[ -n "$target" && "$current" != "$target" ]]; then
+        log "plymouth theme ${target} (was ${current:-none})"
+        if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+            sudo plymouth-set-default-theme -R "$target" || warn "plymouth-set-default-theme failed"
+        fi
+    elif [[ -z "$target" ]]; then
+        log "no breeze/spinner Plymouth theme packaged; leave ${current:-default}"
+    fi
+else
+    log "plymouth not installed; skip splash theme"
 fi

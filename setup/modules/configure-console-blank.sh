@@ -8,6 +8,7 @@
 #   * Ly inactivity_cmd / inactivity_delay (config.ini or config.lua)
 #     via a helper that writes DRM DPMS Off. Ly 1.1.0's default
 #     inactivity_delay is 0 (never) and setterm alone does not blank DP.
+#   * Ly greeter colors / TTY palette (Kitty Tango Dark)
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -21,6 +22,8 @@ SETTERM_BIN="$(command -v setterm || true)"
 [[ -n "$SETTERM_BIN" ]] || SETTERM_BIN="/usr/bin/setterm"
 LY_BLANK_DEST="/usr/local/sbin/ly-blank-displays"
 LY_BLANK_SRC="${SETUP_FILES_DIR}/ly-blank-displays.sh"
+LY_PALETTE_DEST="/usr/local/sbin/ly-set-palette"
+LY_PALETTE_SRC="${SETUP_FILES_DIR}/ly-set-palette.sh"
 
 ensure_grub_cmdline_arg() {
     local arg="$1"
@@ -124,14 +127,16 @@ set_ly_lua_key() {
     fi
 }
 
-install_ly_blank_helper() {
-    [[ -f "$LY_BLANK_SRC" ]] || die "missing ${LY_BLANK_SRC}"
-    if [[ -f "$LY_BLANK_DEST" ]] && cmp -s "$LY_BLANK_SRC" "$LY_BLANK_DEST"; then
+install_ly_helper() {
+    local src="$1"
+    local dest="$2"
+    [[ -f "$src" ]] || die "missing ${src}"
+    if [[ -f "$dest" ]] && cmp -s "$src" "$dest"; then
         return 0
     fi
-    log "install ${LY_BLANK_DEST}"
+    log "install ${dest}"
     if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-        sudo install -m 0755 "$LY_BLANK_SRC" "$LY_BLANK_DEST"
+        sudo install -m 0755 "$src" "$dest"
     fi
 }
 
@@ -159,14 +164,31 @@ EOF
 )"
 
 # --- Ly login screen ----------------------------------------------------
-install_ly_blank_helper
+install_ly_helper "$LY_BLANK_SRC" "$LY_BLANK_DEST"
+install_ly_helper "$LY_PALETTE_SRC" "$LY_PALETTE_DEST"
 
 if [[ -f /etc/ly/config.ini ]]; then
     set_ly_ini_key /etc/ly/config.ini inactivity_delay "$BLANK_SECONDS"
     set_ly_ini_key /etc/ly/config.ini inactivity_cmd "$LY_BLANK_DEST"
+    # Newer Ly accepts 0xSSRRGGBB. Older Ly ignores unknown hex and still
+    # honors term_reset_cmd for the TTY palette.
+    set_ly_ini_key /etc/ly/config.ini bg "0x00000000"
+    set_ly_ini_key /etc/ly/config.ini fg "0x00D3D7CF"
+    set_ly_ini_key /etc/ly/config.ini border_fg "0x003465A4"
+    set_ly_ini_key /etc/ly/config.ini error_fg "0x01CC0000"
+    set_ly_ini_key /etc/ly/config.ini error_bg "0x00000000"
+    set_ly_ini_key /etc/ly/config.ini cmatrix_fg "0x004E9A06"
+    set_ly_ini_key /etc/ly/config.ini term_reset_cmd "/usr/bin/tput reset; ${LY_PALETTE_DEST}"
 elif [[ -f /etc/ly/config.lua ]]; then
     set_ly_lua_key /etc/ly/config.lua inactivity_delay "$BLANK_SECONDS"
     set_ly_lua_key /etc/ly/config.lua inactivity_cmd "\"${LY_BLANK_DEST}\""
+    set_ly_lua_key /etc/ly/config.lua bg "0x00000000"
+    set_ly_lua_key /etc/ly/config.lua fg "0x00D3D7CF"
+    set_ly_lua_key /etc/ly/config.lua border_fg "0x003465A4"
+    set_ly_lua_key /etc/ly/config.lua error_fg "0x01CC0000"
+    set_ly_lua_key /etc/ly/config.lua error_bg "0x00000000"
+    set_ly_lua_key /etc/ly/config.lua cmatrix_fg "0x004E9A06"
+    set_ly_lua_key /etc/ly/config.lua term_reset_cmd "\"/usr/bin/tput reset; ${LY_PALETTE_DEST}\""
 else
     log "Ly config not present; console blanking only"
 fi

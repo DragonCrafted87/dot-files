@@ -16,6 +16,10 @@ SingleClick=false
 [UiSettings]
 ColorScheme=TangoDark
 
+[Cursors]
+Theme=breeze_cursors
+Size=24
+
 [Colors:Window]
 BackgroundAlternate=85,87,83
 BackgroundNormal=0,0,0

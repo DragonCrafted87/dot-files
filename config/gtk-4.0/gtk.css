@@ -1,0 +1,23 @@
+/* Overlay on Adwaita dark. Palette from config/kitty/kitty.conf Tango Dark. */
+@define-color theme_bg_color #000000;
+@define-color theme_fg_color #D3D7CF;
+@define-color theme_base_color #000000;
+@define-color theme_text_color #D3D7CF;
+@define-color theme_selected_bg_color #3465A4;
+@define-color theme_selected_fg_color #EEEEEC;
+@define-color theme_unfocused_fg_color #555753;
+@define-color theme_unfocused_bg_color #000000;
+@define-color theme_unfocused_selected_bg_color #555753;
+@define-color theme_unfocused_selected_fg_color #D3D7CF;
+@define-color insensitive_bg_color #000000;
+@define-color insensitive_fg_color #555753;
+@define-color borders #555753;
+@define-color theme_unfocused_insensitive_color #555753;
+@define-color warning_color #C4A000;
+@define-color error_color #CC0000;
+@define-color success_color #4E9A06;
+
+selection {
+    background-color: #3465A4;
+    color: #EEEEEC;
+}

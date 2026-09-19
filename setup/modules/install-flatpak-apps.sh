@@ -21,3 +21,16 @@ case "${OMV_ROLE:-}" in
         log "no extra flatpaks for role ${OMV_ROLE:-unknown}"
         ;;
 esac
+
+# Let sandboxed GTK/Qt apps see the same Tango/Adwaita-dark + kdeglobals.
+if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+    log "dry-run: flatpak override GTK/Qt theme"
+else
+    log "flatpak override user theme env"
+    flatpak override --user --env=GTK_THEME=Adwaita:dark || true
+    flatpak override --user --env=QT_QPA_PLATFORMTHEME=kde || true
+    flatpak override --user --env=XCURSOR_THEME=breeze_cursors || true
+    flatpak override --user --filesystem=xdg-config/gtk-3.0:ro || true
+    flatpak override --user --filesystem=xdg-config/gtk-4.0:ro || true
+    flatpak override --user --filesystem=xdg-config/kdeglobals:ro || true
+fi
