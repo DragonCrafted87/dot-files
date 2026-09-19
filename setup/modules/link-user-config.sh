@@ -5,8 +5,9 @@
 #
 # Code/ is handled by configure-vscode. Linking the whole Chromium profile
 # replaces Local State and VS Code rewrites settings.json to {}.
-# gtk-3.0 / gtk-4.0 MUST be symlinks. Flatpak/bwrap tries to create a
-# symlink at those paths and aborts if they are real directories (boincmgr).
+# gtk-3.0 / gtk-4.0 are NOT linked. edu.berkeley.BOINC uses --persist=.
+# which makes bwrap create ~/.config/gtk-3.0 as a symlink. A real dir or a
+# symlink-to-repo at that path both abort the sandbox.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -33,18 +34,10 @@ for source_path in "${config_dirs[@]}"; do
     dest_path="${CONFIG_TARGET_DIR}/${dest_name}"
 
     case "$dest_name" in
-        Code)
+        Code | gtk-3.0 | gtk-4.0)
             continue
             ;;
     esac
-
-    if [[ "$dest_name" == gtk-3.0 || "$dest_name" == gtk-4.0 ]]; then
-        if [[ -d "$dest_path" && ! -L "$dest_path" ]]; then
-            backup="${dest_path}.bak.$(date +%F-%H%M%S)"
-            log "gtk dir is not a symlink; move ${dest_path} -> ${backup}"
-            run mv "$dest_path" "$backup"
-        fi
-    fi
 
     ensure_symlink "$source_path" "$dest_path"
     if [[ "$dest_name" == "quickshell" ]]; then

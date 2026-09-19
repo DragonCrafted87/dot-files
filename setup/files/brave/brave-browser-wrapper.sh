@@ -19,8 +19,6 @@ for candidate in /usr/lib64/brave-browser/brave /usr/lib/brave-browser/brave /op
     fi
 done
 if [[ -z "$real" ]]; then
-    # Fall back to the packaged wrapper, but drop this dir from PATH so
-    # we do not recurse into ourselves.
     PATH="${PATH//:${HOME}\/.local\/bin/}"
     PATH="${PATH//${HOME}\/.local\/bin:/}"
     real="$(command -v brave-browser || true)"
