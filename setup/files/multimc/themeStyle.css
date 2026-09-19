@@ -1,0 +1,63 @@
+/* MultiMC custom theme. Palette from Kitty Tango Dark. */
+QWidget {
+    background-color: #000000;
+    color: #D3D7CF;
+}
+QLineEdit, QTextEdit, QPlainTextEdit, QListView, QTreeView, QTableView {
+    background-color: #000000;
+    color: #D3D7CF;
+    selection-background-color: #3465A4;
+    selection-color: #EEEEEC;
+}
+QPushButton {
+    background-color: #2A2B29;
+    color: #D3D7CF;
+    border: 1px solid #555753;
+    padding: 4px 10px;
+}
+QPushButton:hover {
+    border-color: #729FCF;
+}
+QPushButton:pressed {
+    background-color: #3465A4;
+    color: #EEEEEC;
+}
+QMenuBar, QMenu {
+    background-color: #000000;
+    color: #D3D7CF;
+}
+QMenu::item:selected {
+    background-color: #3465A4;
+    color: #EEEEEC;
+}
+QStatusBar, QToolBar {
+    background-color: #000000;
+    color: #D3D7CF;
+}
+QGroupBox {
+    border: 1px solid #555753;
+    margin-top: 0.6em;
+}
+QGroupBox::title {
+    color: #729FCF;
+}
+QHeaderView::section {
+    background-color: #2A2B29;
+    color: #D3D7CF;
+    border: 0;
+    padding: 4px;
+}
+QScrollBar:vertical, QScrollBar:horizontal {
+    background: #000000;
+    width: 10px;
+    height: 10px;
+}
+QScrollBar::handle {
+    background: #555753;
+    min-height: 20px;
+}
+QToolTip {
+    background-color: #000000;
+    color: #D3D7CF;
+    border: 1px solid #555753;
+}
