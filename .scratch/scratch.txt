@@ -1,4 +1,0 @@
-- create a color config for MultiMC's custom setting i have the icons set to flat
-- also create a proper desktop file for it if its setup on the system
-
-- would also be nice to be able to color brave-browser as well

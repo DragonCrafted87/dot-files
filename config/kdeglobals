@@ -6,7 +6,7 @@ widgetStyle=Fusion
 TerminalApplication=kitty
 TerminalService=kitty.desktop
 [Icons]
-Theme=breeze-dark
+Theme=Tango
 
 [KDE]
 LookAndFeelPackage=org.kde.breezedark.desktop
