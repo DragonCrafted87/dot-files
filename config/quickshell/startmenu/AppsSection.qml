@@ -8,8 +8,8 @@ import Quickshell.Hyprland
 Rectangle {
     id: root
     radius: 8
-    color: "#181825"
-    border.color: "#313244"
+    color: "#000000"
+    border.color: "#555753"
     border.width: 1
 
     signal appLaunched()
@@ -145,12 +145,12 @@ Rectangle {
             id: searchField
             Layout.fillWidth: true
             placeholderText: "Search apps…"
-            color: "#cdd6f4"
-            placeholderTextColor: "#6c7086"
+            color: "#EEEEEC"
+            placeholderTextColor: "#555753"
             background: Rectangle {
                 radius: 6
-                color: "#11111b"
-                border.color: searchField.activeFocus ? "#89b4fa" : "#313244"
+                color: "#000000"
+                border.color: searchField.activeFocus ? "#729FCF" : "#555753"
                 border.width: 1
             }
             Keys.onEscapePressed: root.appLaunched()
@@ -192,14 +192,14 @@ Rectangle {
                     const current = root.pinnedCat !== "" ? root.pinnedCat : root.hoveredCat
                     return current === cat
                 }
-                color: selected ? "#89b4fa" : (catMouse.containsMouse ? "#313244" : "transparent")
+                color: selected ? "#729FCF" : (catMouse.containsMouse ? "#555753" : "transparent")
 
                 Text {
                     anchors.left: parent.left
                     anchors.leftMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
                     text: label
-                    color: parent.selected ? "#1e1e2e" : "#cdd6f4"
+                    color: parent.selected ? "#000000" : "#EEEEEC"
                     font.pixelSize: 12
                     font.bold: parent.selected
                 }
@@ -209,7 +209,7 @@ Rectangle {
                     anchors.rightMargin: 6
                     anchors.verticalCenter: parent.verticalCenter
                     text: "›"
-                    color: parent.selected ? "#1e1e2e" : "#6c7086"
+                    color: parent.selected ? "#000000" : "#555753"
                     font.pixelSize: 14
                 }
 
