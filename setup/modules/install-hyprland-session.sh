@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Login and session stack for GUI roles, matching the current workstation.
+# Distro Hyprland stays here. install-hyprland-source.sh adds a second
+# prefix build that Ly can pick without replacing these rpms.
 
 set -euo pipefail
 # shellcheck disable=SC1091
