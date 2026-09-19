@@ -313,8 +313,7 @@
     "githubPullRequests.neverIgnoreDefaultBranch": true,
     "githubPullRequests.notifications": "pullRequests",
     "yaml.format.singleQuote": true,
-
-    "workbench.colorTheme": "Default Dark Modern",
+    "workbench.colorTheme": "Dark Modern",
     "terminal.integrated.fontFamily": "Lucida Sans Typewriter",
     "workbench.colorCustomizations": {
         "focusBorder": "#3465A4",
@@ -410,4 +409,12 @@
             "variables": "#D3D7CF"
         }
     }
+    "editor.semanticHighlighting.enabled": true,
+    "window.dialogStyle": "custom",
+    // Use command palette instead.
+    "window.menuBarVisibility": "hidden",
+    "window.titleBarStyle": "custom",
+    "window.controlsStyle": "hidden",
+    "window.commandCenter": true,
+    "workbench.layoutControl.enabled": true,
 }
