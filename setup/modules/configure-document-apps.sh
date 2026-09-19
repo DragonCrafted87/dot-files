@@ -247,22 +247,7 @@ configure_okular() {
 }
 
 configure_brave_theme() {
-    local flags="${CONFIG_TARGET_DIR}/brave-flags.conf"
-    ensure_dir "$(dirname "$flags")"
-    local want=(
-        '--force-dark-mode'
-        '--ozone-platform=x11'
-        '--ozone-platform-hint=x11'
-    )
-    if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-        touch "$flags"
-        for flag in "${want[@]}"; do
-            if ! grep -Fqx "$flag" "$flags"; then
-                log "brave flag ${flag}"
-                printf '%s\n' "$flag" >>"$flags"
-            fi
-        done
-    fi
+    # Flags are setup/files/brave/brave-flags.conf via configure-brave-keyring.
     local src="${SETUP_FILES_DIR}/brave/tango-dark.json"
     local dest="/etc/brave/policies/managed/tango-dark.json"
     [[ -f "$src" ]] || return 0

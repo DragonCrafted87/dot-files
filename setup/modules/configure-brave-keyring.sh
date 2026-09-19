@@ -126,8 +126,6 @@ fix_ly_pam
 strip_extra_gkr_pam /etc/pam.d/login
 strip_extra_gkr_pam /etc/pam.d/system-auth
 
-# Distro already has -password optional pam_gnome_keyring.so use_authtok on passwd.
-
 mask_user_keyring_units() {
     local unit
     for unit in gnome-keyring-daemon.service gnome-keyring-daemon.socket; do
@@ -162,35 +160,25 @@ if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && ! -e "${keyrings}/login.keyring" ]]; th
     fi
 fi
 
-flags="${DOTFILES_HOME}/.config/brave-flags.conf"
-ensure_dir "$(dirname "$flags")"
-want_flags=(
-    '--password-store=gnome-libsecret'
-    '--restore-last-session'
-)
-if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-    touch "$flags"
-    for flag in "${want_flags[@]}"; do
-        if ! grep -Fqx "$flag" "$flags"; then
-            log "brave flag ${flag}"
-            printf '%s\n' "$flag" >>"$flags"
-        fi
-    done
+# One flags file. The wrapper reads ~/.config/brave-flags.conf.
+# Do not append here — that is how the file grew 40 duplicate lines.
+flags_src="${SETUP_FILES_DIR}/brave/brave-flags.conf"
+flags_dest="${CONFIG_TARGET_DIR}/brave-flags.conf"
+if [[ -f "$flags_src" ]]; then
+    if [[ -e "$flags_dest" && ! -L "$flags_dest" ]]; then
+        log "replace regular ${flags_dest} with symlink"
+        run rm -f "$flags_dest"
+    fi
+    ensure_symlink "$flags_src" "$flags_dest"
 fi
 
-apps="${DOTFILES_HOME}/.local/share/applications"
-ensure_dir "$apps"
-override="${apps}/brave-browser.desktop"
-src=""
-for candidate in /usr/share/applications/brave-browser.desktop /usr/share/applications/com.brave.Browser.desktop; do
-    if [[ -f "$candidate" ]]; then
-        src="$candidate"
-        break
+# Drop the old desktop override that baked extra flags into Exec=
+# (those raced the flags file and kept Wayland ozone alive).
+override="${DOTFILES_HOME}/.local/share/applications/brave-browser.desktop"
+if [[ -f "$override" ]]; then
+    log "remove ${override} (use packaged desktop + brave-flags.conf)"
+    run rm -f "$override"
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database "${DOTFILES_HOME}/.local/share/applications" >/dev/null 2>&1 || true
     fi
-done
-if [[ -n "$src" && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-    log "desktop override ${override}"
-    sed \
-        -e 's|^Exec=\(.*brave[^ ]*\)|Exec=\1 --password-store=gnome-libsecret --restore-last-session|' \
-        "$src" >"$override"
 fi
