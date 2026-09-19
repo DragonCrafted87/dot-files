@@ -172,7 +172,7 @@ if [[ -f "$flags_src" ]]; then
     ensure_symlink "$flags_src" "$flags_dest"
 fi
 
-wrapper_src="${SETUP_FILES_DIR}/brave/brave-browser-wrapper"
+wrapper_src="${SETUP_FILES_DIR}/brave/brave-browser-wrapper.sh"
 wrapper_dest="${DOTFILES_HOME}/.local/bin/brave-browser"
 if [[ -f "$wrapper_src" ]]; then
     ensure_dir "${DOTFILES_HOME}/.local/bin"
