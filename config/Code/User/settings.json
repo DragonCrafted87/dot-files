@@ -653,4 +653,5 @@
     "window.controlsStyle": "hidden",
     "window.commandCenter": true,
     "workbench.layoutControl.enabled": true,
+    "qt-qml.doNotAskForQmllsDownload": true,
 }
