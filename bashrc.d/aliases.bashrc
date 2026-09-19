@@ -5,13 +5,14 @@
 if [ -x /usr/bin/dircolors ]; then
     # shellcheck disable=SC2015
     test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-    alias ls='ls --color=auto -lah --block-size=M --group-directories-first '
+    # C collation puts ".***" before letters. UTF-8 locales hide that.
+    alias ls='LC_COLLATE=C ls --color=auto -lah --block-size=M --group-directories-first '
 
     alias grep='grep --color=auto'
     alias fgrep='fgrep --color=auto'
     alias egrep='egrep --color=auto'
 else
-    alias ls='ls -lah '
+    alias ls='LC_COLLATE=C ls -lah '
 fi
 
 # colored GCC warnings and errors
