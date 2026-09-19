@@ -204,6 +204,15 @@ EOF
 }
 
 configure_libreoffice() {
+    # Prefer the Qt/KDE VCL so toolbars read kdeglobals instead of Adwaita.
+    local pkg
+    for pkg in libreoffice-kf6 libreoffice-qt6 libreoffice-kde5 libreoffice-gtk3; do
+        if dnf list --available "$pkg" >/dev/null 2>&1 || rpm -q "$pkg" >/dev/null 2>&1; then
+            ensure_packages "$pkg"
+            break
+        fi
+    done
+
     local xcu_src="${SETUP_FILES_DIR}/libreoffice/tango-dark.xcu"
     local dest="${CONFIG_TARGET_DIR}/libreoffice/4/user/registrymodifications.xcu"
     [[ -f "$xcu_src" ]] || return 0
@@ -222,9 +231,21 @@ from pathlib import Path
 src, dest = Path(sys.argv[1]), Path(sys.argv[2])
 snippet = src.read_text().strip()
 text = dest.read_text()
+skip_tokens = (
+    "TangoDark",
+    "ApplicationAppearance",
+    "WindowColor",
+    "WindowTextColor",
+    "ButtonColor",
+    "ButtonTextColor",
+    "AccentColor",
+    "BaseColor",
+    "DisabledColor",
+    "DisabledTextColor",
+)
 lines = []
 for line in text.splitlines():
-    if "TangoDark" in line or "ApplicationAppearance" in line or (
+    if any(tok in line for tok in skip_tokens) or (
         "SymbolStyle" in line and "sifr_dark" in line
     ):
         continue
@@ -235,7 +256,7 @@ if "</oor:items>" not in text:
 text = text.replace("</oor:items>", snippet + "\n</oor:items>")
 dest.write_text(text if text.endswith("\n") else text + "\n")
 PY
-    log "LibreOffice TangoDark + Appearance=Dark"
+    log "LibreOffice TangoDark + Appearance=Dark + VCL chrome colors"
 }
 
 configure_okular() {
@@ -247,7 +268,6 @@ configure_okular() {
 }
 
 configure_brave_theme() {
-    # Flags are setup/files/brave/brave-flags.conf via configure-brave-keyring.
     local src="${SETUP_FILES_DIR}/brave/tango-dark.json"
     local dest="/etc/brave/policies/managed/tango-dark.json"
     [[ -f "$src" ]] || return 0

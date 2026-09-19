@@ -160,8 +160,8 @@ if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && ! -e "${keyrings}/login.keyring" ]]; th
     fi
 fi
 
-# One flags file. The wrapper reads ~/.config/brave-flags.conf.
-# Do not append here — that is how the file grew 40 duplicate lines.
+# Flags file + a PATH wrapper. OM's packaged /usr/bin/brave-browser does
+# not read ~/.config/brave-flags.conf (confirmed: CLI flags work, file does not).
 flags_src="${SETUP_FILES_DIR}/brave/brave-flags.conf"
 flags_dest="${CONFIG_TARGET_DIR}/brave-flags.conf"
 if [[ -f "$flags_src" ]]; then
@@ -172,12 +172,35 @@ if [[ -f "$flags_src" ]]; then
     ensure_symlink "$flags_src" "$flags_dest"
 fi
 
-# Drop the old desktop override that baked extra flags into Exec=
-# (those raced the flags file and kept Wayland ozone alive).
-override="${DOTFILES_HOME}/.local/share/applications/brave-browser.desktop"
-if [[ -f "$override" ]]; then
-    log "remove ${override} (use packaged desktop + brave-flags.conf)"
-    run rm -f "$override"
+wrapper_src="${SETUP_FILES_DIR}/brave/brave-browser-wrapper"
+wrapper_dest="${DOTFILES_HOME}/.local/bin/brave-browser"
+if [[ -f "$wrapper_src" ]]; then
+    ensure_dir "${DOTFILES_HOME}/.local/bin"
+    if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+        install -m 0755 "$wrapper_src" "$wrapper_dest"
+        log "install ${wrapper_dest} (reads brave-flags.conf, execs real binary)"
+    fi
+fi
+
+# Also drop a user desktop file so Hypr/Quickshell launchers hit the wrapper.
+desk_dest="${DOTFILES_HOME}/.local/share/applications/brave-browser.desktop"
+if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+    ensure_dir "$(dirname "$desk_dest")"
+    cat >"$desk_dest" <<EOF
+[Desktop Entry]
+Version=1.0
+Name=Brave Web Browser
+GenericName=Web Browser
+Comment=Access the Internet
+Exec=${wrapper_dest} %U
+StartupNotify=true
+StartupWMClass=brave-browser
+Terminal=false
+Icon=brave-browser
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=application/pdf;application/rdf+xml;application/rss+xml;application/xhtml+xml;application/xhtml_xml;application/xml;image/gif;image/jpeg;image/png;image/webp;text/html;text/xml;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ipfs;x-scheme-handler/ipns;
+EOF
     if command -v update-desktop-database >/dev/null 2>&1; then
         update-desktop-database "${DOTFILES_HOME}/.local/share/applications" >/dev/null 2>&1 || true
     fi
