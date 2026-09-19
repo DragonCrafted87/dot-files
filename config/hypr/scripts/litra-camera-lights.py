@@ -176,7 +176,7 @@ def watch():
         held = hold_enabled()
         # Manual hold keeps lamps on even when the camera is idle. Camera
         # start still forces on so a hold + stream cannot leave them dark.
-        target = True if (live or held) else False
+        target = bool(live or held)
         now = time.monotonic()
         if target != pending:
             pending = target
@@ -188,31 +188,31 @@ def watch():
         time.sleep(POLL_SECONDS)
 
 
+def run_command(command, hold_flag):
+    if command in {"-h", "--help", "help"}:
+        usage()
+    actions = {
+        "on": lambda: (set_hold(True), send_litra(True))[-1],
+        "off": lambda: (set_hold(False), send_litra(False))[-1],
+        "status": print_status,
+        "watch": watch,
+    }
+    if command == "toggle":
+        turning_off = hold_enabled() and not hold_flag
+        set_hold(not turning_off)
+        return send_litra(not turning_off)
+    if command in actions:
+        result = actions[command]()
+        return 0 if result is None else result
+    usage()
+    return 1
+
+
 def main(argv):
     args = [a for a in argv[1:] if a != "--hold"]
     hold_flag = "--hold" in argv[1:]
     command = args[0] if args else "watch"
-    if command in {"-h", "--help", "help"}:
-        usage()
-    if command == "on":
-        set_hold(True)
-        return send_litra(True)
-    if command == "off":
-        set_hold(False)
-        return send_litra(False)
-    if command == "toggle":
-        if hold_enabled() and not hold_flag:
-            set_hold(False)
-            return send_litra(False)
-        set_hold(True)
-        return send_litra(True)
-    if command == "status":
-        return print_status()
-    if command == "watch":
-        watch()
-        return 0
-    usage()
-    return 1
+    return run_command(command, hold_flag)
 
 
 if __name__ == "__main__":
