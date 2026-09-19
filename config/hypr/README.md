@@ -72,15 +72,15 @@ moves to the monitor under the cursor.
 
 ## Litra Glow
 
-`scripts/litra_camera_lights.py` watches the Insta360 Link (`2e1a:*`)
+`scripts/litra-camera-lights.py` watches the Insta360 Link (`2e1a:*`)
 and turns every USB Litra Glow (`046d:c900`) on while that camera has an
 open V4L2 node. It waits 1.5s so a browser camera probe does not flash
 the lamps. Hyprland starts the watcher with `exec-once`.
 
 ```bash
-python3 ~/.config/hypr/scripts/litra_camera_lights.py status
-python3 ~/.config/hypr/scripts/litra_camera_lights.py on
-python3 ~/.config/hypr/scripts/litra_camera_lights.py off
+python3 ~/.config/hypr/scripts/litra-camera-lights.py status
+python3 ~/.config/hypr/scripts/litra-camera-lights.py on
+python3 ~/.config/hypr/scripts/litra-camera-lights.py off
 ```
 
 hidraw access needs `setup/modules/configure-litra-glow.sh` (udev rule

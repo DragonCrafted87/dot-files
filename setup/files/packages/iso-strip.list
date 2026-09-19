@@ -1,0 +1,45 @@
+# Names to drop from setup/files/iso-installed.txt when computing the
+# post-reset baseline. One rpm name per line. Prefixes end with *.
+#
+# Always strip (ISO desktop / installer chrome we never want):
+chromium
+chromium-qt6
+om-welcome
+plasma6-konsole
+plasma6-kate
+plasma6-kate-extensions
+plasma6-katepart
+plasma6-kwrite
+plasma6-kwrited
+plasma6-sddm
+plasma6-sddm-kcm
+plasma6-sddm-theme-breeze
+sddm
+sddm-kcm
+sddm-theme-breeze
+dnfdrake
+calamares
+lib64calamares
+distro-release-installer
+
+# Desktop / branding leftovers from the Plasma slim ISO:
+distro-release-desktop
+distro-release-desktop-Plasma6
+om-bug-report
+om-mirror-selector
+om-repo-picker
+om-welcome
+
+# Splash (console-only after reset):
+plymouth
+plymouth-scripts
+plymouth-theme-openmandriva
+lib64ply5
+lib64ply-boot-client5
+lib64ply-splash-core5
+lib64ply-splash-graphics5
+
+# Rest of Plasma 6 from the slim ISO. Role modules reinstall only what
+# Hyprland actually needs (dolphin / kio / breeze icons).
+plasma6-*
+task-plasma*

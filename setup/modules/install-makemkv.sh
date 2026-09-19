@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# Build MakeMKV with the OpenMandriva LLVM toolchain, enable Ask for
-# single drive mode, and install one Desktop launcher. Skip the whole
-# module when this machine has no DVD/Blu-ray device.
+# Build MakeMKV with a working C toolchain, enable Ask for single drive
+# mode, and install one Desktop launcher. Skip the whole module when this
+# machine has no DVD/Blu-ray device.
+#
+# Fresh Rock installs often have clang on PATH that fails autoconf's
+# AC_PROG_CC ("invalid C compiler") because gcc/glibc-devel are missing.
+# Prefer gcc/g++ when they compile a trivial file; fall back to clang.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -57,6 +61,11 @@ install_build_deps() {
     local picked
     local group
     local groups=(
+        "gcc"
+        "gcc-c++ gcc-c++-x86_64 gcc-c++-znver1"
+        "glibc-devel lib64c-devel"
+        "libstdc++-devel lib64stdc++-devel"
+        "binutils"
         "clang"
         "llvm"
         "lld"
@@ -80,6 +89,34 @@ install_build_deps() {
         fi
     done
     ensure_packages "${pkgs[@]}"
+}
+
+compiler_works() {
+    local cc="$1"
+    local tmp src obj
+    command -v "$cc" >/dev/null 2>&1 || return 1
+    tmp="$(mktemp -d)"
+    src="${tmp}/t.c"
+    obj="${tmp}/t"
+    printf 'int main(void){return 0;}\n' >"$src"
+    if "$cc" -o "$obj" "$src" >/dev/null 2>&1; then
+        rm -rf "$tmp"
+        return 0
+    fi
+    rm -rf "$tmp"
+    return 1
+}
+
+pick_compilers() {
+    if compiler_works clang && command -v clang++ >/dev/null 2>&1; then
+        printf '%s %s\n' clang clang++
+        return 0
+    fi
+    if compiler_works gcc && command -v g++ >/dev/null 2>&1; then
+        printf '%s %s\n' gcc g++
+        return 0
+    fi
+    return 1
 }
 
 accept_eula() {
@@ -106,17 +143,25 @@ if [[ -x "${MAKEMKV_PREFIX}/bin/makemkv" && -f "$STAMP" ]] \
     log "MakeMKV ${MAKEMKV_VERSION} already installed"
 else
     install_build_deps
-    command -v clang >/dev/null 2>&1 || die "clang is not on PATH after package install"
-    command -v clang++ >/dev/null 2>&1 || die "clang++ is not on PATH after package install"
+    local_cc=""
+    local_cxx=""
+    if read -r local_cc local_cxx < <(pick_compilers); then
+        log "MakeMKV compilers ${local_cc} / ${local_cxx}"
+    else
+        die "no working C compiler after package install (gcc and clang both failed a trivial compile)"
+    fi
 
     ensure_dir "$BUILD_ROOT"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
-        log "would build MakeMKV ${MAKEMKV_VERSION} with clang in ${BUILD_ROOT}"
+        log "would build MakeMKV ${MAKEMKV_VERSION} with ${local_cc} in ${BUILD_ROOT}"
     else
-        export CC=clang
-        export CXX=clang++
-        export OBJCOPY="${OBJCOPY:-llvm-objcopy}"
-        if command -v ld.lld >/dev/null 2>&1; then
+        export CC="$local_cc"
+        export CXX="$local_cxx"
+        export OBJCOPY="${OBJCOPY:-objcopy}"
+        if command -v llvm-objcopy >/dev/null 2>&1 && [[ "$local_cc" == clang ]]; then
+            export OBJCOPY=llvm-objcopy
+        fi
+        if command -v ld.lld >/dev/null 2>&1 && [[ "$local_cc" == clang ]]; then
             export LDFLAGS="${LDFLAGS:-} -fuse-ld=lld"
         fi
 
@@ -129,7 +174,7 @@ else
 
         (
             cd "${BUILD_ROOT}/makemkv-oss-${MAKEMKV_VERSION}"
-            ./configure --prefix="$MAKEMKV_PREFIX"
+            ./configure --prefix="$MAKEMKV_PREFIX" CC="$CC" CXX="$CXX"
             make -j"$(nproc)"
             sudo make install
         )
@@ -141,7 +186,7 @@ else
         )
         sudo mkdir -p "$(dirname "$STAMP")"
         printf '%s\n' "$MAKEMKV_VERSION" | sudo tee "$STAMP" >/dev/null
-        log "installed MakeMKV ${MAKEMKV_VERSION} with clang"
+        log "installed MakeMKV ${MAKEMKV_VERSION} with ${local_cc}"
     fi
 fi
 
@@ -151,7 +196,6 @@ sync_src="${SETUP_FILES_DIR}/makemkv/sync-makemkv-desktops.sh"
 ensure_dir "${DOTFILES_HOME}/bin"
 run install -m 0755 "$sync_src" "${DOTFILES_HOME}/bin/sync-makemkv-desktops.sh"
 
-# Login autostart is no longer needed: one launcher, not per-drive files.
 if [[ -f "${DOTFILES_HOME}/.config/autostart/makemkv-sync-desktops.desktop" ]]; then
     run rm -f "${DOTFILES_HOME}/.config/autostart/makemkv-sync-desktops.desktop"
 fi

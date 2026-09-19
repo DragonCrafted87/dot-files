@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 """Turn Logitech Litra Glow lamps on while the Insta360 Link is streaming."""
 
 import glob
@@ -14,7 +15,7 @@ DEBOUNCE_SECONDS = 1.5
 
 
 def usage():
-    print("Usage: litra_camera_lights.py on|off|status|watch", file=sys.stderr)
+    print("Usage: litra-camera-lights.py on|off|status|watch", file=sys.stderr)
     raise SystemExit(1)
 
 

@@ -2,10 +2,12 @@
 # Apply or reset a machine role. Module lists live in roles.conf.
 #
 #   ./setup/role.sh workstation
-#   ./setup/role.sh --reset laptop
-#   ./setup/role.sh --reset --force server
-#   ./setup/role.sh --dry-run --reset htpc
-#   ./setup/role.sh --hostname study.lan laptop
+#   ./setup/role.sh --reset workstation
+#   ./setup/role.sh --reset --force workstation
+#
+# --reset strips toward the ISO-minus-strip baseline. It does not re-run
+# modules. After a forced reset, run role.sh again without --reset.
+# --reset must be a real VT (Ctrl+Alt+F3) or SSH, not Ly/Hyprland/Plasma.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -18,8 +20,8 @@ usage: $0 [options] <role>
 Roles: workstation, laptop, htpc, server
 
 Options:
-  --reset              re-apply the role, then list extra packages
-  --force              with --reset, actually remove the extras
+  --reset              list packages that a force-reset would remove
+  --force              with --reset, actually strip to the ISO baseline
   --dry-run            print actions without changing the system
   --hostname NAME      set the static hostname
   -h, --help           show this help
@@ -89,28 +91,35 @@ else
 fi
 
 require_user
+
+if ! command -v git >/dev/null 2>&1; then
+    log "bootstrap git (missing on this root)"
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        printf 'dry-run: sudo dnf install -y git\n'
+    else
+        sudo dnf install -y git
+        command -v git >/dev/null 2>&1 || die "git is still missing after dnf install"
+    fi
+fi
+
 ensure_hostname "${hostname_arg}"
 record_role "$role"
 
 if [[ "$do_reset" -eq 1 ]]; then
-    log "re-apply ${role} so declared packages are present"
+    log "strip toward ISO baseline (role packages come back on the next plain run)"
+    OMV_ROLE="$role" bash "${SETUP_DIR}/modules/prune-extra-packages.sh"
+    if [[ "$force" -eq 1 && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+        log "baseline strip finished. home files were left in place."
+        log "log in on a VT or SSH and run: $0 ${role}"
+    elif [[ "$force" -ne 1 && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+        log "review the extras list, then from a VT or SSH: $0 --reset --force ${role}"
+    fi
+    exit 0
 fi
 
 while IFS= read -r module; do
     [[ -n "$module" ]] || continue
     run_module "$module"
 done < <(role_modules "$role")
-
-if [[ "$do_reset" -eq 1 ]]; then
-    log "remove extras that are not part of ${role}"
-    OMV_ROLE="$role" bash "${SETUP_DIR}/modules/prune-extra-packages.sh"
-    run_module remove-plasma-sddm
-
-    log "reset of ${role} finished"
-    log "home files were left in place"
-    if [[ "$force" -ne 1 && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-        log "review the extras list, then rerun with --reset --force to actually remove them"
-    fi
-fi
 
 restart_qs_if_needed
