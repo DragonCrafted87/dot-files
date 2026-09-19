@@ -165,8 +165,8 @@ ShellRoot {
             id: panel
             anchors.fill: parent
             radius: 12
-            color: "#1e1e2e"
-            border.color: "#45475a"
+            color: "#000000"
+            border.color: "#555753"
             border.width: 1
             visible: root.chromeVisible
             focus: root.menuOpen && root.chromeVisible

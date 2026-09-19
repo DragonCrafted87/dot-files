@@ -7,8 +7,8 @@ import Quickshell.Widgets
 Rectangle {
     id: root
     radius: 8
-    color: "#181825"
-    border.color: "#313244"
+    color: "#000000"
+    border.color: "#555753"
     border.width: 1
 
     signal windowFocused()
@@ -142,7 +142,7 @@ Rectangle {
 
             Text {
                 text: root.minimizedOnly ? "Minimized" : "Windows"
-                color: "#a6adc8"
+                color: "#D3D7CF"
                 font.pixelSize: 11
                 font.bold: true
             }
@@ -151,7 +151,7 @@ Rectangle {
 
             Text {
                 text: "↻"
-                color: refreshMouse.containsMouse ? "#89b4fa" : "#6c7086"
+                color: refreshMouse.containsMouse ? "#729FCF" : "#555753"
                 font.pixelSize: 12
                 MouseArea {
                     id: refreshMouse
@@ -165,7 +165,7 @@ Rectangle {
 
             Text {
                 text: root.minimizedOnly ? "All" : "Min"
-                color: toggleMouse.containsMouse ? "#89b4fa" : "#6c7086"
+                color: toggleMouse.containsMouse ? "#729FCF" : "#555753"
                 font.pixelSize: 10
                 MouseArea {
                     id: toggleMouse
@@ -195,7 +195,7 @@ Rectangle {
                 width: winList.width
                 height: 32
                 radius: 6
-                color: winMouse.containsMouse ? "#313244" : "transparent"
+                color: winMouse.containsMouse ? "#555753" : "transparent"
 
                 RowLayout {
                     anchors.fill: parent
@@ -216,14 +216,14 @@ Rectangle {
                         Text {
                             Layout.fillWidth: true
                             text: title
-                            color: "#cdd6f4"
+                            color: "#EEEEEC"
                             font.pixelSize: 12
                             elide: Text.ElideRight
                         }
                         Text {
                             Layout.fillWidth: true
                             text: (cls ? cls + "  ·  " : "") + wsName
-                            color: "#6c7086"
+                            color: "#555753"
                             font.pixelSize: 9
                             elide: Text.ElideRight
                         }
@@ -243,7 +243,7 @@ Rectangle {
                 anchors.centerIn: parent
                 visible: winList.count === 0
                 text: root.minimizedOnly ? "No minimized windows" : "No windows"
-                color: "#6c7086"
+                color: "#555753"
                 font.pixelSize: 11
             }
         }
