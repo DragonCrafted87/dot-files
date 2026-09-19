@@ -1,0 +1,13 @@
+# Managed by dot-files. Palette follows Kitty Tango Dark via Qt Fusion + kdeglobals.
+[qt]
+qt-privacy-ask=0
+qt-system-tray=1
+qt-notification=1
+qt-minimal-view=0
+qt-bgcone=0
+qt-fullscreen-screennumber=-1
+# Fusion reads ~/.config/kdeglobals Colors:* groups.
+qt-style=Fusion
+
+[core]
+metadata-network-access=1
