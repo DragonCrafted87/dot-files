@@ -1,0 +1,22 @@
+{
+    "name": "Tango Dark",
+    "widgets": "Fusion",
+    "qssFilePath": "themeStyle.css",
+    "colors": {
+        "Window": "#000000",
+        "WindowText": "#D3D7CF",
+        "Base": "#000000",
+        "AlternateBase": "#2A2B29",
+        "Text": "#D3D7CF",
+        "Button": "#2A2B29",
+        "ButtonText": "#D3D7CF",
+        "BrightText": "#EF2929",
+        "Highlight": "#3465A4",
+        "HighlightedText": "#EEEEEC",
+        "Link": "#729FCF",
+        "ToolTipBase": "#000000",
+        "ToolTipText": "#D3D7CF",
+        "fadeAmount": 0.35,
+        "fadeColor": "#555753"
+    }
+}
