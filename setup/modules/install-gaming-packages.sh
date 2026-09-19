@@ -79,7 +79,6 @@ looks_like_multimc() {
 
 find_multimc_root() {
     local d
-    # Current tree first. Directory was renamed to match ~/games/* style.
     for d in \
         "${DOTFILES_HOME}/games/multi-mc" \
         "${DOTFILES_HOME}/games/MultiMC" \
@@ -128,14 +127,40 @@ if new != text:
 PY
 }
 
+ensure_java_for_multimc() {
+    if command -v java >/dev/null 2>&1; then
+        log "java already on PATH"
+        return 0
+    fi
+    local pkg
+    for pkg in \
+        java-21-openjdk \
+        java-17-openjdk \
+        java-latest-openjdk \
+        java-21-openjdk-headless \
+        java-17-openjdk-headless \
+        java-11-openjdk; do
+        if rpm -q "$pkg" >/dev/null 2>&1; then
+            log "${pkg} already installed"
+            return 0
+        fi
+        if dnf list --available "$pkg" >/dev/null 2>&1; then
+            ensure_packages "$pkg"
+            return 0
+        fi
+    done
+    warn "no OpenJDK package found; MultiMC will not launch until java is installed"
+}
+
 configure_multimc() {
     local root
     root="$(find_multimc_root || true)"
     if [[ -z "$root" ]]; then
-        log "MultiMC not found; skip theme and desktop"
+        log "MultiMC not found; skip theme, desktop, and java"
         return 0
     fi
     log "MultiMC root ${root}"
+    ensure_java_for_multimc
     ensure_dir "${root}/themes/custom"
     local src_json="${SETUP_FILES_DIR}/multimc/theme.json"
     local src_css="${SETUP_FILES_DIR}/multimc/themeStyle.css"
