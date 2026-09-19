@@ -18,10 +18,6 @@ Tracked after the Tango Dark pass. Not scheduled.
   `#75507B`) that covers desk + theater + laptop without per-host files
   if possible.
 
-## Rebuild system
-
-- get a dump of all the packages in the slim iso so we can properly setup the clear
-
 ## local builds
 
 - replace flatpak boinc with real build
