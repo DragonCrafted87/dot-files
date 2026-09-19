@@ -12,7 +12,7 @@ Tracked after the Tango Dark pass. Not scheduled.
 ## Wallpapers
 
 - Hyprland logo splash is already disabled.
-- No managed wallpaper yet (`hyprpaper` / `swww` / one still under
+- No managed wallpaper yet (`hyprpaper` / one still under
   `~/Pictures`).
 - Want a Tango-adjacent dark still (black + blue `#3465A4` / purple
   `#75507B`) that covers desk + theater + laptop without per-host files
