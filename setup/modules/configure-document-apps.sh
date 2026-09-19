@@ -267,21 +267,6 @@ configure_okular() {
     ensure_ini_key "$dest" "Dlg Accessibility" RecolorBackground "0,0,0"
 }
 
-configure_brave_theme() {
-    local src="${SETUP_FILES_DIR}/brave/tango-dark.json"
-    local dest="/etc/brave/policies/managed/tango-dark.json"
-    [[ -f "$src" ]] || return 0
-    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
-        log "dry-run: install ${dest}"
-        return 0
-    fi
-    sudo mkdir -p "$(dirname "$dest")"
-    if [[ ! -f "$dest" ]] || ! cmp -s "$src" "$dest"; then
-        log "install ${dest}"
-        sudo install -m 0644 "$src" "$dest"
-    fi
-}
-
 install_tango_icons
 if [[ -f "${DOTFILES_HOME}/.local/share/icons/Tango/index.theme" ]]; then
     ensure_ini_key "${CONFIG_TARGET_DIR}/kdeglobals" Icons Theme Tango
