@@ -45,9 +45,12 @@ set_grub_key() {
 set_grub_key GRUB_GFXMODE 1920x1080
 set_grub_key GRUB_GFXPAYLOAD_LINUX keep
 set_grub_key GRUB_TERMINAL_OUTPUT gfxterm
-# Tango: light-gray on black menu, white on blue highlight (color4).
 set_grub_key GRUB_COLOR_NORMAL '"light-gray/black"'
 set_grub_key GRUB_COLOR_HIGHLIGHT '"white/blue"'
+# OpenMandriva ships a branded theme + backsplash. Empty these so the
+# menu is just the Tango colors above.
+set_grub_key GRUB_THEME '""'
+set_grub_key GRUB_BACKGROUND '""'
 
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && -f /etc/default/grub ]]; then
     cfg=""
@@ -65,7 +68,6 @@ if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && -f /etc/default/grub ]]; then
 fi
 
 vconsole="/etc/vconsole.conf"
-# sun32 is shipped with kbd; terminus is nicer if the package installed.
 font="latarcyrheb-sun32"
 if [[ -f /usr/lib/kbd/consolefonts/ter-v32n.psf.gz || -f /usr/share/kbd/consolefonts/ter-v32n.psf.gz ]]; then
     font="ter-v32n"
@@ -83,7 +85,6 @@ else
     fi
 fi
 
-# Linux console 16-color palette (setvtrgb). Matches Kitty Tango Dark.
 palette_src="${SETUP_FILES_DIR}/vconsole/tango-dark.rgb"
 palette_dest="/etc/vconsole-palette"
 if [[ -f "$palette_src" ]]; then
@@ -104,9 +105,6 @@ if [[ -f "$palette_src" ]]; then
     fi
 fi
 
-# Plymouth: only retarget an already-installed splash. Do not pull in a
-# new initramfs stack. tango-icon-theme / a Tango Plymouth theme are not
-# in Rock repos.
 if command -v plymouth-set-default-theme >/dev/null 2>&1; then
     current="$(plymouth-set-default-theme 2>/dev/null || true)"
     target=""
