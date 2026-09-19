@@ -13,7 +13,9 @@ CAMERA_VENDOR = 0x2E1A
 REPORT_LEN = 20
 POLL_SECONDS = 0.4
 DEBOUNCE_SECONDS = 1.5
-STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "hypr"
+STATE_DIR = (
+    Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "hypr"
+)
 HOLD_FILE = STATE_DIR / "litra-hold-on"
 
 

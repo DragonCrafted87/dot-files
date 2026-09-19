@@ -4,7 +4,7 @@ Copy everything below the line into a new Grok / agent chat.
 
 ---
 
-i have the following repo git@github.com:DragonCrafted87/dot-files.git
+I have the following repo git@github.com:DragonCrafted87/dot-files.git
 
 Read `AGENTS.md` first, then `config/hypr/README.md` and `setup/README.md` if the task touches Hyprland or roles.
 
@@ -17,4 +17,3 @@ Rules that bite:
 - Pre-commit lives in Docker (`pre-commit run`). `.scratch/` is excluded.
 
 Task:
-* <describe the change>
