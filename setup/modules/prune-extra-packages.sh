@@ -66,10 +66,7 @@ name_is_stripped() {
     return 1
 }
 
-ISO_FILE="${SETUP_FILES_DIR}/iso-installed.txt"
-if [[ ! -f "$ISO_FILE" ]]; then
-    ISO_FILE="${SETUP_FILES_DIR}/packages/iso-installed.list"
-fi
+ISO_FILE="${SETUP_FILES_DIR}/packages/iso-installed.list"
 STRIP_FILE="${SETUP_FILES_DIR}/packages/iso-strip.list"
 KEEP_FILE="${SETUP_FILES_DIR}/packages/never-remove.list"
 
