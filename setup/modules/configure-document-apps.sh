@@ -274,4 +274,3 @@ fi
 configure_multimc
 configure_libreoffice
 configure_okular
-configure_brave_theme
