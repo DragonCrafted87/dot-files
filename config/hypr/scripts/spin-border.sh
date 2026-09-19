@@ -6,7 +6,8 @@
 # Seconds per full rotation. Match the look you wanted (~8s).
 SECONDS_PER_TURN="${SECONDS_PER_TURN:-6}"
 
-GRADIENT="rgb(305cde) rgb(560591)"
+# Palette from config/kitty/kitty.conf (Tango Dark color4 + color5).
+GRADIENT="rgb(3465A4) rgb(75507B)"
 
 # ~45 updates/sec is enough at 2px border; cheaper than a 144 Hz compositor loop.
 STEP_DEG=2
