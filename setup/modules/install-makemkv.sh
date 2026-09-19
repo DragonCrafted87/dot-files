@@ -108,12 +108,12 @@ compiler_works() {
 }
 
 pick_compilers() {
-    if compiler_works gcc && command -v g++ >/dev/null 2>&1; then
-        printf '%s %s\n' gcc g++
-        return 0
-    fi
     if compiler_works clang && command -v clang++ >/dev/null 2>&1; then
         printf '%s %s\n' clang clang++
+        return 0
+    fi
+    if compiler_works gcc && command -v g++ >/dev/null 2>&1; then
+        printf '%s %s\n' gcc g++
         return 0
     fi
     return 1
