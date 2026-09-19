@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=invalid-name
 """Strip installed rpms toward the ISO baseline minus iso-strip.list."""
 
 from __future__ import annotations
@@ -68,7 +69,9 @@ def matches_any(name: str, patterns: list[str]) -> bool:
 
 
 def run_out(cmd: list[str]) -> str:
-    result = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    result = subprocess.run(
+        cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
+    )
     return result.stdout
 
 

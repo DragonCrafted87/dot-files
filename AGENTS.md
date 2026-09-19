@@ -105,7 +105,7 @@ bit (pre-commit `check-executables-have-shebangs`).
 
 ### Litra Glow + Insta360 Link
 
-`scripts/litra_camera_lights.py watch` is `exec-once`. It turns every
+`scripts/litra-camera-lights.py watch` is `exec-once`. It turns every
 USB Litra Glow on while the Insta360 Link (`2e1a:*`) has an open V4L2
 node, with a 1.5s debounce so browser probes do not flash the lamps.
 
