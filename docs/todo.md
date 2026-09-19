@@ -27,3 +27,8 @@ Tracked after the Tango Dark pass. Not scheduled.
 - get a dump of all the packages in the slim iso so we can properly setup the clear
 
 - add java install on reinstall system if multimc is present
+
+## local builds
+
+- replace flatpak boinc with real build
+- current version of hyprland
