@@ -10,6 +10,7 @@ PROFILE_SH="${SCRIPT_DIR}/display-profile.sh"
 MONITORS_D="${SCRIPT_DIR}/../conf.d/monitors.d"
 HOSTS_D="${SCRIPT_DIR}/../conf.d/hosts.d"
 AUDIO_SH="${SCRIPT_DIR}/display-audio.sh"
+ENSURE_SH="${SCRIPT_DIR}/ensure-monitors-runtime.sh"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 PROFILE_FILE="${STATE_DIR}/display-profile"
 WATCH_PID_FILE="${STATE_DIR}/display-switch.pid"
@@ -26,6 +27,20 @@ trim() {
     s="${s#"${s%%[![:space:]]*}"}"
     s="${s%"${s##*[![:space:]]}"}"
     printf '%s\n' "$s"
+}
+
+ensure_runtime_monitors() {
+    if [[ -x "$ENSURE_SH" ]]; then
+        "$ENSURE_SH" || true
+        return 0
+    fi
+    mkdir -p "$STATE_DIR"
+    if [[ ! -f "${STATE_DIR}/monitors.runtime.conf" ]]; then
+        printf 'monitor=,highrr,auto,1\n' >"${STATE_DIR}/monitors.runtime.conf"
+        if command -v hyprctl >/dev/null 2>&1; then
+            hyprctl reload >/dev/null 2>&1 || true
+        fi
+    fi
 }
 
 load_host_conf() {
@@ -304,10 +319,11 @@ cmd_status() {
 }
 
 usage() {
-    echo "Usage: display-switch.sh [restore|single|desk|watch|status|detect|<profile>]"
+    echo "Usage: display-switch.sh [restore|single|desk|watch|status|detect|ensure-runtime|<profile>]"
 }
 
 main() {
+    ensure_runtime_monitors
     load_host_conf
     case "${1:-restore}" in
         restore|apply) cmd_restore ;;
@@ -317,6 +333,7 @@ main() {
         start-watch) start_watch ;;
         stop-watch|stop) stop_watch ;;
         restore-watch) start_watch ;;
+        ensure-runtime) ensure_runtime_monitors ;;
         status) cmd_status ;;
         detect) detect_single_profile ;;
         -h|--help|help) usage ;;
