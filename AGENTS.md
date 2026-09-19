@@ -46,6 +46,12 @@ Do not merge `scripts/` and `setup/files/`.
 - Modules are `setup/modules/<name>.sh` and source `setup/lib.sh`.
 - Prefer adding a module + a `roles.conf` line over growing an unrelated
   script.
+- `install-hyprland-session` keeps the OpenMandriva Hyprland rpms and
+  enables `ly.service`.
+- `install-hyprland-source` builds Hyprland v0.56.2 and the hypr*
+  ecosystem into `/opt/hyprland-0.56.2`. It must not overwrite `/usr`
+  binaries or `/usr/share/wayland-sessions/hyprland.desktop`. Ly extra
+  session is `hyprland-source.desktop`.
 - `configure-litra-glow` installs hidraw udev for Logitech Litra Glow
   (`046d:c900`) and adds the user to `video`.
 - Modules run in a subprocess (`bash module.sh`), so env vars do not
@@ -176,3 +182,5 @@ PipeWire is 1.4.x + WirePlumber. Volume CLI is `wpctl`.
 - Commit secrets. Transfer with `setup/utility/transfer-secrets.sh`.
 - Overwrite an existing real `~/.config/<name>` directory; the linker
   will skip it.
+- Install the source Hyprland stack into `/usr` or `/usr/local` in a way
+  that shadows the OpenMandriva rpms.
