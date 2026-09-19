@@ -6,8 +6,8 @@ import Quickshell.Io
 Rectangle {
     id: root
     radius: 8
-    color: "#181825"
-    border.color: "#313244"
+    color: "#000000"
+    border.color: "#555753"
     border.width: 1
     implicitHeight: 52
 
@@ -52,13 +52,13 @@ Rectangle {
                 Layout.preferredWidth: Math.max(72, labelText.implicitWidth + 16)
                 Layout.minimumHeight: 32
                 radius: 6
-                color: powerMouse.containsMouse ? "#313244" : "transparent"
+                color: powerMouse.containsMouse ? "#555753" : "transparent"
 
                 Text {
                     id: labelText
                     anchors.centerIn: parent
                     text: label
-                    color: index === 4 ? "#f38ba8" : "#a6adc8"
+                    color: index === 4 ? "#EF2929" : "#D3D7CF"
                     font.pixelSize: 12
                     elide: Text.ElideNone
                     wrapMode: Text.NoWrap

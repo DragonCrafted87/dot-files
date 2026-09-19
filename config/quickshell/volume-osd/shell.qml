@@ -76,8 +76,8 @@ ShellRoot {
             Rectangle {
                 anchors.fill: parent
                 radius: 14
-                color: "#e61e1e2e"
-                border.color: root.overDrive ? "#f38ba8" : "#45475a"
+                color: "#e6000000"
+                border.color: root.overDrive ? "#EF2929" : "#555753"
                 border.width: 1
 
                 ColumnLayout {
@@ -88,7 +88,7 @@ ShellRoot {
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         text: root.muted ? "MUTE" : Math.round(root.volume * 1000) / 10 + "%"
-                        color: root.overDrive ? "#f38ba8" : "#cdd6f4"
+                        color: root.overDrive ? "#EF2929" : "#EEEEEC"
                         font.pixelSize: 11
                         font.bold: root.overDrive
                     }
@@ -97,7 +97,7 @@ ShellRoot {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         radius: 8
-                        color: "#11111b"
+                        color: "#000000"
 
                         Rectangle {
                             anchors.left: parent.left
@@ -108,7 +108,7 @@ ShellRoot {
                                 return parent.height * (shown / 1.5);
                             }
                             radius: 8
-                            color: root.overDrive ? "#f38ba8" : (root.muted ? "#45475a" : "#89b4fa")
+                            color: root.overDrive ? "#EF2929" : (root.muted ? "#555753" : "#729FCF")
                         }
                     }
                 }
