@@ -5,6 +5,7 @@ import glob
 import os
 import sys
 import time
+from pathlib import Path
 
 LITRA_VENDOR = 0x046D
 LITRA_PRODUCT = 0xC900
@@ -12,11 +13,28 @@ CAMERA_VENDOR = 0x2E1A
 REPORT_LEN = 20
 POLL_SECONDS = 0.4
 DEBOUNCE_SECONDS = 1.5
+STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "hypr"
+HOLD_FILE = STATE_DIR / "litra-hold-on"
 
 
 def usage():
-    print("Usage: litra-camera-lights.py on|off|status|watch", file=sys.stderr)
+    print(
+        "Usage: litra-camera-lights.py on|off|toggle|status|watch [--hold]",
+        file=sys.stderr,
+    )
     raise SystemExit(1)
+
+
+def hold_enabled() -> bool:
+    return HOLD_FILE.is_file()
+
+
+def set_hold(enabled: bool) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    if enabled:
+        HOLD_FILE.write_text("1\n", encoding="utf-8")
+    elif HOLD_FILE.exists():
+        HOLD_FILE.unlink()
 
 
 def read_text(path):
@@ -144,6 +162,7 @@ def print_status():
     print(f"camera_nodes={' '.join(cameras) if cameras else 'none'}")
     print(f"camera_open={' '.join(sorted(opened)) if opened else 'none'}")
     print(f"camera_live={'yes' if opened else 'no'}")
+    print(f"hold_on={'yes' if hold_enabled() else 'no'}")
     return 0
 
 
@@ -154,9 +173,13 @@ def watch():
     print("watching Insta360 Link for Litra Glow on/off", flush=True)
     while True:
         live = camera_is_live()
+        held = hold_enabled()
+        # Manual hold keeps lamps on even when the camera is idle. Camera
+        # start still forces on so a hold + stream cannot leave them dark.
+        target = True if (live or held) else False
         now = time.monotonic()
-        if live != pending:
-            pending = live
+        if target != pending:
+            pending = target
             pending_since = now
         elif pending is not None and now - pending_since >= DEBOUNCE_SECONDS:
             if pending != desired:
@@ -166,13 +189,23 @@ def watch():
 
 
 def main(argv):
-    command = argv[1] if len(argv) > 1 else "watch"
+    args = [a for a in argv[1:] if a != "--hold"]
+    hold_flag = "--hold" in argv[1:]
+    command = args[0] if args else "watch"
     if command in {"-h", "--help", "help"}:
         usage()
     if command == "on":
+        set_hold(True)
         return send_litra(True)
     if command == "off":
+        set_hold(False)
         return send_litra(False)
+    if command == "toggle":
+        if hold_enabled() and not hold_flag:
+            set_hold(False)
+            return send_litra(False)
+        set_hold(True)
+        return send_litra(True)
     if command == "status":
         return print_status()
     if command == "watch":
