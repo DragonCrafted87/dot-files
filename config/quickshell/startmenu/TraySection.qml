@@ -9,8 +9,8 @@ import Quickshell.Widgets
 Rectangle {
     id: root
     radius: 8
-    color: "#181825"
-    border.color: "#313244"
+    color: "#000000"
+    border.color: "#555753"
     border.width: 1
 
     property var menuWindow
@@ -154,8 +154,8 @@ Rectangle {
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.bottom: parent.top
                         anchors.bottomMargin: 4
-                        color: "#11111b"
-                        border.color: "#45475a"
+                        color: "#000000"
+                        border.color: "#555753"
                         border.width: 1
                         radius: 4
                         width: tipText.implicitWidth + 10
@@ -169,7 +169,7 @@ Rectangle {
                                   || modelData.title
                                   || modelData.id
                                   || ""
-                            color: "#cdd6f4"
+                            color: "#EEEEEC"
                             font.pixelSize: 11
                         }
                     }
@@ -220,7 +220,7 @@ Rectangle {
                     if (!parent.sinkAudio || parent.muted || parent.vol === 0) return "MUTE"
                     return "VOL"
                 }
-                color: parent.over ? "#f38ba8" : "#cdd6f4"
+                color: parent.over ? "#EF2929" : "#EEEEEC"
                 font.pixelSize: 11
                 font.family: "sans-serif"
                 Layout.preferredWidth: 36
@@ -239,14 +239,14 @@ Rectangle {
                 Layout.fillWidth: true
                 height: 8
                 radius: 4
-                color: "#313244"
+                color: "#555753"
                 Rectangle {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     width: parent.width * Math.min(1, parent.parent.muted ? 0 : parent.parent.vol)
                     radius: parent.radius
-                    color: parent.parent.over ? "#f38ba8" : "#89b4fa"
+                    color: parent.parent.over ? "#EF2929" : "#729FCF"
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -270,7 +270,7 @@ Rectangle {
             Text {
                 text: !parent.sinkAudio ? "--%"
                       : Math.round((parent.muted ? 0 : parent.vol) * 100) + "%"
-                color: parent.over ? "#f38ba8" : "#a6adc8"
+                color: parent.over ? "#EF2929" : "#D3D7CF"
                 font.pixelSize: 11
                 Layout.preferredWidth: 40
                 horizontalAlignment: Text.AlignRight
@@ -280,7 +280,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             height: 1
-            color: "#313244"
+            color: "#555753"
         }
 
         Flow {
@@ -289,22 +289,22 @@ Rectangle {
 
             Text {
                 text: root.cpuText
-                color: "#cdd6f4"
+                color: "#EEEEEC"
                 font.pixelSize: 14
             }
             Text {
                 text: root.memText
-                color: "#cdd6f4"
+                color: "#EEEEEC"
                 font.pixelSize: 14
             }
             Text {
                 text: root.gpuText
-                color: "#cdd6f4"
+                color: "#EEEEEC"
                 font.pixelSize: 14
             }
             Text {
                 text: root.netText
-                color: "#cdd6f4"
+                color: "#EEEEEC"
                 font.pixelSize: 14
             }
         }
@@ -315,13 +315,13 @@ Rectangle {
 
             Text {
                 text: root.clockText
-                color: "#89b4fa"
+                color: "#729FCF"
                 font.pixelSize: 22
                 font.bold: true
             }
             Text {
                 text: root.dateText
-                color: "#89b4fa"
+                color: "#729FCF"
                 font.pixelSize: 12
             }
         }

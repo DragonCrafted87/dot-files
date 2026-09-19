@@ -111,15 +111,37 @@ write_wrapper() {
     local command="$2"
     local tmp
     tmp="$(mktemp)"
+    # App finish-args still request xdg-config/gtk-3.0. bwrap then tries to
+    # replace the host dir with a symlink and dies. Revoke it at launch.
     cat >"$tmp" <<EOF
 #!/usr/bin/env bash
-exec /usr/bin/flatpak run --command=${command} edu.berkeley.BOINC "\$@"
+exec /usr/bin/flatpak run \\
+    --nofilesystem=xdg-config/gtk-3.0 \\
+    --nofilesystem=xdg-config/gtk-4.0 \\
+    --env=GTK_THEME=Adwaita:dark \\
+    --command=${command} edu.berkeley.BOINC "\$@"
 EOF
     sudo install -m 0755 "$tmp" "$dest"
     rm -f "$tmp"
 }
 write_wrapper /usr/local/bin/boinccmd boinccmd
 write_wrapper /usr/local/bin/boincmgr boincmgr
+
+clear_gtk_fs() {
+    local scope="$1"
+    shift
+    log "flatpak override ${scope} $* nofilesystem gtk-3.0/4.0"
+    if [[ "$scope" == "--system" ]]; then
+        sudo flatpak override "$scope" --nofilesystem=xdg-config/gtk-3.0 "$@" || true
+        sudo flatpak override "$scope" --nofilesystem=xdg-config/gtk-4.0 "$@" || true
+    else
+        flatpak override "$scope" --nofilesystem=xdg-config/gtk-3.0 "$@" || true
+        flatpak override "$scope" --nofilesystem=xdg-config/gtk-4.0 "$@" || true
+    fi
+}
+clear_gtk_fs --user
+clear_gtk_fs --user edu.berkeley.BOINC
+clear_gtk_fs --system edu.berkeley.BOINC
 
 # Sandbox cannot follow a symlink into ~/dot-files unless that tree is
 # explicitly allowed. Read-only is enough; idle/active only retargets the link.

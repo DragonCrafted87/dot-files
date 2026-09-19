@@ -6,8 +6,8 @@ import Quickshell.Widgets
 Rectangle {
     id: root
     radius: 8
-    color: "#181825"
-    border.color: "#313244"
+    color: "#000000"
+    border.color: "#555753"
     border.width: 1
 
     property var controller
@@ -22,7 +22,7 @@ Rectangle {
 
         Text {
             text: root.title
-            color: "#a6adc8"
+            color: "#D3D7CF"
             font.pixelSize: 11
             font.bold: true
         }
@@ -66,7 +66,7 @@ Rectangle {
                 width: appList.width
                 height: 34
                 radius: 6
-                color: appMouse.containsMouse ? "#313244" : "transparent"
+                color: appMouse.containsMouse ? "#555753" : "transparent"
 
                 RowLayout {
                     anchors.fill: parent
@@ -83,7 +83,7 @@ Rectangle {
                     Text {
                         Layout.fillWidth: true
                         text: modelData.name || modelData.id
-                        color: "#cdd6f4"
+                        color: "#EEEEEC"
                         font.pixelSize: 13
                         elide: Text.ElideRight
                     }
@@ -102,7 +102,7 @@ Rectangle {
                 anchors.centerIn: parent
                 visible: appList.count === 0
                 text: "No apps"
-                color: "#6c7086"
+                color: "#555753"
                 font.pixelSize: 11
             }
         }

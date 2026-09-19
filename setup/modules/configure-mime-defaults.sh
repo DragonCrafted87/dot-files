@@ -145,13 +145,13 @@ if new != text:
 PY
 }
 
-seed_breeze_dark() {
+seed_tango_dark() {
     local dest_file="$1"
     local src_file="$2"
 
     [[ -f "$src_file" ]] || return 0
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
-        log "dry-run: seed Breeze Dark into ${dest_file}"
+        log "dry-run: seed Tango Dark into ${dest_file}"
         return 0
     fi
     if [[ ! -f "$dest_file" ]]; then
@@ -159,10 +159,7 @@ seed_breeze_dark() {
         install -m 0644 "$src_file" "$dest_file"
         return 0
     fi
-    if grep -q '^\[Colors:Window\]' "$dest_file"; then
-        return 0
-    fi
-    log "append Breeze Dark color groups to ${dest_file}"
+    log "sync Tango Dark color groups into ${dest_file}"
     python3 - "$dest_file" "$src_file" <<'PY'
 import sys
 from pathlib import Path
@@ -196,7 +193,21 @@ if current in wanted and buf:
     blocks.append("\n".join(buf).rstrip())
 if not blocks:
     raise SystemExit(0)
-new = text.rstrip() + "\n\n" + "\n\n".join(blocks) + "\n"
+
+def strip_wanted(src):
+    out = []
+    skip = False
+    for line in src.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            skip = stripped in wanted
+        if not skip:
+            out.append(line)
+    return "\n".join(out).rstrip()
+
+base = strip_wanted(text)
+addon = "\n\n".join(blocks)
+new = (base + "\n\n" + addon + "\n") if base else (addon + "\n")
 if new != text:
     dest.write_text(new)
 PY
@@ -208,14 +219,27 @@ ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General TerminalApplication kit
 ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General TerminalService kitty.desktop
 ensure_kde_key "${CONFIG_TARGET_DIR}/dolphinrc" General TerminalApplication kitty
 
-ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General ColorScheme BreezeDark
-ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General Name "Breeze Dark"
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General ColorScheme TangoDark
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General Name "Tango Dark"
 ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" General widgetStyle Fusion
 ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" Icons Theme breeze-dark
 ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" KDE LookAndFeelPackage org.kde.breezedark.desktop
 ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" KDE widgetStyle Fusion
-ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" UiSettings ColorScheme BreezeDark
-seed_breeze_dark "$theme_dest" "$theme_src"
+ensure_kde_key "${CONFIG_TARGET_DIR}/kdeglobals" UiSettings ColorScheme TangoDark
+seed_tango_dark "$theme_dest" "$theme_src"
+
+scheme_src="${SETUP_FILES_DIR}/color-schemes/TangoDark.colors"
+scheme_dest="${DOTFILES_HOME}/.local/share/color-schemes/TangoDark.colors"
+if [[ -f "$scheme_src" ]]; then
+    ensure_dir "$(dirname "$scheme_dest")"
+    if [[ ! -f "$scheme_dest" ]] || ! cmp -s "$scheme_src" "$scheme_dest"; then
+        log "write ${scheme_dest}"
+        if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+            install -m 0644 "$scheme_src" "$scheme_dest"
+        fi
+    fi
+fi
+
 
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     exit 0

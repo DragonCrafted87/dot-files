@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json
+# Colors follow config/kitty/kitty.conf Tango Dark.
 
 console_title_template: '{{if .Root}} :: root{{end}} {{.HostName}} {{.Folder}}'
 blocks:
@@ -22,7 +23,7 @@ blocks:
             cache_duration: none
             display_status: true
             fetch_status: true
-          template: '{{ if (.Working.Changed) }}<#CC0000>{{ else if (gt .StashCount 0) }}<#FCE94F>{{ else if (.Staging.Changed) }}<#34E2E2>{{ else }}<#4E9A06>{{ end }}{{ .HEAD }}</> {{ if .Staging.Changed }}<#98c379>{{ .Staging.String }}</>{{ end}} {{ if .Working.Changed }}<#d16971>{{ .Working.String }}</>{{ end }}'
+          template: '{{ if (.Working.Changed) }}<#CC0000>{{ else if (gt .StashCount 0) }}<#FCE94F>{{ else if (.Staging.Changed) }}<#34E2E2>{{ else }}<#4E9A06>{{ end }}{{ .HEAD }}</> {{ if .Staging.Changed }}<#8AE234>{{ .Staging.String }}</>{{ end}} {{ if .Working.Changed }}<#EF2929>{{ .Working.String }}</>{{ end }}'
           type: git
           style: plain
     - type: prompt

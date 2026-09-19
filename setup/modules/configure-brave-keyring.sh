@@ -126,8 +126,6 @@ fix_ly_pam
 strip_extra_gkr_pam /etc/pam.d/login
 strip_extra_gkr_pam /etc/pam.d/system-auth
 
-# Distro already has -password optional pam_gnome_keyring.so use_authtok on passwd.
-
 mask_user_keyring_units() {
     local unit
     for unit in gnome-keyring-daemon.service gnome-keyring-daemon.socket; do
@@ -162,35 +160,48 @@ if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && ! -e "${keyrings}/login.keyring" ]]; th
     fi
 fi
 
-flags="${DOTFILES_HOME}/.config/brave-flags.conf"
-ensure_dir "$(dirname "$flags")"
-want_flags=(
-    '--password-store=gnome-libsecret'
-    '--restore-last-session'
-)
-if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-    touch "$flags"
-    for flag in "${want_flags[@]}"; do
-        if ! grep -Fqx "$flag" "$flags"; then
-            log "brave flag ${flag}"
-            printf '%s\n' "$flag" >>"$flags"
-        fi
-    done
+# Flags file + a PATH wrapper. OM's packaged /usr/bin/brave-browser does
+# not read ~/.config/brave-flags.conf (confirmed: CLI flags work, file does not).
+flags_src="${SETUP_FILES_DIR}/brave/brave-flags.conf"
+flags_dest="${CONFIG_TARGET_DIR}/brave-flags.conf"
+if [[ -f "$flags_src" ]]; then
+    if [[ -e "$flags_dest" && ! -L "$flags_dest" ]]; then
+        log "replace regular ${flags_dest} with symlink"
+        run rm -f "$flags_dest"
+    fi
+    ensure_symlink "$flags_src" "$flags_dest"
 fi
 
-apps="${DOTFILES_HOME}/.local/share/applications"
-ensure_dir "$apps"
-override="${apps}/brave-browser.desktop"
-src=""
-for candidate in /usr/share/applications/brave-browser.desktop /usr/share/applications/com.brave.Browser.desktop; do
-    if [[ -f "$candidate" ]]; then
-        src="$candidate"
-        break
+wrapper_src="${SETUP_FILES_DIR}/brave/brave-browser-wrapper.sh"
+wrapper_dest="${DOTFILES_HOME}/.local/bin/brave-browser"
+if [[ -f "$wrapper_src" ]]; then
+    ensure_dir "${DOTFILES_HOME}/.local/bin"
+    if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+        install -m 0755 "$wrapper_src" "$wrapper_dest"
+        log "install ${wrapper_dest} (reads brave-flags.conf, execs real binary)"
     fi
-done
-if [[ -n "$src" && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-    log "desktop override ${override}"
-    sed \
-        -e 's|^Exec=\(.*brave[^ ]*\)|Exec=\1 --password-store=gnome-libsecret --restore-last-session|' \
-        "$src" >"$override"
+fi
+
+# Also drop a user desktop file so Hypr/Quickshell launchers hit the wrapper.
+desk_dest="${DOTFILES_HOME}/.local/share/applications/brave-browser.desktop"
+if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+    ensure_dir "$(dirname "$desk_dest")"
+    cat >"$desk_dest" <<EOF
+[Desktop Entry]
+Version=1.0
+Name=Brave Web Browser
+GenericName=Web Browser
+Comment=Access the Internet
+Exec=${wrapper_dest} %U
+StartupNotify=true
+StartupWMClass=brave-browser
+Terminal=false
+Icon=brave-browser
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=application/pdf;application/rdf+xml;application/rss+xml;application/xhtml+xml;application/xhtml_xml;application/xml;image/gif;image/jpeg;image/png;image/webp;text/html;text/xml;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ipfs;x-scheme-handler/ipns;
+EOF
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database "${DOTFILES_HOME}/.local/share/applications" >/dev/null 2>&1 || true
+    fi
 fi

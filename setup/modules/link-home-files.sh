@@ -7,19 +7,26 @@ set -euo pipefail
 
 require_user
 
-gitconfig_src="${SETUP_FILES_DIR}/home/gitconfig"
-sshconfig_src="${SETUP_FILES_DIR}/home/ssh-config"
-
-if [[ -f "$gitconfig_src" ]]; then
-    if [[ -e "${DOTFILES_HOME}/.gitconfig" && ! -L "${DOTFILES_HOME}/.gitconfig" ]]; then
-        log "back up existing ${DOTFILES_HOME}/.gitconfig"
-        run mv "${DOTFILES_HOME}/.gitconfig" "${DOTFILES_HOME}/.gitconfig.distro"
+link_home() {
+    local src="$1"
+    local dest="$2"
+    if [[ ! -f "$src" ]]; then
+        warn "missing ${src}"
+        return 0
     fi
-    ensure_symlink "$gitconfig_src" "${DOTFILES_HOME}/.gitconfig"
-else
-    warn "missing ${gitconfig_src}"
-fi
+    if [[ -e "$dest" && ! -L "$dest" ]]; then
+        log "back up existing ${dest}"
+        run mv "$dest" "${dest}.distro"
+    fi
+    ensure_symlink "$src" "$dest"
+}
 
+link_home "${SETUP_FILES_DIR}/home/gitconfig" "${DOTFILES_HOME}/.gitconfig"
+link_home "${SETUP_FILES_DIR}/home/nanorc" "${DOTFILES_HOME}/.nanorc"
+link_home "${SETUP_FILES_DIR}/home/dircolors" "${DOTFILES_HOME}/.dircolors"
+link_home "${SETUP_FILES_DIR}/home/gtkrc-2.0" "${DOTFILES_HOME}/.gtkrc-2.0"
+
+sshconfig_src="${SETUP_FILES_DIR}/home/ssh-config"
 if [[ -f "$sshconfig_src" ]]; then
     ensure_dir "${DOTFILES_HOME}/.ssh"
     run chmod 700 "${DOTFILES_HOME}/.ssh"
