@@ -38,6 +38,16 @@ in `docs/structure.md`.
 
 Do not merge `scripts/` and `setup/files/`.
 
+## Shebang files
+
+Anything with a `#!` line must have an extension that matches the
+interpreter (`.sh`, `.py`, `.ps1`, …) **unless** it is installed onto
+`PATH` as a command name (`/usr/local/bin/boincmgr`,
+`~/.local/bin/brave-browser`). Those installed binaries may stay
+extensionless. Repo copies that are *not* the installed name (wrappers,
+modules, helpers, `exec-once` scripts) keep the extension. Do not add a
+bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
+
 ## Setup modules
 
 - Lists in `setup/roles.conf`. `[common]` always runs. `laptop` is
@@ -45,7 +55,9 @@ Do not merge `scripts/` and `setup/files/`.
 - Roles: `workstation`, `laptop`, `htpc`, `server`.
 - Modules are `setup/modules/<name>.sh` and source `setup/lib.sh`.
 - Prefer adding a module + a `roles.conf` line over growing an unrelated
-  script.
+  script. Color/theme work for an app belongs in that app's install
+  module (office → `install-office-printing`, games →
+  `install-gaming-packages`, KDE chrome → `configure-mime-defaults`).
 - `configure-litra-glow` installs hidraw udev for Logitech Litra Glow
   (`046d:c900`) and adds the user to `video`.
 - Modules run in a subprocess (`bash module.sh`), so env vars do not
