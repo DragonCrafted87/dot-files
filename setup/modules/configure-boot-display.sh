@@ -69,7 +69,6 @@ strip_grub_theme_from_cfg() {
         "$cfg"
 }
 
-# Drop quiet/splash and force Plymouth off so boot/shutdown show the VT.
 rewrite_kernel_cmdline() {
     local file="/etc/default/grub"
     [[ -f "$file" ]] || return 0
@@ -94,7 +93,6 @@ def rewrite(val: str) -> str:
         if extra not in seen:
             tokens.append(extra)
             seen.add(extra)
-    # show service start/stop on the console
     out = []
     for t in tokens:
         if t.startswith("rd.systemd.show_status="):
@@ -191,16 +189,14 @@ if [[ -f "$palette_src" ]]; then
             sudo install -m 0644 "$palette_src" "$palette_dest"
         fi
         if command -v setvtrgb >/dev/null 2>&1; then
-            for n in 1 2 3 7; do
-                if [[ -c "/dev/tty${n}" ]]; then
-                    sudo setvtrgb "$palette_dest" <"/dev/tty${n}" >/dev/null 2>&1 || true
-                fi
-            done
+            # Redirects on the sudo line run as the user and fail on /dev/ttyN.
+            # setvtrgb as root applies the table without per-tty stdin.
+            log "setvtrgb ${palette_dest}"
+            sudo setvtrgb "$palette_dest" || true
         fi
     fi
 fi
 
-# Kill Plymouth so shutdown/boot are the real console, not the OM splash.
 if command -v plymouth-set-default-theme >/dev/null 2>&1 || rpm -q plymouth >/dev/null 2>&1; then
     log "disable Plymouth splash"
     if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
