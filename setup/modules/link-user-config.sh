@@ -5,6 +5,8 @@
 #
 # Code/ is handled by configure-vscode. Linking the whole Chromium profile
 # replaces Local State and VS Code rewrites settings.json to {}.
+# gtk-3.0 / gtk-4.0 stay real directories (configure-app-colors copies
+# files). A dir-symlink there makes Flatpak/bwrap abort on BOINC.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -31,7 +33,7 @@ for source_path in "${config_dirs[@]}"; do
     dest_path="${CONFIG_TARGET_DIR}/${dest_name}"
 
     case "$dest_name" in
-        Code)
+        Code | gtk-3.0 | gtk-4.0)
             continue
             ;;
     esac

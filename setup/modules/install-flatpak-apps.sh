@@ -24,7 +24,7 @@ esac
 
 # Theme via env only. Binding xdg-config/gtk-3.0 makes bwrap try to
 # replace ~/.config/gtk-3.0 with a symlink and abort when that path is
-# already a directory (BOINC manager: "Can't make symlink at gtk-3.0").
+# already a directory (BOINC manager).
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     log "dry-run: flatpak override GTK/Qt theme env"
 else
@@ -34,4 +34,6 @@ else
     flatpak override --user --env=XCURSOR_THEME=breeze_cursors || true
     flatpak override --user --nofilesystem=xdg-config/gtk-3.0 || true
     flatpak override --user --nofilesystem=xdg-config/gtk-4.0 || true
+    flatpak override --user --nofilesystem=xdg-config/gtk-3.0 edu.berkeley.BOINC || true
+    flatpak override --user --nofilesystem=xdg-config/gtk-4.0 edu.berkeley.BOINC || true
 fi
