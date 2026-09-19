@@ -56,15 +56,24 @@ unset_grub_key() {
     fi
 }
 
+strip_grub_theme_from_cfg() {
+    local cfg="$1"
+    [[ -f "$cfg" ]] || return 0
+    log "strip OM theme/background/missing fonts from ${cfg}"
+    sudo sed -i -E \
+        '/loadfont .*themes\/OpenMandriva/d;'
+        '/background_image/d;'
+        '/^[[:space:]]*set theme=/d;'
+        '/^[[:space:]]*export theme/d' \
+        "$cfg"
+}
+
 set_grub_key GRUB_GFXMODE 1920x1080
 set_grub_key GRUB_GFXPAYLOAD_LINUX keep
 set_grub_key GRUB_TERMINAL_OUTPUT gfxterm
 set_grub_key GRUB_COLOR_NORMAL '"light-gray/black"'
 set_grub_key GRUB_COLOR_HIGHLIGHT '"white/blue"'
 
-# Empty GRUB_THEME="" is still a set variable; grub2-mkconfig + OM theme
-# scripts keep the branded backsplash. Comment the keys out entirely and
-# disable the theme drop-ins.
 unset_grub_key GRUB_THEME /etc/default/grub
 unset_grub_key GRUB_BACKGROUND /etc/default/grub
 if [[ -d /etc/default/grub.d ]]; then
@@ -75,15 +84,20 @@ if [[ -d /etc/default/grub.d ]]; then
     done
 fi
 
+# 00_header auto-detects /boot/grub2/themes/OpenMandriva even when
+# GRUB_THEME is unset. Hide the tree so mkconfig stops emitting
+# loadfont/theme/background. The file error was loadfont of
+# unifont-regular-14.pf2 / 16.pf2 which are not shipped in that dir.
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+    if [[ -d /boot/grub2/themes/OpenMandriva && ! -d /boot/grub2/themes/OpenMandriva.distro ]]; then
+        log "move /boot/grub2/themes/OpenMandriva aside"
+        sudo mv /boot/grub2/themes/OpenMandriva /boot/grub2/themes/OpenMandriva.distro
+    fi
+    if [[ -f /etc/grub.d/05_theme && -x /etc/grub.d/05_theme ]]; then
+        log "chmod -x /etc/grub.d/05_theme"
+        sudo chmod a-x /etc/grub.d/05_theme
+    fi
     for script in /etc/grub.d/*theme* /etc/grub.d/*omv* /etc/grub.d/*background* /etc/grub.d/*splash*; do
-        if [[ -f "$script" && -x "$script" ]]; then
-            log "chmod -x ${script} (distro GRUB theme)"
-            sudo chmod a-x "$script" || true
-        fi
-    done
-    # 05/08 style theme helpers on RPM distros.
-    for script in /etc/grub.d/05_debian_theme /etc/grub.d/08_fallback_theme /etc/grub.d/41_custom_theme; do
         if [[ -f "$script" && -x "$script" ]]; then
             log "chmod -x ${script}"
             sudo chmod a-x "$script" || true
@@ -92,23 +106,14 @@ if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
 fi
 
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && -f /etc/default/grub ]]; then
-    cfg=""
-    for candidate in /boot/grub2/grub.cfg /boot/efi/EFI/openmandriva/grub.cfg /boot/efi/EFI/OpenMandriva/grub.cfg; do
-        if [[ -f "$candidate" ]]; then
-            cfg="$candidate"
-            break
-        fi
-    done
-    if [[ -z "$cfg" ]]; then
-        cfg="/boot/grub2/grub.cfg"
-    fi
+    # Firmware on this box loads /boot/grub2/grub.cfg. Do not create a
+    # second cfg under EFI just because the directory exists.
+    cfg="/boot/grub2/grub.cfg"
     log "grub2-mkconfig -o ${cfg}"
     sudo grub2-mkconfig -o "$cfg"
-    # Last pass: drop leftover background_image / theme lines the scripts
-    # still emitted.
-    if sudo grep -qE 'background_image|set theme=' "$cfg" 2>/dev/null; then
-        log "strip background_image/theme from ${cfg}"
-        sudo sed -i -E '/background_image/d;/^[[:space:]]*set theme=/d;/^[[:space:]]*insmod jpeg/d;/^[[:space:]]*insmod png/d' "$cfg"
+    strip_grub_theme_from_cfg "$cfg"
+    if [[ -f /boot/efi/EFI/openmandriva/grub.cfg ]]; then
+        strip_grub_theme_from_cfg /boot/efi/EFI/openmandriva/grub.cfg
     fi
 fi
 
