@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Strip the machine down to: (ISO packages minus iso-strip.list) plus
-# never-remove.list. Role packages are NOT kept here; the next plain
-# role.sh run reinstalls them.
+# Strip toward: (ISO packages minus iso-strip.list) plus never-remove.list.
+# Role packages are not kept here; the next plain role.sh run reinstalls them.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -13,8 +12,6 @@ role="${OMV_ROLE:-}"
 [[ -n "$role" ]] || die "OMV_ROLE is unset; run: ./setup/role.sh --reset <role>"
 valid_role "$role" || die "unknown role ${role}"
 
-# Refuse to strip from inside Ly / Hyprland / Plasma. A graphical session
-# dies mid-remove. SSH or a real VT (Ctrl+Alt+F3) only.
 require_reset_session() {
     local tty_name proc reason=""
     tty_name="$(tty 2>/dev/null || true)"
@@ -31,7 +28,7 @@ require_reset_session() {
     if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
         reason="HYPRLAND_INSTANCE_SIGNATURE is set"
     elif [[ -n "${WAYLAND_DISPLAY:-}" || -n "${DISPLAY:-}" ]]; then
-        reason="graphical display is set (${WAYLAND_DISPLAY:-}${DISPLAY:-})"
+        reason="graphical display is set"
     elif [[ "${XDG_SESSION_TYPE:-}" == wayland || "${XDG_SESSION_TYPE:-}" == x11 ]]; then
         reason="XDG_SESSION_TYPE=${XDG_SESSION_TYPE}"
     fi
@@ -48,16 +45,28 @@ require_reset_session() {
 
 require_reset_session
 
-list_file_names() {
+# Read one name per line. Skip comments/blank. Do not fail the script if
+# grep matches nothing (pipefail + grep -v on an all-comment file).
+read_name_list() {
     local file="$1"
+    local line
     [[ -f "$file" ]] || return 0
-    grep -vE '^[[:space:]]*(#|$)' "$file" | sed 's/[[:space:]]\+$//'
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%%#*}"
+        line="${line//$'\r'/}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -n "$line" ]] || continue
+        printf '%s\n' "$line"
+    done <"$file"
 }
 
-name_is_stripped() {
+name_matches_any() {
     local name="$1"
+    shift
     local pat
-    for pat in "${STRIP_PATTERNS[@]}"; do
+    for pat in "$@"; do
+        [[ -n "$pat" && "$pat" != '*' ]] || continue
         # shellcheck disable=SC2254
         case "$name" in
             $pat) return 0 ;;
@@ -66,27 +75,44 @@ name_is_stripped() {
     return 1
 }
 
-ISO_FILE="${SETUP_FILES_DIR}/packages/iso-installed.list"
+ISO_FILE="${SETUP_FILES_DIR}/iso-installed.txt"
+if [[ ! -f "$ISO_FILE" ]]; then
+    ISO_FILE="${SETUP_FILES_DIR}/packages/iso-installed.list"
+fi
 STRIP_FILE="${SETUP_FILES_DIR}/packages/iso-strip.list"
 KEEP_FILE="${SETUP_FILES_DIR}/packages/never-remove.list"
 
-mapfile -t STRIP_PATTERNS < <(list_file_names "$STRIP_FILE")
-mapfile -t iso_names < <(list_file_names "$ISO_FILE")
-mapfile -t never < <(list_file_names "$KEEP_FILE")
+[[ -f "$ISO_FILE" ]] || die "missing ISO package list (${SETUP_FILES_DIR}/iso-installed.txt)"
+[[ -f "$KEEP_FILE" ]] || die "missing ${KEEP_FILE}"
+
+mapfile -t STRIP_PATTERNS < <(read_name_list "$STRIP_FILE" || true)
+mapfile -t iso_names < <(read_name_list "$ISO_FILE" || true)
+mapfile -t never < <(read_name_list "$KEEP_FILE" || true)
+
+log "lists: iso=${#iso_names[@]} strip=${#STRIP_PATTERNS[@]} never-remove=${#never[@]}"
+log "ISO file ${ISO_FILE}"
 
 declare -A keep=()
+local_kept_iso=0
+local_stripped=0
 for pkg in "${iso_names[@]}"; do
-    [[ -z "$pkg" ]] && continue
-    if name_is_stripped "$pkg"; then
+    [[ -n "$pkg" ]] || continue
+    if name_matches_any "$pkg" "${STRIP_PATTERNS[@]+"${STRIP_PATTERNS[@]}"}"; then
+        local_stripped=$((local_stripped + 1))
         continue
     fi
     keep["$pkg"]=1
+    local_kept_iso=$((local_kept_iso + 1))
 done
 for pkg in "${never[@]}"; do
-    [[ -n "$pkg" ]] && keep["$pkg"]=1
+    [[ -n "$pkg" ]] || continue
+    keep["$pkg"]=1
 done
 
-log "baseline: ${#keep[@]} names (ISO minus strip + never-remove)"
+log "baseline: ${#keep[@]} names (kept ${local_kept_iso} from ISO, stripped ${local_stripped}, plus never-remove)"
+if [[ "${#keep[@]}" -lt 50 ]]; then
+    die "baseline is too small (${#keep[@]}); check that ${ISO_FILE} and ${KEEP_FILE} parsed"
+fi
 
 mapfile -t installed < <(rpm -qa --qf '%{name}\n' | sort -u)
 to_remove=()
