@@ -69,22 +69,63 @@ if new != text:
 PY
 }
 
+looks_like_multimc() {
+    local d="$1"
+    [[ -d "$d" ]] || return 1
+    [[ -f "${d}/multimc.cfg" ]] && return 0
+    [[ -x "${d}/MultiMC" || -x "${d}/multimc" || -x "${d}/bin/multimc" || -x "${d}/MultiMC5" ]] && return 0
+    return 1
+}
+
 find_multimc_root() {
     local d
+    # Current tree first. Directory was renamed to match ~/games/* style.
     for d in \
+        "${DOTFILES_HOME}/games/multi-mc" \
+        "${DOTFILES_HOME}/games/MultiMC" \
+        "${DOTFILES_HOME}/games/multimc" \
+        "${DOTFILES_HOME}/Games/MultiMC" \
         "${DOTFILES_HOME}/MultiMC" \
         "${DOTFILES_HOME}/multimc" \
         "${DOTFILES_HOME}/.local/share/multimc" \
-        "${DOTFILES_HOME}/.multimc" \
-        "${DOTFILES_HOME}/games/MultiMC" \
-        "${DOTFILES_HOME}/games/multimc" \
-        "${DOTFILES_HOME}/Games/MultiMC"; do
-        if [[ -f "${d}/multimc.cfg" || -x "${d}/MultiMC" || -x "${d}/multimc" || -x "${d}/bin/multimc" ]]; then
+        "${DOTFILES_HOME}/.multimc"; do
+        if looks_like_multimc "$d"; then
+            printf '%s\n' "$d"
+            return 0
+        fi
+    done
+    shopt -s nullglob
+    for d in "${DOTFILES_HOME}/games"/*; do
+        if looks_like_multimc "$d"; then
             printf '%s\n' "$d"
             return 0
         fi
     done
     return 1
+}
+
+rewrite_multimc_paths() {
+    local cfg="$1"
+    local root="$2"
+    [[ -f "$cfg" ]] || return 0
+    python3 - "$cfg" "$root" <<'PY'
+import sys
+from pathlib import Path
+
+cfg = Path(sys.argv[1])
+root = sys.argv[2].rstrip("/")
+text = cfg.read_text()
+old_needles = (
+    "/games/MultiMC",
+    "/games/multimc",
+    "/Games/MultiMC",
+)
+new = text
+for needle in old_needles:
+    new = new.replace(needle, "/games/multi-mc")
+if new != text:
+    cfg.write_text(new)
+PY
 }
 
 configure_multimc() {
@@ -106,7 +147,10 @@ configure_multimc() {
         log "write MultiMC custom theme"
     fi
     local cfg="${root}/multimc.cfg"
-    if [[ -f "$cfg" || "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+    if [[ -f "$cfg" ]]; then
+        if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+            rewrite_multimc_paths "$cfg" "$root"
+        fi
         ensure_ini_key "$cfg" General ApplicationTheme custom
         ensure_ini_key "$cfg" General IconTheme pe_colored
     fi
@@ -141,6 +185,7 @@ Icon=multimc
 Terminal=false
 Categories=Game;
 StartupNotify=true
+Path=${root}
 EOF
     if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
         install_user_desktop "$desk"
