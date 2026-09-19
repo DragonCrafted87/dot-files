@@ -42,15 +42,54 @@ set_grub_key() {
     fi
 }
 
+unset_grub_key() {
+    local key="$1"
+    local file="$2"
+    [[ -f "$file" ]] || return 0
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        log "dry-run: drop ${key} from ${file}"
+        return 0
+    fi
+    if grep -qE "^[#]*[[:space:]]*${key}=" "$file"; then
+        log "comment out ${key} in ${file}"
+        sudo sed -i -E "s|^[#]*[[:space:]]*${key}=.*|# ${key} cleared by dot-files|" "$file"
+    fi
+}
+
 set_grub_key GRUB_GFXMODE 1920x1080
 set_grub_key GRUB_GFXPAYLOAD_LINUX keep
 set_grub_key GRUB_TERMINAL_OUTPUT gfxterm
 set_grub_key GRUB_COLOR_NORMAL '"light-gray/black"'
 set_grub_key GRUB_COLOR_HIGHLIGHT '"white/blue"'
-# OpenMandriva ships a branded theme + backsplash. Empty these so the
-# menu is just the Tango colors above.
-set_grub_key GRUB_THEME '""'
-set_grub_key GRUB_BACKGROUND '""'
+
+# Empty GRUB_THEME="" is still a set variable; grub2-mkconfig + OM theme
+# scripts keep the branded backsplash. Comment the keys out entirely and
+# disable the theme drop-ins.
+unset_grub_key GRUB_THEME /etc/default/grub
+unset_grub_key GRUB_BACKGROUND /etc/default/grub
+if [[ -d /etc/default/grub.d ]]; then
+    for dropin in /etc/default/grub.d/*; do
+        [[ -f "$dropin" ]] || continue
+        unset_grub_key GRUB_THEME "$dropin"
+        unset_grub_key GRUB_BACKGROUND "$dropin"
+    done
+fi
+
+if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+    for script in /etc/grub.d/*theme* /etc/grub.d/*omv* /etc/grub.d/*background* /etc/grub.d/*splash*; do
+        if [[ -f "$script" && -x "$script" ]]; then
+            log "chmod -x ${script} (distro GRUB theme)"
+            sudo chmod a-x "$script" || true
+        fi
+    done
+    # 05/08 style theme helpers on RPM distros.
+    for script in /etc/grub.d/05_debian_theme /etc/grub.d/08_fallback_theme /etc/grub.d/41_custom_theme; do
+        if [[ -f "$script" && -x "$script" ]]; then
+            log "chmod -x ${script}"
+            sudo chmod a-x "$script" || true
+        fi
+    done
+fi
 
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && -f /etc/default/grub ]]; then
     cfg=""
@@ -65,6 +104,12 @@ if [[ "${DOTFILES_DRY_RUN:-0}" != "1" && -f /etc/default/grub ]]; then
     fi
     log "grub2-mkconfig -o ${cfg}"
     sudo grub2-mkconfig -o "$cfg"
+    # Last pass: drop leftover background_image / theme lines the scripts
+    # still emitted.
+    if sudo grep -qE 'background_image|set theme=' "$cfg" 2>/dev/null; then
+        log "strip background_image/theme from ${cfg}"
+        sudo sed -i -E '/background_image/d;/^[[:space:]]*set theme=/d;/^[[:space:]]*insmod jpeg/d;/^[[:space:]]*insmod png/d' "$cfg"
+    fi
 fi
 
 vconsole="/etc/vconsole.conf"
