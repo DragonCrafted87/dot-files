@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # 1080p GRUB menu and a larger virtual-console font so the firmware
 # screens are readable on HiDPI panels. GRUB menu colors and the VT
-# 16-color palette follow Kitty Tango Dark.
+# 16-color palette follow Kitty Tango Dark. No Plymouth splash so the
+# console is visible on boot and shutdown.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -68,11 +69,61 @@ strip_grub_theme_from_cfg() {
         "$cfg"
 }
 
+# Drop quiet/splash and force Plymouth off so boot/shutdown show the VT.
+rewrite_kernel_cmdline() {
+    local file="/etc/default/grub"
+    [[ -f "$file" ]] || return 0
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        log "dry-run: strip splash/quiet from GRUB_CMDLINE_*"
+        return 0
+    fi
+    sudo python3 - "$file" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+drop = {"quiet", "splash", "rhgb"}
+add = ["plymouth.enable=0", "rd.plymouth=0", "logo.nologo"]
+
+def rewrite(val: str) -> str:
+    raw = val.strip().strip("'\"")
+    tokens = [t for t in raw.split() if t and t not in drop]
+    seen = set(tokens)
+    for extra in add:
+        if extra not in seen:
+            tokens.append(extra)
+            seen.add(extra)
+    # show service start/stop on the console
+    out = []
+    for t in tokens:
+        if t.startswith("rd.systemd.show_status="):
+            out.append("rd.systemd.show_status=1")
+        elif t.startswith("systemd.show_status="):
+            out.append("systemd.show_status=1")
+        else:
+            out.append(t)
+    return '"' + " ".join(out) + '"'
+
+lines = []
+for line in text.splitlines():
+    if line.startswith("GRUB_CMDLINE_LINUX_DEFAULT="):
+        lines.append("GRUB_CMDLINE_LINUX_DEFAULT=" + rewrite(line.split("=", 1)[1]))
+    elif line.startswith("GRUB_CMDLINE_LINUX=") and "GRUB_CMDLINE_LINUX_DEFAULT" not in line:
+        lines.append("GRUB_CMDLINE_LINUX=" + rewrite(line.split("=", 1)[1]))
+    else:
+        lines.append(line)
+path.write_text("\n".join(lines) + "\n")
+PY
+    log "GRUB cmdline: no quiet/splash, plymouth.enable=0"
+}
+
 set_grub_key GRUB_GFXMODE 1920x1080
 set_grub_key GRUB_GFXPAYLOAD_LINUX keep
 set_grub_key GRUB_TERMINAL_OUTPUT gfxterm
 set_grub_key GRUB_COLOR_NORMAL '"light-gray/black"'
 set_grub_key GRUB_COLOR_HIGHLIGHT '"white/blue"'
+rewrite_kernel_cmdline
 
 unset_grub_key GRUB_THEME /etc/default/grub
 unset_grub_key GRUB_BACKGROUND /etc/default/grub
@@ -84,10 +135,6 @@ if [[ -d /etc/default/grub.d ]]; then
     done
 fi
 
-# 00_header auto-detects /boot/grub2/themes/OpenMandriva even when
-# GRUB_THEME is unset. Hide the tree so mkconfig stops emitting
-# loadfont/theme/background. The file error was loadfont of
-# unifont-regular-14.pf2 / 16.pf2 which are not shipped in that dir.
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
     if [[ -d /boot/grub2/themes/OpenMandriva && ! -d /boot/grub2/themes/OpenMandriva.distro ]]; then
         log "move /boot/grub2/themes/OpenMandriva aside"
@@ -153,23 +200,23 @@ if [[ -f "$palette_src" ]]; then
     fi
 fi
 
-if command -v plymouth-set-default-theme >/dev/null 2>&1; then
-    current="$(plymouth-set-default-theme 2>/dev/null || true)"
-    target=""
-    for name in breeze-dark breeze spinner; do
-        if plymouth-set-default-theme --list 2>/dev/null | grep -qx "$name"; then
-            target="$name"
-            break
+# Kill Plymouth so shutdown/boot are the real console, not the OM splash.
+if command -v plymouth-set-default-theme >/dev/null 2>&1 || rpm -q plymouth >/dev/null 2>&1; then
+    log "disable Plymouth splash"
+    if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
+        sudo systemctl mask plymouth-start.service plymouth-read-write.service \
+            plymouth-quit.service plymouth-quit-wait.service plymouth-kexec.service \
+            plymouth-reboot.service plymouth-poweroff.service plymouth-halt.service \
+            2>/dev/null || true
+        if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+            sudo plymouth-set-default-theme -R details 2>/dev/null || \
+                sudo plymouth-set-default-theme -R text 2>/dev/null || true
         fi
-    done
-    if [[ -n "$target" && "$current" != "$target" ]]; then
-        log "plymouth theme ${target} (was ${current:-none})"
-        if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-            sudo plymouth-set-default-theme -R "$target" || warn "plymouth-set-default-theme failed"
+        if command -v dracut >/dev/null 2>&1; then
+            log "rebuild initramfs so Plymouth is gone from early boot"
+            sudo dracut -f || warn "dracut -f failed; next kernel install will rebuild"
         fi
-    elif [[ -z "$target" ]]; then
-        log "no breeze/spinner Plymouth theme packaged; leave ${current:-default}"
     fi
 else
-    log "plymouth not installed; skip splash theme"
+    log "plymouth not installed"
 fi
