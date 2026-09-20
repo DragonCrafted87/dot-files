@@ -23,16 +23,17 @@ BOINC_DIR="${DOTFILES_HOME}/.local/share/boinc"
 install_build_deps() {
     local pkgs=()
     local picked group
-    # OpenMandriva names are lowercase. Prefer lib64* / libx* devel.
+    # OpenMandriva names are lowercase. lib64* is the 64-bit devel;
+    # the short lib*-devel name is the 32-bit compat package.
     local groups=(
         "git"
         "clang"
         "llvm"
         "lld"
         "gcc"
-        "gcc-c++ gcc-c++-x86_64 gcc-c++-znver1"
+        "gcc-c++ gcc-c++-znver1 gcc-c++-x86_64"
         "glibc-devel lib64c-devel"
-        "libstdc++-devel lib64stdc++-devel"
+        "lib64stdc++-devel libstdc++-devel"
         "make"
         "autoconf"
         "automake"
@@ -40,16 +41,16 @@ install_build_deps() {
         "pkgconf pkgconfig"
         "m4"
         "lib64openssl-devel openssl-devel"
-        "libcurl-devel lib64curl-devel curl-devel"
+        "lib64curl-devel libcurl-devel curl-devel"
         "lib64z-devel zlib-devel"
         "lib64sqlite3-devel sqlite-devel"
         "lib64notify-devel libnotify-devel"
-        "libx11-devel lib64x11-devel"
-        "libxmu-devel lib64xmu-devel"
-        "libxscrnsaver-devel lib64xscrnsaver-devel lib64xss-devel"
+        "lib64x11-devel libx11-devel"
+        "lib64xmu-devel libxmu-devel"
+        "lib64xscrnsaver-devel libxscrnsaver-devel"
         "lib64freeglut-devel freeglut-devel"
         "lib64glu-devel mesa-libglu-devel"
-        "libjpeg-devel lib64jpeg-devel libjpeg-turbo-devel"
+        "lib64jpeg-devel libjpeg-devel libjpeg-turbo-devel"
         "lib64xcb-util-devel xcb-util-devel"
         "lib64gtk+3.0-devel libgtk+3.0-devel"
         "lib64wxgtku3.2-devel lib64wxgtku3.0-devel lib64wxu3.2-devel"

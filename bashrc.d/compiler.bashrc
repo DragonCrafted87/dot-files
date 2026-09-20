@@ -24,3 +24,9 @@ command -v llvm-nm >/dev/null 2>&1 && export NM="${NM:-llvm-nm}"
 command -v llvm-objcopy >/dev/null 2>&1 && export OBJCOPY="${OBJCOPY:-llvm-objcopy}"
 command -v llvm-objdump >/dev/null 2>&1 && export OBJDUMP="${OBJDUMP:-llvm-objdump}"
 command -v llvm-strip >/dev/null 2>&1 && export STRIP="${STRIP:-llvm-strip}"
+
+# Do not force CFLAGS/CXXFLAGS. Distro clang already has sane defaults,
+# and autoconf packages often append their own. Parallel make is safe.
+if [[ -z "${MAKEFLAGS:-}" ]]; then
+    export MAKEFLAGS="-j$(nproc)"
+fi

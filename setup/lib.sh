@@ -227,10 +227,23 @@ ensure_packages() {
 }
 
 # First exact name that is installed or available. OpenMandriva names are
-# lowercase (libx11-devel, lib64z-devel). dnf list can be sloppy about case
-# and still exit 0; repoquery + rpm -q stay exact.
+# lowercase. On 64-bit, libfoo-devel is the 32-bit compat package and
+# lib64foo-devel is the real one — try lib64* first even if the caller
+# listed the short name first. dnf list can be sloppy about case and
+# still exit 0; repoquery + rpm -q stay exact.
 pick_pkg() {
-    local p avail
+    local p avail arch ordered=() rest=()
+    arch="$(uname -m)"
+    if [[ "$arch" == "x86_64" || "$arch" == "aarch64" ]]; then
+        for p in "$@"; do
+            if [[ "$p" == lib64* ]]; then
+                ordered+=("$p")
+            else
+                rest+=("$p")
+            fi
+        done
+        set -- "${ordered[@]}" "${rest[@]}"
+    fi
     for p in "$@"; do
         if rpm -q "$p" >/dev/null 2>&1; then
             printf '%s\n' "$p"
