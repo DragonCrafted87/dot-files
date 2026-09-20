@@ -236,6 +236,14 @@ ensure_hyprland_tarball() {
 # cmake options like -mtune=native.
 cmake_config_flags=()
 fill_cmake_config_flags() {
+    # lld rejects test binaries when a hypr*.so still has hyprutils
+    # symbols unresolved (hyprgraphics, aquamarine, ...). Those tests
+    # are not installed; allow the undefined refs so "all" can finish.
+    CMAKE_EXE_LINKER_FLAGS="${LDFLAGS:-}"
+    case " ${CMAKE_EXE_LINKER_FLAGS} " in
+        *" --allow-shlib-undefined "*) ;;
+        *) CMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS:+${CMAKE_EXE_LINKER_FLAGS} }-Wl,--allow-shlib-undefined" ;;
+    esac
     cmake_config_flags=(
         -DCMAKE_BUILD_TYPE=Release
         -DCMAKE_INSTALL_PREFIX="$PREFIX"
@@ -248,7 +256,7 @@ fill_cmake_config_flags() {
         -DCMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER:-${CXX:-clang++}}"
         "-DCMAKE_C_FLAGS=${CFLAGS:-}"
         "-DCMAKE_CXX_FLAGS=${CXXFLAGS:-}"
-        "-DCMAKE_EXE_LINKER_FLAGS=${LDFLAGS:-}"
+        "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}"
         "-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS:-}"
         "-DCMAKE_MODULE_LINKER_FLAGS=${LDFLAGS:-}"
     )
@@ -264,7 +272,7 @@ build_cmake_src() {
     local src="$1"
     shift || true
     local extra=("$@")
-    local name jobs
+    local jobs
 
     [[ -f "${src}/CMakeLists.txt" ]] || die "no CMakeLists.txt in ${src}"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
@@ -274,16 +282,8 @@ build_cmake_src() {
     rm -rf "${src}/build"
     fill_cmake_config_flags
     cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" "${extra[@]}"
-    name="$(basename "$src")"
     jobs="$(nproc)"
-    # Default target "all" also builds installable helpers (hyprcursor-util,
-    # hyprctl, ...). hyprgraphics is the exception: its test binaries are on
-    # "all" and fail to link with lld --no-allow-shlib-undefined.
-    if [[ "$name" == "hyprgraphics" ]]; then
-        cmake --build "${src}/build" --config Release -j"$jobs" --target hyprgraphics
-    else
-        cmake --build "${src}/build" --config Release -j"$jobs"
-    fi
+    cmake --build "${src}/build" --config Release -j"$jobs"
     sudo cmake --install "${src}/build"
 }
 
