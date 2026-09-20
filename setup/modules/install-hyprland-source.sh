@@ -238,7 +238,7 @@ cmake_config_flags=()
 fill_cmake_config_flags() {
     # lld rejects test binaries when a hypr*.so still has hyprutils
     # symbols unresolved (hyprgraphics, aquamarine, ...). Those tests
-    # are not installed; allow the undefined refs so "all" can finish.
+    # are not installed; allow the undefined refs so leftover tools can link.
     CMAKE_EXE_LINKER_FLAGS="${LDFLAGS:-}"
     case " ${CMAKE_EXE_LINKER_FLAGS} " in
         *" --allow-shlib-undefined "*) ;;
@@ -268,11 +268,37 @@ fill_cmake_config_flags() {
     fi
 }
 
+# hyprgraphics_arg / aquamarine SimpleWindow etc. are on "all" and do
+# not link hyprutils. Skip anything that looks like a test.
+cmake_skip_target() {
+    case "$1" in
+        *test* | *Test* | *tests*)
+            return 0
+            ;;
+        hyprgraphics_image | hyprgraphics_arg | simpleWindow | commitThread | attachments | output)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+cmake_installable_targets() {
+    local build="$1"
+    local dir base
+    shopt -s nullglob
+    for dir in "${build}/CMakeFiles"/*.dir "${build}"/*/CMakeFiles/*.dir; do
+        [[ -d "$dir" ]] || continue
+        base="$(basename "$dir" .dir)"
+        cmake_skip_target "$base" && continue
+        printf '%s\n' "$base"
+    done
+}
+
 build_cmake_src() {
     local src="$1"
     shift || true
     local extra=("$@")
-    local jobs
+    local jobs targets=() t build_args=()
 
     [[ -f "${src}/CMakeLists.txt" ]] || die "no CMakeLists.txt in ${src}"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
@@ -283,7 +309,18 @@ build_cmake_src() {
     fill_cmake_config_flags
     cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" "${extra[@]}"
     jobs="$(nproc)"
-    cmake --build "${src}/build" --config Release -j"$jobs"
+    while IFS= read -r t; do
+        [[ -n "$t" ]] && targets+=("$t")
+    done < <(cmake_installable_targets "${src}/build" | sort -u)
+    if [[ "${#targets[@]}" -gt 0 ]]; then
+        for t in "${targets[@]}"; do
+            build_args+=(--target "$t")
+        done
+        log "cmake targets: ${targets[*]}"
+        cmake --build "${src}/build" --config Release -j"$jobs" "${build_args[@]}"
+    else
+        cmake --build "${src}/build" --config Release -j"$jobs"
+    fi
     sudo cmake --install "${src}/build"
 }
 
