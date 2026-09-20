@@ -365,6 +365,40 @@ build_meson_src() {
     sudo meson install -C "${src}/build"
 }
 
+ensure_iniparser_pc() {
+    # OM 6.0 lib64iniparser-devel 4.2.1 has headers + .so but no iniparser.pc.
+    if pkg-config --exists iniparser 2>/dev/null; then
+        log "iniparser.pc already present"
+        return 0
+    fi
+    local so=""
+    for cand in /usr/lib64/libiniparser.so /usr/lib/libiniparser.so; do
+        if [[ -e "$cand" ]]; then
+            so="$cand"
+            break
+        fi
+    done
+    [[ -n "$so" ]] || die "libiniparser.so missing; install lib64iniparser-devel"
+    local pc="${PREFIX}/lib64/pkgconfig/iniparser.pc"
+    log "write ${pc} (distro package has no pkg-config file)"
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        return 0
+    fi
+    sudo mkdir -p "$(dirname "$pc")"
+    sudo tee "$pc" >/dev/null <<EOF
+prefix=/usr
+exec_prefix=\${prefix}
+libdir=$(dirname "$so")
+includedir=/usr/include
+
+Name: iniparser
+Description: INI file parser
+Version: 4.2.1
+Libs: -L\${libdir} -liniparser
+Cflags: -I\${includedir}
+EOF
+}
+
 maybe_build_xcb_errors() {
     if pkg-config --exists xcb-errors 2>/dev/null; then
         log "xcb-errors already present"
@@ -469,6 +503,7 @@ build_stack() {
     fi
 
     maybe_build_xcb_errors
+    ensure_iniparser_pc
 
     ensure_tagged_repo https://github.com/hyprwm/hyprwayland-scanner.git \
         "${SRC_ROOT}/hyprwayland-scanner" "$HYPRWAYLAND_SCANNER_TAG"
