@@ -172,7 +172,6 @@ if [[ "$current_rpc" != "$rpc_password" ]]; then
 fi
 chmod 644 "$rpc_file"
 write_config_properties
-link_rpc_auth
 
 install_boinc_file "${src}/cc_config.xml" "${BOINC_DIR}/cc_config.xml"
 log "link ${BOINC_DIR}/global_prefs_override.xml -> ${prefs_src}"

@@ -158,17 +158,3 @@ write_config_properties() {
     run sudo install -m 0644 "$tmp" "$conf"
     rm -f "$tmp"
 }
-
-link_rpc_auth() {
-    local dest_dir=/var/lib/boinc
-    local dest="${dest_dir}/gui_rpc_auth.cfg"
-    run sudo mkdir -p "$dest_dir"
-    if [[ -L "$dest" ]] && [[ "$(readlink "$dest")" == "$rpc_file" ]]; then
-        return 0
-    fi
-    log "link ${dest} -> ${rpc_file}"
-    if [[ -e "$dest" || -L "$dest" ]]; then
-        run sudo rm -f "$dest"
-    fi
-    run sudo ln -sfn "$rpc_file" "$dest"
-}
