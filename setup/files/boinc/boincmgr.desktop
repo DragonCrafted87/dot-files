@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=BOINC Manager
+Comment=Control the local BOINC client
+Exec=/usr/local/bin/boincmgr --datadir %h/.local/share/boinc
+Icon=boinc
+Terminal=false
+Categories=System;Monitor;
+StartupNotify=true
