@@ -54,6 +54,9 @@ HYPRUTILS_TAG="${HYPRUTILS_TAG:?set HYPRUTILS_TAG in setup/versions.conf}"
 HYPRWAYLAND_SCANNER_TAG="${HYPRWAYLAND_SCANNER_TAG:?set HYPRWAYLAND_SCANNER_TAG in setup/versions.conf}"
 HYPRWIRE_TAG="${HYPRWIRE_TAG:?set HYPRWIRE_TAG in setup/versions.conf}"
 XDPH_TAG="${XDPH_TAG:?set XDPH_TAG in setup/versions.conf}"
+LIBXKBCOMMON_TAG="${LIBXKBCOMMON_TAG:?set LIBXKBCOMMON_TAG in setup/versions.conf}"
+WAYLAND_PROTOCOLS_TAG="${WAYLAND_PROTOCOLS_TAG:?set WAYLAND_PROTOCOLS_TAG in setup/versions.conf}"
+LIBINPUT_TAG="${LIBINPUT_TAG:?set LIBINPUT_TAG in setup/versions.conf}"
 
 stamp_payload() {
     cat <<EOF
@@ -81,6 +84,9 @@ hyprutils=${HYPRUTILS_TAG}
 hyprwayland-scanner=${HYPRWAYLAND_SCANNER_TAG}
 hyprwire=${HYPRWIRE_TAG}
 xdg-desktop-portal-hyprland=${XDPH_TAG}
+libxkbcommon=${LIBXKBCOMMON_TAG}
+wayland-protocols=${WAYLAND_PROTOCOLS_TAG}
+libinput=${LIBINPUT_TAG}
 prefix=${PREFIX}
 stdlib=libc++
 EOF
@@ -152,6 +158,13 @@ install_build_deps() {
         "lib64polkit-devel polkit-devel polkit"
         "lib64pipewire-devel pipewire-devel"
         "lib64ei-devel libei-devel libei"
+        "lib64eis-devel libeis-devel"
+        "lib64evdev-devel libevdev-devel"
+        "lib64mtdev-devel mtdev-devel"
+        "lib64xml2-devel libxml2-devel"
+        "bison"
+        "flex"
+        "lib64canberra-devel libcanberra-devel"
         "lib64lua-devel lua-devel lua5.5-devel lua"
         "lib64Qt6Core-devel lib64qt6core-devel qt6-qtbase-devel qt6-base-devel"
         "lib64Qt6Gui-devel lib64Qt6Widgets-devel"
@@ -261,9 +274,6 @@ ensure_hyprland_tarball() {
 cmake_config_flags=()
 fill_cmake_config_flags() {
     use_libcxx
-    # lld rejects test binaries when a hypr*.so still has hyprutils
-    # symbols unresolved (hyprgraphics, aquamarine, ...). Those tests
-    # are not installed; allow the undefined refs so leftover tools can link.
     CMAKE_EXE_LINKER_FLAGS="${LDFLAGS:-}"
     case " ${CMAKE_EXE_LINKER_FLAGS} " in
         *" --allow-shlib-undefined "*) ;;
@@ -293,8 +303,6 @@ fill_cmake_config_flags() {
     fi
 }
 
-# hyprgraphics_arg / aquamarine SimpleWindow etc. are on "all" and do
-# not link hyprutils. Skip anything that looks like a test.
 cmake_skip_target() {
     case "$1" in
         *test* | *Test* | *tests*)
@@ -351,6 +359,8 @@ build_cmake_src() {
 
 build_meson_src() {
     local src="$1"
+    shift || true
+    local extra=("$@")
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         log "would meson-build ${src} -> ${PREFIX}"
         return 0
@@ -360,9 +370,66 @@ build_meson_src() {
         --prefix="$PREFIX" \
         --libdir=lib64 \
         --buildtype=release \
-        --pkg-config-path="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig"
+        --pkg-config-path="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig" \
+        "${extra[@]}"
     meson compile -C "${src}/build"
     sudo meson install -C "${src}/build"
+}
+
+pkg_ver_ge() {
+    local have="$1" need="$2"
+    [[ "$(printf '%s\n' "$need" "$have" | sort -V | tail -1)" == "$have" ]]
+}
+
+ensure_pkg_or_build() {
+    local mod="$1" min="$2"
+    local have
+    if pkg-config --exists "$mod" 2>/dev/null; then
+        have="$(pkg-config --modversion "$mod")"
+        if pkg_ver_ge "$have" "$min"; then
+            log "${mod} ${have} satisfies >= ${min}"
+            return 1
+        fi
+        log "${mod} ${have} is older than ${min}; building into prefix"
+    else
+        log "${mod} missing; building into prefix"
+    fi
+    return 0
+}
+
+ensure_wayland_protocols() {
+    if ! ensure_pkg_or_build wayland-protocols 1.49; then
+        return 0
+    fi
+    ensure_tagged_repo https://gitlab.freedesktop.org/wayland/wayland-protocols.git \
+        "${SRC_ROOT}/wayland-protocols" "$WAYLAND_PROTOCOLS_TAG"
+    build_meson_src "${SRC_ROOT}/wayland-protocols" -Dtests=false
+}
+
+ensure_libxkbcommon() {
+    if ! ensure_pkg_or_build xkbcommon 1.11.0; then
+        return 0
+    fi
+    ensure_tagged_repo https://github.com/xkbcommon/libxkbcommon.git \
+        "${SRC_ROOT}/libxkbcommon" "$LIBXKBCOMMON_TAG"
+    build_meson_src "${SRC_ROOT}/libxkbcommon" \
+        -Denable-docs=false \
+        -Denable-wayland=false \
+        -Denable-x11=true \
+        -Denable-xkbregistry=true
+}
+
+ensure_libinput() {
+    if ! ensure_pkg_or_build libinput 1.29; then
+        return 0
+    fi
+    ensure_tagged_repo https://gitlab.freedesktop.org/libinput/libinput.git \
+        "${SRC_ROOT}/libinput" "$LIBINPUT_TAG"
+    build_meson_src "${SRC_ROOT}/libinput" \
+        -Dtests=false \
+        -Ddocumentation=false \
+        -Ddebug-gui=false \
+        -Dlibwacom=false
 }
 
 ensure_iniparser_pc() {
@@ -545,6 +612,10 @@ build_stack() {
     ensure_tagged_repo https://github.com/hyprwm/hyprtoolkit.git \
         "${SRC_ROOT}/hyprtoolkit" "$HYPRTOOLKIT_TAG"
     build_cmake_src "${SRC_ROOT}/hyprtoolkit"
+
+    ensure_wayland_protocols
+    ensure_libxkbcommon
+    ensure_libinput
 
     ensure_hyprland_tarball
     build_cmake_src "${SRC_ROOT}/Hyprland" \
