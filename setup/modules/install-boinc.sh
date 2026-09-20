@@ -167,18 +167,24 @@ remove_stale_path_cmds() {
             run sudo rm -f "/usr/local/bin/${stale}"
         fi
     done
+    if [[ -e "${DOTFILES_HOME}/bin/boincmgr" ]]; then
+        log "remove ${DOTFILES_HOME}/bin/boincmgr wrapper"
+        run rm -f "${DOTFILES_HOME}/bin/boincmgr"
+    fi
 }
 
-write_mgr_datadir() {
-    local dest="/etc/boinc-client/config.properties"
-    local want="data_dir=${BOINC_DIR}"
-    ensure_dir /etc/boinc-client || run sudo mkdir -p /etc/boinc-client
-    if [[ -f "$dest" ]] && grep -qx "$want" "$dest"; then
+link_rpc_auth() {
+    local dest_dir=/var/lib/boinc
+    local dest="${dest_dir}/gui_rpc_auth.cfg"
+    run sudo mkdir -p "$dest_dir"
+    if [[ -L "$dest" ]] && [[ "$(readlink "$dest")" == "$rpc_file" ]]; then
         return 0
     fi
-    log "write ${dest}"
-    printf '%s\n' "$want" | sudo tee "$dest" >/dev/null
-    sudo chmod 0644 "$dest"
+    log "link ${dest} -> ${rpc_file}"
+    if [[ -e "$dest" || -L "$dest" ]]; then
+        run sudo rm -f "$dest"
+    fi
+    run sudo ln -sfn "$rpc_file" "$dest"
 }
 
 remove_flatpak_boinc
@@ -201,7 +207,6 @@ fi
 
 migrate_data_dir
 remove_stale_path_cmds
-write_mgr_datadir
 
 rpc_file="${BOINC_DIR}/gui_rpc_auth.cfg"
 secret="${DOTFILES_HOME}/.config/dot-files/boinc-rpc.password"
@@ -280,7 +285,6 @@ fi
 
 ensure_dir "$BOINC_DIR"
 ensure_dir "${DOTFILES_HOME}/.config/systemd/user"
-ensure_dir "${DOTFILES_HOME}/bin"
 ensure_dir /etc/boinc-client || run sudo mkdir -p /etc/boinc-client
 
 install -m 0644 "${src}/boinc-client.service" \
@@ -351,6 +355,7 @@ if [[ "$current_rpc" != "$rpc_password" ]]; then
     boinc_changed=1
 fi
 chmod 644 "$rpc_file"
+link_rpc_auth
 
 install_boinc_file "${src}/cc_config.xml" "${BOINC_DIR}/cc_config.xml"
 log "link ${BOINC_DIR}/global_prefs_override.xml -> ${prefs_src}"
@@ -370,8 +375,6 @@ rm -f "$tmp"
 install_boinc_file "${src}/boinc-config.sh" /usr/local/bin/boinc-config 0755 1
 install_boinc_file "${src}/boinc-status.sh" /usr/local/bin/boinc-status 0755 1
 install_boinc_file "${src}/boinc-status-all.sh" /usr/local/bin/boinc-status-all 0755 1
-install_boinc_file "${src}/boincmgr.sh" "${DOTFILES_HOME}/bin/boincmgr" 0755 0
-install_user_desktop "${src}/boincmgr.desktop"
 
 systemctl --user daemon-reload
 enable_user_service boinc-client.service
