@@ -3,22 +3,80 @@
 # ~/.config/dot-files/boinc-rpc.password.
 # Point global_prefs_override.xml at setup/files/boinc/prefs/<role>.xml.
 # science_united_user must be the Science United email address.
-#   /usr/local/bin/boinc-config.sh
+# Installed on PATH as /usr/local/bin/boinc-config.
 
 set -euo pipefail
 
-# shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-boinccmd.sh"
-
-PROJECT_URL="https://scienceunited.org/"
 OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
-BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.var/app/edu.berkeley.BOINC}"
+BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.local/share/boinc}"
+BOINC_HOST="${BOINC_HOST:-127.0.0.1}"
+BOINCCMD="${BOINCCMD:-/usr/local/bin/boinccmd}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 SECRET="${BOINC_SECRET:-/home/${OWNER}/.config/dot-files/boinc-rpc.password}"
+ROLE_FILE="${BOINC_ROLE_FILE:-/home/${OWNER}/.config/dot-files/role}"
+ROOT_FILE="${DOTFILES_ROOT_FILE:-/home/${OWNER}/.config/dot-files/root}"
+PROJECT_URL="https://scienceunited.org/"
 
 rpc_password=""
 science_united_user=""
 science_united_password=""
+
+boinc_service_active() {
+    systemctl --user is-active --quiet boinc-client.service 2>/dev/null \
+        || systemctl is-active --quiet boinc-client.service 2>/dev/null
+}
+
+wait_for_boinc_rpc() {
+    local _i
+    for _i in $(seq 1 20); do
+        if timeout 1 bash -c "echo >/dev/tcp/${BOINC_HOST}/31416" 2>/dev/null; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
+dotfiles_root() {
+    local path
+    if [[ -n "${DOTFILES_ROOT:-}" && -d "$DOTFILES_ROOT/setup/files/boinc/prefs" ]]; then
+        printf '%s\n' "$DOTFILES_ROOT"
+        return 0
+    fi
+    if [[ -f "$ROOT_FILE" ]]; then
+        path="$(tr -d '[:space:]' <"$ROOT_FILE")"
+        if [[ -n "$path" && -d "$path/setup/files/boinc/prefs" ]]; then
+            printf '%s\n' "$path"
+            return 0
+        fi
+    fi
+    path="/home/${OWNER}/dot-files"
+    if [[ -d "$path/setup/files/boinc/prefs" ]]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+    return 1
+}
+
+boinc_role() {
+    local role="${BOINC_ROLE:-${OMV_ROLE:-}}"
+    if [[ -z "$role" && -f "$ROLE_FILE" ]]; then
+        role="$(tr -d '[:space:]' <"$ROLE_FILE")"
+    fi
+    printf '%s\n' "${role:-server}"
+}
+
+link_boinc_prefs() {
+    local role repo src dest
+    role="$(boinc_role)"
+    repo="$(dotfiles_root)" || return 1
+    src="${repo}/setup/files/boinc/prefs/${role}.xml"
+    [[ -f "$src" ]] || return 1
+    dest="${BOINC_DIR}/global_prefs_override.xml"
+    mkdir -p "$BOINC_DIR"
+    ln -sfn "$src" "$dest"
+    printf '%s\n' "$src"
+}
 
 load_secret_file() {
     local path="$1"
@@ -44,7 +102,7 @@ load_secret_file() {
 apply_role_prefs() {
     local role prefs_src
     role="$(boinc_role)"
-    if ! prefs_src="$(link_boinc_prefs active)"; then
+    if ! prefs_src="$(link_boinc_prefs)"; then
         printf 'error: no prefs XML for role %s in the dot-files repo\n' "$role" >&2
         return 1
     fi
@@ -57,6 +115,11 @@ attached_to_science_united() {
     timeout 8 "$BOINCCMD" --host "$BOINC_HOST" --passwd "$rpc_password" --acct_mgr info 2>/dev/null \
         | grep -q "$PROJECT_URL"
 }
+
+if [[ ! -x "$BOINCCMD" ]]; then
+    printf 'error: %s is missing; rebuild BOINC with setup/modules/install-boinc.sh\n' "$BOINCCMD" >&2
+    exit 1
+fi
 
 if ! boinc_service_active; then
     printf 'error: boinc-client user service is not running\n' >&2

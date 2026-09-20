@@ -167,41 +167,52 @@ build lists the game.
 
 ## BOINC
 
-Every role installs the Flathub app `edu.berkeley.BOINC`. OpenMandriva
-has no BOINC rpms; the old Fedora packages were ABI-mismatched and are
-removed on the next role run.
+Every role builds the client and manager from tagged source
+`client_release/8.2/8.2.13`. Override with `BOINC_VERSION`. OpenMandriva
+has no working BOINC rpms; Fedora packages ABI-mismatch and are removed.
+The old Flatpak app is uninstalled on the next role run. The compile is
+skipped when `/usr/local/share/boinc/.dotfiles-version` already matches
+the pinned version.
 
-The client is a lingering user unit, not a system daemon:
+Source builds pick up `bashrc.d/compiler.bashrc` (`clang`, `lld`,
+`-march=native`). On AMD family 23+ that is the matching `znver*` ISA,
+not a hard-coded `znver1`.
 
 ```text
 ~/.config/systemd/user/boinc-client.service
-~/.var/app/edu.berkeley.BOINC/          data dir
-/etc/boinc-client/prefs/<role>.xml      installed role prefs
+~/.local/share/boinc/                     data dir
+~/.cache/boinc-build/boinc                source checkout
+/usr/local/bin/boinc{,mgr,cmd}
+/usr/local/bin/boinc-config
+/usr/local/bin/boinc-status
+/usr/local/bin/boinc-status-all
+/usr/local/share/boinc/.dotfiles-version
 ```
 
-`loginctl enable-linger` keeps it running after logout so servers and
-the HTPC still crunch without a desktop session. Manager and CLI share
-that data dir:
+Repo copies of the helpers keep the `.sh` suffix under
+`setup/files/boinc/`. PATH names do not.
+
+Existing Flatpak data under `~/.var/app/edu.berkeley.BOINC` is moved to
+`~/.local/share/boinc` once. `loginctl enable-linger` keeps the user unit
+running after logout so servers and the HTPC still crunch without a
+desktop session.
 
 ```bash
 boincmgr
-flatpak run edu.berkeley.BOINC
-/usr/local/bin/boinc-config.sh
-/usr/local/bin/boinc-status.sh
-/usr/local/bin/boinc-status-all.sh
+boinc-config
+boinc-status
+boinc-status-all
 systemctl --user status boinc-client.service
 ```
 
 Fill `files/boinc/hosts.list` with real hostnames so each client allows
 GUI RPC from the others. Role prefs live in `files/boinc/prefs/<role>.xml`
-and are installed to `/etc/boinc-client/prefs/`. The current role from
-`~/.config/dot-files/role` is copied to
-`~/.var/app/edu.berkeley.BOINC/global_prefs_override.xml`.
+and are linked to `~/.local/share/boinc/global_prefs_override.xml`.
 
-`/usr/local/bin/boinc-config.sh` always rewrites that override from the
-role XML and tells the client `--read_global_prefs_override`. After
-prefs are applied it attaches Science United if the secret file has a
-login. `BOINC_REPLACE=1` detaches and reattaches.
+`boinc-config` always retargets that override from the role XML and tells
+the client `--read_global_prefs_override`. After prefs are applied it
+attaches Science United if the secret file has a login. `BOINC_REPLACE=1`
+detaches and reattaches.
 
 `~/.config/dot-files/boinc-rpc.password` holds `rpc_password`,
 `science_united_user` (the Science United **email**), and
@@ -219,21 +230,22 @@ apps so long-lived Brave/Firefox windows do not park the client.
 RAM limits must use `ram_max_used_idle_pct` / `ram_max_used_busy_pct` /
 `vm_max_used_pct` (percent 0-100). The old `*_frac` tags are ignored.
 
-Flatpak BOINC on Hyprland does not see user idle, so `idle_time_to_run`
-is left at 0 and desktop roles keep `run_if_user_active`. Protection is
-the always-on CPU/RAM caps plus GPU off while the session exists.
+Native BOINC honors `run_if_user_active`, `run_gpu_if_user_active`, and
+`idle_time_to_run` directly. Desktop roles keep CPU on while the session
+is busy, leave the GPU off until three minutes of idle, and use the
+idle/busy RAM split. There is no hypridle prefs swap.
 
 Current `global_preferences` overrides:
 
 | Role          | CPU while active | CPU cap | CPU limit | Suspend if other CPU | Idle delay | RAM idle/busy | GPU while active |
 | ------------- | ---------------- | ------- | --------- | -------------------- | ---------- | ------------- | ---------------- |
-| `workstation` | yes              | 35%     | 50%       | 20%                  | 0          | 40% / 25%     | no               |
-| `laptop`      | yes              | 30%     | 50%       | 20%                  | 0          | 30% / 15%     | no               |
-| `htpc`        | yes              | 60%     | 80%       | 35%                  | 0          | 40% / 20%     | no               |
+| `workstation` | yes              | 35%     | 50%       | 20%                  | 3 min      | 40% / 25%     | no               |
+| `laptop`      | yes              | 30%     | 50%       | 20%                  | 3 min      | 30% / 15%     | no               |
+| `htpc`        | yes              | 60%     | 80%       | 35%                  | 3 min      | 40% / 20%     | no               |
 | `server`      | yes              | 80%     | 100%      | 30%                  | 0          | 40% / 30%     | yes              |
 
 None of the roles run on battery. Edit the XML under `files/boinc/prefs/`
-and re-run `install-boinc.sh` or `boinc-config.sh`.
+and re-run `install-boinc.sh` or `boinc-config`.
 
 Docker image manager is a standalone placeholder, not part of every server:
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=BOINC client (Flatpak)
+Description=BOINC client
 Documentation=https://boinc.berkeley.edu/
 After=network-online.target
 Wants=network-online.target
@@ -13,11 +13,11 @@ OOMScoreAdjust=400
 Restart=on-failure
 RestartSec=10
 TimeoutStartSec=60
-WorkingDirectory=%h/.var/app/edu.berkeley.BOINC
-ExecStartPre=/usr/bin/mkdir -p %h/.var/app/edu.berkeley.BOINC
-ExecStart=/usr/bin/flatpak run --filesystem=%h/dot-files/setup/files/boinc/prefs:ro --command=boinc edu.berkeley.BOINC --dir %h/.var/app/edu.berkeley.BOINC
+WorkingDirectory=%h/.local/share/boinc
+ExecStartPre=/usr/bin/mkdir -p %h/.local/share/boinc
+ExecStart=/usr/local/bin/boinc --dir %h/.local/share/boinc --allow_remote_gui_rpc
 ExecReload=/bin/kill -HUP $MAINPID
-ExecStopPost=/bin/rm -f %h/.var/app/edu.berkeley.BOINC/lockfile
+ExecStopPost=/bin/rm -f %h/.local/share/boinc/lockfile
 
 [Install]
 WantedBy=default.target

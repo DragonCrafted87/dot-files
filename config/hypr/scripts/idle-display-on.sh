@@ -11,11 +11,3 @@ if [ -x "$PROFILE" ]; then
 else
     echo "display-profile.sh missing; falling back to dpms on" >&2
 fi
-
-for boinc_session in /usr/local/bin/boinc-session.sh \
-    "${HOME}/dot-files/setup/files/boinc/boinc-session.sh"; do
-    if [ -x "$boinc_session" ]; then
-        "$boinc_session" active >/dev/null 2>&1 || true
-        break
-    fi
-done

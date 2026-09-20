@@ -22,9 +22,8 @@ case "${OMV_ROLE:-}" in
         ;;
 esac
 
-# Theme via env only. Binding xdg-config/gtk-3.0 makes bwrap try to
-# replace ~/.config/gtk-3.0 with a symlink and abort when that path is
-# already a directory (BOINC manager).
+# Theme via env. Binding xdg-config/gtk-3.0 makes some Flatpaks fight a
+# real ~/.config/gtk-3.0 directory (now linked from the repo).
 strip_gtk_filesystem_grants() {
     local file="$1"
     [[ -f "$file" ]] || return 0
@@ -48,7 +47,6 @@ for line in text.splitlines():
         keep.append(p)
     keep.append("!xdg-config/gtk-3.0")
     keep.append("!xdg-config/gtk-4.0")
-    # de-dupe preserving order
     seen = set()
     out = []
     for p in keep:
@@ -68,31 +66,4 @@ else
     flatpak override --user --env=QT_QPA_PLATFORMTHEME=kde || true
     flatpak override --user --env=XCURSOR_THEME=breeze_cursors || true
     strip_gtk_filesystem_grants "${DOTFILES_HOME}/.local/share/flatpak/overrides/global"
-    strip_gtk_filesystem_grants "${DOTFILES_HOME}/.local/share/flatpak/overrides/edu.berkeley.BOINC"
-    if [[ -f /var/lib/flatpak/overrides/edu.berkeley.BOINC ]]; then
-        sudo python3 - <<'PY'
-from pathlib import Path
-p = Path("/var/lib/flatpak/overrides/edu.berkeley.BOINC")
-text = p.read_text()
-lines = []
-for line in text.splitlines():
-    if not line.startswith("filesystems="):
-        lines.append(line)
-        continue
-    parts = [x for x in line.split("=", 1)[1].split(";") if x]
-    keep = []
-    for x in parts:
-        raw = x[1:] if x.startswith("!") else x
-        if raw.startswith("xdg-config/gtk-3.0") or raw.startswith("xdg-config/gtk-4.0"):
-            continue
-        keep.append(x)
-    keep += ["!xdg-config/gtk-3.0", "!xdg-config/gtk-4.0"]
-    seen, out = set(), []
-    for x in keep:
-        if x not in seen:
-            seen.add(x); out.append(x)
-    lines.append("filesystems=" + ";".join(out) + ";")
-p.write_text("\n".join(lines) + "\n")
-PY
-    fi
 fi

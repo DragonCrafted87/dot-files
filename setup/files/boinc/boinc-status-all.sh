@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # Query every host in /etc/boinc-client/hosts.list over GUI RPC.
-#   /usr/local/bin/boinc-status-all.sh
+# Installed on PATH as /usr/local/bin/boinc-status-all.
 
 set -euo pipefail
 
-# shellcheck source=find-boinccmd.sh disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-boinccmd.sh"
-
-HOSTS_FILE="${HOSTS_FILE:-/etc/boinc-client/hosts.list}"
 OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
-BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.var/app/edu.berkeley.BOINC}"
+BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.local/share/boinc}"
+BOINCCMD="${BOINCCMD:-/usr/local/bin/boinccmd}"
+HOSTS_FILE="${HOSTS_FILE:-/etc/boinc-client/hosts.list}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
+
+if [[ ! -x "$BOINCCMD" ]]; then
+    printf 'error: %s is missing; rebuild BOINC with setup/modules/install-boinc.sh\n' "$BOINCCMD" >&2
+    exit 1
+fi
 
 if [[ ! -f "$HOSTS_FILE" ]]; then
     printf 'error: %s is missing; edit setup/files/boinc/hosts.list\n' "$HOSTS_FILE" >&2
