@@ -275,14 +275,23 @@ ensure_wayland_protocols() {
     if ! ensure_pkg_or_build wayland-protocols 1.49; then return 0; fi
     ensure_tagged_repo https://gitlab.freedesktop.org/wayland/wayland-protocols.git \
         "${SRC_ROOT}/wayland-protocols" "$WAYLAND_PROTOCOLS_TAG"
-    # OM 6.0 wayland-scanner 1.23.1 --strict rejects some 1.49 XMLs.
-    # Hyprland only needs pkgdatadir + the .pc, not generated headers.
-    local src="${SRC_ROOT}/wayland-protocols"
+    local src="${SRC_ROOT}/wayland-protocols" dest="${PREFIX}/share/wayland-protocols"
+    local pc="${PREFIX}/lib64/pkgconfig/wayland-protocols.pc" d
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
-    rm -rf "${src}/build"
-    meson setup "${src}/build" "$src" --prefix="$PREFIX" --libdir=lib64 --buildtype=release \
-        --pkg-config-path="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig" -Dtests=false
-    sudo meson install -C "${src}/build" --no-rebuild
+    sudo rm -rf "$dest"
+    sudo mkdir -p "$dest" "$(dirname "$pc")"
+    for d in stable staging unstable experimental; do
+        [[ -d "${src}/${d}" ]] && sudo cp -a "${src}/${d}" "${dest}/"
+    done
+    sudo tee "$pc" >/dev/null <<EOF
+prefix=${PREFIX}
+datarootdir=\${prefix}/share
+pkgdatadir=\${datarootdir}/wayland-protocols
+
+Name: Wayland Protocols
+Description: Wayland protocol files
+Version: ${WAYLAND_PROTOCOLS_TAG}
+EOF
 }
 
 ensure_libxkbcommon() {
