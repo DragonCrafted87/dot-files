@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=BOINC Manager
-Comment=Control the local BOINC client
-Exec=/usr/local/bin/boincmgr --datadir %h/.local/share/boinc
+Comment=Control local and remote BOINC clients
+Exec=env GTK_THEME=Adwaita:dark /usr/local/bin/boincmgr
 Icon=boinc
 Terminal=false
 Categories=System;Monitor;
