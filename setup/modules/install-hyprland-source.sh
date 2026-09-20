@@ -141,6 +141,7 @@ install_build_deps() {
         "lib64magic-devel libmagic-devel file-devel magic-devel"
         "lib64rsvg2-devel librsvg2-devel lib64rsvg-devel librsvg-devel"
         "lib64heif-devel libheif-devel"
+        "lib64zip-devel libzip-devel"
         "libuuid-devel lib64uuid-devel"
         "pugixml-devel lib64pugixml-devel"
         "lib64sdbus-cpp-devel sdbus-c++-devel sdbus-cpp-devel libsdbus-c++-devel"
