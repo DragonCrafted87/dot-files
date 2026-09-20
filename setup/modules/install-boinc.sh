@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Build BOINC client + manager from the tagged GitHub source.
 # OpenMandriva has no working BOINC rpms; Fedora packages ABI-mismatch.
-# Version is pinned so a role rerun skips the compile when the stamp matches.
+# Version comes from setup/versions.conf so a role rerun skips the compile
+# when the stamp matches.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -9,7 +10,7 @@ set -euo pipefail
 
 require_user
 
-BOINC_VERSION="${BOINC_VERSION:-8.2.13}"
+BOINC_VERSION="${BOINC_VERSION:?set BOINC_VERSION in setup/versions.conf}"
 BOINC_TAG="${BOINC_TAG:-client_release/8.2/${BOINC_VERSION}}"
 BOINC_GIT_URL="${BOINC_GIT_URL:-https://github.com/BOINC/boinc.git}"
 BOINC_PREFIX="${BOINC_PREFIX:-/usr/local}"
@@ -19,26 +20,15 @@ SRC_DIR="${BUILD_ROOT}/boinc"
 OLD_DATA_DIR="${DOTFILES_HOME}/.var/app/edu.berkeley.BOINC"
 BOINC_DIR="${DOTFILES_HOME}/.local/share/boinc"
 
-pick_pkg() {
-    local p
-    for p in "$@"; do
-        if rpm -q "$p" >/dev/null 2>&1; then
-            printf '%s\n' "$p"
-            return 0
-        fi
-        if dnf list --available "$p" >/dev/null 2>&1; then
-            printf '%s\n' "$p"
-            return 0
-        fi
-    done
-    return 1
-}
-
 install_build_deps() {
     local pkgs=()
     local picked group
+    # OpenMandriva names are lowercase. Prefer lib64* / libx* devel.
     local groups=(
         "git"
+        "clang"
+        "llvm"
+        "lld"
         "gcc"
         "gcc-c++ gcc-c++-x86_64 gcc-c++-znver1"
         "glibc-devel lib64c-devel"
@@ -49,20 +39,20 @@ install_build_deps() {
         "libtool"
         "pkgconf pkgconfig"
         "m4"
-        "openssl-devel lib64openssl-devel"
+        "lib64openssl-devel openssl-devel"
         "libcurl-devel lib64curl-devel curl-devel"
-        "zlib-devel lib64zlib-devel"
-        "sqlite-devel lib64sqlite-devel pkgconfig(sqlite)"
-        "libnotify-devel lib64notify-devel"
-        "libX11-devel lib64x11-devel"
-        "libXmu-devel lib64xmu-devel"
-        "libXScrnSaver-devel lib64xss-devel libXss-devel"
-        "freeglut-devel lib64freeglut-devel"
-        "mesa-libGLU-devel lib64glu-devel lib64mesaglu-devel"
+        "lib64z-devel zlib-devel"
+        "lib64sqlite3-devel sqlite-devel"
+        "lib64notify-devel libnotify-devel"
+        "libx11-devel lib64x11-devel"
+        "libxmu-devel lib64xmu-devel"
+        "libxscrnsaver-devel lib64xscrnsaver-devel lib64xss-devel"
+        "lib64freeglut-devel freeglut-devel"
+        "lib64glu-devel mesa-libglu-devel"
         "libjpeg-devel lib64jpeg-devel libjpeg-turbo-devel"
-        "xcb-util-devel lib64xcb-util-devel"
-        "gtk3-devel lib64gtk3-devel libgtk3-devel"
-        "wxGTK3-devel wxwidgets-gtk3-devel lib64wxgtk3-devel wxGTK-devel"
+        "lib64xcb-util-devel xcb-util-devel"
+        "lib64gtk+3.0-devel libgtk+3.0-devel"
+        "lib64wxgtku3.2-devel lib64wxgtku3.0-devel lib64wxu3.2-devel"
         "gettext"
     )
 
@@ -107,10 +97,11 @@ sync_boinc_source() {
 build_boinc() {
     install_build_deps
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
-        log "would build BOINC ${BOINC_VERSION} (${BOINC_TAG}) in ${SRC_DIR}"
+        log "would build BOINC ${BOINC_VERSION} (${BOINC_TAG}) CC=${CC:-} in ${SRC_DIR}"
         return 0
     fi
     sync_boinc_source
+    log "BOINC compilers ${CC:-cc} / ${CXX:-c++}"
     (
         cd "$SRC_DIR"
         ./_autosetup
@@ -121,7 +112,9 @@ build_boinc() {
             --disable-silent-rules \
             --enable-unicode \
             --with-ssl \
-            --with-x
+            --with-x \
+            CC="${CC:-clang}" \
+            CXX="${CXX:-clang++}"
         make -j"$(nproc)"
         sudo make install
     )
