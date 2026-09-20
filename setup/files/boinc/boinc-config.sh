@@ -12,7 +12,7 @@ set -euo pipefail
 
 PROJECT_URL="https://scienceunited.org/"
 OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
-BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.var/app/edu.berkeley.BOINC}"
+BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.local/share/boinc}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 SECRET="${BOINC_SECRET:-/home/${OWNER}/.config/dot-files/boinc-rpc.password}"
 
@@ -44,7 +44,7 @@ load_secret_file() {
 apply_role_prefs() {
     local role prefs_src
     role="$(boinc_role)"
-    if ! prefs_src="$(link_boinc_prefs active)"; then
+    if ! prefs_src="$(link_boinc_prefs)"; then
         printf 'error: no prefs XML for role %s in the dot-files repo\n' "$role" >&2
         return 1
     fi

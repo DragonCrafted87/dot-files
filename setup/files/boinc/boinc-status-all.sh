@@ -9,7 +9,7 @@ set -euo pipefail
 
 HOSTS_FILE="${HOSTS_FILE:-/etc/boinc-client/hosts.list}"
 OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
-BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.var/app/edu.berkeley.BOINC}"
+BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.local/share/boinc}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 
 if [[ ! -f "$HOSTS_FILE" ]]; then

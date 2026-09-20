@@ -8,7 +8,7 @@ set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-boinccmd.sh"
 
 OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
-BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.var/app/edu.berkeley.BOINC}"
+BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.local/share/boinc}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 
 if ! boinc_service_active; then

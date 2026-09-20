@@ -20,5 +20,4 @@ Tracked after the Tango Dark pass. Not scheduled.
 
 ## local builds
 
-- replace flatpak boinc with real build
 - current version of hyprland
