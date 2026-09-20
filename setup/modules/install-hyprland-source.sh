@@ -161,6 +161,7 @@ install_build_deps() {
         "automake autoconf libtool xorg-x11-util-macros util-macros"
         "lib64c++-devel libc++-devel"
         "lib64c++abi-devel libc++abi-devel"
+        "lib64unwind-devel libunwind-devel"
     )
 
     for group in "${groups[@]}"; do
