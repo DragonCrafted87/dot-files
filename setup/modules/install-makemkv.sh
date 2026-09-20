@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Build MakeMKV with a working C toolchain, enable Ask for single drive
+# Build MakeMKV with the shared LLVM toolchain, enable Ask for single drive
 # mode, and install one Desktop launcher. Skip the whole module when this
 # machine has no DVD/Blu-ray device.
 #
-# Fresh Rock installs often have clang on PATH that fails autoconf's
-# AC_PROG_CC ("invalid C compiler") because gcc/glibc-devel are missing.
-# Prefer gcc/g++ when they compile a trivial file; fall back to clang.
+# Version comes from setup/versions.conf. Compiler flags come from
+# bashrc.d/compiler.bashrc via lib.sh.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -13,7 +12,7 @@ set -euo pipefail
 
 require_user
 
-MAKEMKV_VERSION="${MAKEMKV_VERSION:-1.18.4}"
+MAKEMKV_VERSION="${MAKEMKV_VERSION:?set MAKEMKV_VERSION in setup/versions.conf}"
 MAKEMKV_PREFIX="${MAKEMKV_PREFIX:-/usr}"
 STAMP="${MAKEMKV_PREFIX}/share/makemkv/.dotfiles-version"
 BUILD_ROOT="${DOTFILES_HOME}/.cache/makemkv-build"
@@ -41,43 +40,28 @@ optical_drives() {
     done
 }
 
-pick_pkg() {
-    local p
-    for p in "$@"; do
-        if rpm -q "$p" >/dev/null 2>&1; then
-            printf '%s\n' "$p"
-            return 0
-        fi
-        if dnf list --available "$p" >/dev/null 2>&1; then
-            printf '%s\n' "$p"
-            return 0
-        fi
-    done
-    return 1
-}
-
 install_build_deps() {
     local pkgs=()
     local picked
     local group
     local groups=(
+        "clang"
+        "llvm"
+        "lld"
         "gcc"
         "gcc-c++ gcc-c++-x86_64 gcc-c++-znver1"
         "glibc-devel lib64c-devel"
         "libstdc++-devel lib64stdc++-devel"
         "binutils"
-        "clang"
-        "llvm"
-        "lld"
         "make"
         "pkgconf pkgconfig"
         "wget"
-        "openssl-devel lib64openssl-devel"
-        "expat-devel lib64expat-devel lib64expat1-devel"
-        "zlib-devel lib64zlib-devel"
+        "lib64openssl-devel openssl-devel"
+        "lib64expat-devel lib64expat1-devel expat-devel"
+        "lib64z-devel zlib-devel"
         "lib64ffmpeg-devel libffmpeg-devel ffmpeg-devel"
         "qt5-qtbase-devel lib64qt5core-devel qt5-devel"
-        "lib64mesagl-devel mesa-libGL-devel lib64mesaegl-devel"
+        "lib64mesagl-devel lib64mesaegl-devel mesa-libgl-devel"
     )
 
     for group in "${groups[@]}"; do
@@ -121,6 +105,8 @@ pick_compilers() {
 
 accept_eula() {
     mkdir -p tmp
+    printf 'accepted\n' >tmp.eula_accepted 2>/dev/null || true
+    mkdir -p tmp
     printf 'accepted\n' >tmp/eula_accepted
 }
 
@@ -146,6 +132,8 @@ else
     local_cc=""
     local_cxx=""
     if read -r local_cc local_cxx < <(pick_compilers); then
+        export CC="$local_cc"
+        export CXX="$local_cxx"
         log "MakeMKV compilers ${local_cc} / ${local_cxx}"
     else
         die "no working C compiler after package install (gcc and clang both failed a trivial compile)"
@@ -155,14 +143,6 @@ else
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         log "would build MakeMKV ${MAKEMKV_VERSION} with ${local_cc} in ${BUILD_ROOT}"
     else
-        export OBJCOPY="${OBJCOPY:-objcopy}"
-        if command -v llvm-objcopy >/dev/null 2>&1 && [[ "$local_cc" == clang ]]; then
-            export OBJCOPY=llvm-objcopy
-        fi
-        if command -v ld.lld >/dev/null 2>&1 && [[ "$local_cc" == clang ]]; then
-            export LDFLAGS="${LDFLAGS:-} -fuse-ld=lld"
-        fi
-
         run wget -q -O "${BUILD_ROOT}/makemkv-oss.tar.gz" "$OSS_URL"
         run wget -q -O "${BUILD_ROOT}/makemkv-bin.tar.gz" "$BIN_URL"
         run rm -rf "${BUILD_ROOT}/makemkv-oss-${MAKEMKV_VERSION}" \
