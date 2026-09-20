@@ -654,4 +654,5 @@
     "window.commandCenter": true,
     "workbench.layoutControl.enabled": true,
     "qt-qml.doNotAskForQmllsDownload": true,
+    "githubPullRequests.pullBranch": "always",
 }

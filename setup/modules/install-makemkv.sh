@@ -105,8 +105,6 @@ pick_compilers() {
 
 accept_eula() {
     mkdir -p tmp
-    printf 'accepted\n' >tmp.eula_accepted 2>/dev/null || true
-    mkdir -p tmp
     printf 'accepted\n' >tmp/eula_accepted
 }
 
