@@ -162,6 +162,7 @@ install_build_deps() {
         "lib64c++-devel libc++-devel"
         "lib64c++abi-devel libc++abi-devel"
         "lib64unwind-devel libunwind-devel"
+        "lib64iniparser-devel iniparser-devel"
     )
 
     for group in "${groups[@]}"; do
