@@ -155,8 +155,6 @@ else
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         log "would build MakeMKV ${MAKEMKV_VERSION} with ${local_cc} in ${BUILD_ROOT}"
     else
-        export CC="$local_cc"
-        export CXX="$local_cxx"
         export OBJCOPY="${OBJCOPY:-objcopy}"
         if command -v llvm-objcopy >/dev/null 2>&1 && [[ "$local_cc" == clang ]]; then
             export OBJCOPY=llvm-objcopy

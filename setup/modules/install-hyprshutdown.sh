@@ -123,10 +123,6 @@ if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     exit 0
 fi
 
-export CC=clang
-export CXX=clang++
-export CMAKE_C_COMPILER=clang
-export CMAKE_CXX_COMPILER=clang++
 if command -v ld.lld >/dev/null 2>&1; then
     export LDFLAGS="${LDFLAGS:-} -fuse-ld=lld"
 fi
