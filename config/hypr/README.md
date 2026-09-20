@@ -108,16 +108,12 @@ launch. The wrap script will see HDMI-only and use the live TV mode.
 
 `hypridle` calls the wrappers, which call the profile script:
 
-- `idle-display-off.sh` → `display-profile.sh idle-off`, then
-  `boinc-session.sh idle`
-- `idle-display-on.sh` → `dpms on`, `display-profile.sh idle-on`, then
-  `boinc-session.sh active`
+- `idle-display-off.sh` → `display-profile.sh idle-off`
+- `idle-display-on.sh` → `dpms on`, `display-profile.sh idle-on`
 
-`boinc-session.sh` retargets
-`~/.var/app/edu.berkeley.BOINC/global_prefs_override.xml` at the repo
-file `setup/files/boinc/prefs/<role>.xml` or `<role>-idle.xml` and tells
-the client to reread it. Edit those XML files in git; do not copy them
-under `/etc`.
+BOINC idle/GPU policy lives in `setup/files/boinc/prefs/<role>.xml`
+(`run_gpu_if_user_active`, `idle_time_to_run`). Hyprland no longer swaps
+those files.
 
 When `hosts.d/<host>.conf` sets `IDLE_MONITOR`, idle-off records
 workspaces on that output, `dpms off` that output **and** `DESK_PORTS`
@@ -129,9 +125,8 @@ theater and workshare leave the desk DPs disabled.
 
 Hosts without `IDLE_MONITOR` just `dpms off` / `dpms on`.
 
-Unlock and after-sleep run `idle-display-on.sh` so the desk and the
-active BOINC caps come back together. The 420s listener is what blanks
-HDMI and switches BOINC to idle prefs.
+Unlock and after-sleep run `idle-display-on.sh` so the desk comes back.
+The 420s listener is what blanks HDMI.
 
 If the DP panels are dark after a bad profile, `display-switch.sh desk`
 brings them back.
