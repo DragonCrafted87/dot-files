@@ -61,6 +61,8 @@ OMP_INSTALL_DIR="${OMP_INSTALL_DIR:-${DOTFILES_HOME}/bin}"
 CONFIG_SOURCE_DIR="${CONFIG_SOURCE_DIR:-${REPO_ROOT}/config}"
 CONFIG_TARGET_DIR="${CONFIG_TARGET_DIR:-${DOTFILES_HOME}/.config}"
 SETUP_FILES_DIR="${SETUP_FILES_DIR:-${SETUP_DIR}/files}"
+SETUP_VERSIONS_FILE="${SETUP_VERSIONS_FILE:-${SETUP_DIR}/versions.conf}"
+COMPILER_ENV_FILE="${COMPILER_ENV_FILE:-${REPO_ROOT}/bashrc.d/compiler.bashrc}"
 # Cross-module flags belong in /tmp, not ~/.config/dot-files.
 DOTFILES_QS_RESTART_FLAG="${DOTFILES_QS_RESTART_FLAG:-/tmp/dot-files-$(id -u)-need-qs-restart}"
 
@@ -222,6 +224,25 @@ ensure_packages() {
     fi
     log "install packages: $*"
     run sudo dnf install -y "$@"
+}
+
+# First exact name that is installed or available. OpenMandriva names are
+# lowercase (libx11-devel, lib64z-devel). dnf list can be sloppy about case
+# and still exit 0; repoquery + rpm -q stay exact.
+pick_pkg() {
+    local p avail
+    for p in "$@"; do
+        if rpm -q "$p" >/dev/null 2>&1; then
+            printf '%s\n' "$p"
+            return 0
+        fi
+        avail="$(dnf -q repoquery --available --qf '%{name}\n' "$p" 2>/dev/null | head -n1 || true)"
+        if [[ "$avail" == "$p" ]]; then
+            printf '%s\n' "$p"
+            return 0
+        fi
+    done
+    return 1
 }
 
 # Rock 6.0 ships plasma6-* names for KF6 apps. The unprefixed names are
@@ -512,3 +533,33 @@ role_modules() {
     _role_section "$conf" common
     _role_section "$conf" "$role"
 }
+
+# KEY=value pins from setup/versions.conf. Skip keys already in the environment.
+load_source_versions() {
+    local conf="${SETUP_VERSIONS_FILE}"
+    local line key value
+    [[ -f "$conf" ]] || return 0
+    while IFS= read -r line || [[ -n "${line:-}" ]]; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" || "$line" != *=* ]] && continue
+        key="${line%%=*}"
+        value="${line#*=}"
+        [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+        if [[ -z "${!key:-}" ]]; then
+            printf -v "$key" '%s' "$value"
+            export "$key"
+        fi
+    done <"$conf"
+}
+
+load_compiler_env() {
+    local file="${COMPILER_ENV_FILE}"
+    [[ -f "$file" ]] || return 0
+    # shellcheck disable=SC1090
+    . "$file"
+}
+
+load_source_versions
+load_compiler_env
