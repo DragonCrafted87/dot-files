@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+# BOINC source-build helpers: deps, compile, data-dir migrate, rpc lookup.
+# Sourced from install-boinc.sh. Not a standalone role module.
+
+set -euo pipefail
+# shellcheck disable=SC1091
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
+
+require_user
+
 BOINC_VERSION="${BOINC_VERSION:?set BOINC_VERSION in setup/versions.conf}"
 BOINC_TAG="${BOINC_TAG:-client_release/8.2/${BOINC_VERSION}}"
 BOINC_GIT_URL="${BOINC_GIT_URL:-https://github.com/BOINC/boinc.git}"
@@ -11,6 +21,8 @@ BOINC_DIR="${DOTFILES_HOME}/.local/share/boinc"
 install_build_deps() {
     local pkgs=()
     local picked group
+    # OpenMandriva names are lowercase. lib64* is the 64-bit devel;
+    # the short lib*-devel name is the 32-bit compat package.
     local groups=(
         "git" "clang" "llvm" "lld" "gcc"
         "gcc-c++ gcc-c++-znver1 gcc-c++-x86_64"

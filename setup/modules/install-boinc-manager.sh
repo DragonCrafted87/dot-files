@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-# Sourced from install-boinc.sh. Not installed to PATH.
+# BOINC Manager desktop launcher and Select-computer MRU.
+# Sourced from install-boinc.sh. Not a standalone role module.
+
+set -euo pipefail
+# shellcheck disable=SC1091
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
+
+require_user
 
 # wxGTK does not honor gtk-application-prefer-dark-theme alone.
 # GTK_THEME=Adwaita:dark plus ~/.config/gtk-3.0/gtk.css is Tango Dark.

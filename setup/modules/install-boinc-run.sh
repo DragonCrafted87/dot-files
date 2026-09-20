@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+# Apply BOINC data dir, role prefs, user unit, and PATH helpers.
+# Sourced from install-boinc.sh. Not a standalone role module.
+
+set -euo pipefail
+# shellcheck disable=SC1091
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
+
+require_user
+
 remove_flatpak_boinc
 
 if systemctl --user list-unit-files boinc-client.service >/dev/null 2>&1; then
