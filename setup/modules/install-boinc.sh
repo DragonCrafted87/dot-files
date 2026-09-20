@@ -280,6 +280,7 @@ fi
 
 ensure_dir "$BOINC_DIR"
 ensure_dir "${DOTFILES_HOME}/.config/systemd/user"
+ensure_dir "${DOTFILES_HOME}/bin"
 ensure_dir /etc/boinc-client || run sudo mkdir -p /etc/boinc-client
 
 install -m 0644 "${src}/boinc-client.service" \
@@ -369,6 +370,7 @@ rm -f "$tmp"
 install_boinc_file "${src}/boinc-config.sh" /usr/local/bin/boinc-config 0755 1
 install_boinc_file "${src}/boinc-status.sh" /usr/local/bin/boinc-status 0755 1
 install_boinc_file "${src}/boinc-status-all.sh" /usr/local/bin/boinc-status-all 0755 1
+install_boinc_file "${src}/boincmgr.sh" "${DOTFILES_HOME}/bin/boincmgr" 0755 0
 install_user_desktop "${src}/boincmgr.desktop"
 
 systemctl --user daemon-reload
@@ -393,4 +395,4 @@ BOINC_SECRET="$secret" BOINC_ROLE="$role" BOINC_DIR="$BOINC_DIR" \
     /usr/local/bin/boinc-config || \
     warn "boinc-config failed; retry with /usr/local/bin/boinc-config"
 log "status: boinc-status"
-log "manager: boincmgr --datadir ${BOINC_DIR}"
+log "manager: boincmgr"
