@@ -8,6 +8,9 @@
 # #284 is the closest published dep list; package names below are the
 # OpenMandriva translations of that set plus current hypr* build
 # requirements (C++26, cmake, Qt6 for a few utilities).
+#
+# This prefix is linked against libc++. OpenMandriva 6.0 libstdc++ is GCC 14
+# and does not provide std::vector::append_range (C++23 / hyprwire).
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -79,6 +82,7 @@ hyprwayland-scanner=${HYPRWAYLAND_SCANNER_TAG}
 hyprwire=${HYPRWIRE_TAG}
 xdg-desktop-portal-hyprland=${XDPH_TAG}
 prefix=${PREFIX}
+stdlib=libc++
 EOF
 }
 
@@ -155,6 +159,8 @@ install_build_deps() {
         "lib64Qt6WaylandClient-devel lib64Qt6Wayland-devel qt6-qtwayland-devel lib64qt6wayland-devel"
         "qt6-qttools-devel lib64Qt6Tools-devel"
         "automake autoconf libtool xorg-x11-util-macros util-macros"
+        "lib64c++-devel libc++-devel"
+        "lib64c++abi-devel libc++abi-devel"
     )
 
     for group in "${groups[@]}"; do
@@ -168,9 +174,25 @@ install_build_deps() {
     [[ "${#pkgs[@]}" -gt 0 ]] && ensure_packages "${pkgs[@]}"
 }
 
+use_libcxx() {
+    # hyprwire needs std::vector::append_range (C++23). OpenMandriva 6.0
+    # ships libstdc++ from GCC 14, which does not have it. libc++ 19 does.
+    # Apply only in this module so BOINC/MakeMKV stay on libstdc++.
+    case " ${CXXFLAGS:-} " in
+        *" -stdlib=libc++ "*) ;;
+        *) CXXFLAGS="${CXXFLAGS:+${CXXFLAGS} }-stdlib=libc++" ;;
+    esac
+    case " ${LDFLAGS:-} " in
+        *" -stdlib=libc++ "*) ;;
+        *) LDFLAGS="${LDFLAGS:+${LDFLAGS} }-stdlib=libc++" ;;
+    esac
+    export CXXFLAGS LDFLAGS
+}
+
 export_prefix_env() {
     # CC/CXX/CFLAGS/CXXFLAGS/LDFLAGS come from bashrc.d/compiler.bashrc
     # via load_compiler_env in lib.sh. Only prefix search paths belong here.
+    use_libcxx
     export PATH="${PREFIX}/bin:${PATH:-/usr/bin}"
     export PKG_CONFIG_PATH="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
     export CMAKE_PREFIX_PATH="${PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
@@ -236,6 +258,7 @@ ensure_hyprland_tarball() {
 # cmake options like -mtune=native.
 cmake_config_flags=()
 fill_cmake_config_flags() {
+    use_libcxx
     # lld rejects test binaries when a hypr*.so still has hyprutils
     # symbols unresolved (hyprgraphics, aquamarine, ...). Those tests
     # are not installed; allow the undefined refs so leftover tools can link.
