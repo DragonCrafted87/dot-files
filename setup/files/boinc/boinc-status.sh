@@ -1,15 +1,28 @@
 #!/usr/bin/env bash
 # Local BOINC status.
-#   /usr/local/bin/boinc-status.sh
+# Installed on PATH as /usr/local/bin/boinc-status.
 
 set -euo pipefail
 
-# shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/find-boinccmd.sh"
-
 OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
 BOINC_DIR="${BOINC_DIR:-/home/${OWNER}/.local/share/boinc}"
+BOINC_HOST="${BOINC_HOST:-127.0.0.1}"
+BOINCCMD="${BOINCCMD:-/usr/local/bin/boinccmd}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
+
+boinc_service_active() {
+    systemctl --user is-active --quiet boinc-client.service 2>/dev/null \
+        || systemctl is-active --quiet boinc-client.service 2>/dev/null
+}
+
+boinc_cmd() {
+    timeout 8 "$BOINCCMD" --host "$BOINC_HOST" "$@"
+}
+
+if [[ ! -x "$BOINCCMD" ]]; then
+    printf 'error: %s is missing; rebuild BOINC with setup/modules/install-boinc.sh\n' "$BOINCCMD" >&2
+    exit 1
+fi
 
 if ! boinc_service_active; then
     printf 'BOINC service: not running\n'

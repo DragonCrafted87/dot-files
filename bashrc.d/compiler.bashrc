@@ -25,8 +25,23 @@ command -v llvm-objcopy >/dev/null 2>&1 && export OBJCOPY="${OBJCOPY:-llvm-objco
 command -v llvm-objdump >/dev/null 2>&1 && export OBJDUMP="${OBJDUMP:-llvm-objdump}"
 command -v llvm-strip >/dev/null 2>&1 && export STRIP="${STRIP:-llvm-strip}"
 
-# Do not force CFLAGS/CXXFLAGS. Distro clang already has sane defaults,
-# and autoconf packages often append their own. Parallel make is safe.
+# Tune to this machine. clang -march=native maps AMD family 23+ to
+# znver1/znver2/znver3/znver4/znver5 from CPUID. Do not hard-code
+# -march=znver1: that freezes later Zen chips at the first-gen ISA.
+# Leave CFLAGS/CXXFLAGS alone when the caller already set them.
+# These binaries stay per-host; do not copy /usr/local between CPUs.
+if [[ -z "${CFLAGS:-}" || -z "${CXXFLAGS:-}" ]]; then
+    _dotfiles_cc="${CC:-clang}"
+    if command -v "$_dotfiles_cc" >/dev/null 2>&1 \
+        && "$_dotfiles_cc" -march=native -E -x c /dev/null >/dev/null 2>&1; then
+        _dotfiles_native="-O2 -pipe -march=native -mtune=native"
+        export CFLAGS="${CFLAGS:-${_dotfiles_native}}"
+        export CXXFLAGS="${CXXFLAGS:-${_dotfiles_native}}"
+        unset _dotfiles_native
+    fi
+    unset _dotfiles_cc
+fi
+
 if [[ -z "${MAKEFLAGS:-}" ]]; then
     export MAKEFLAGS="-j$(nproc)"
 fi
