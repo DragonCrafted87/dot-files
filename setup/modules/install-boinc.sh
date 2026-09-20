@@ -169,6 +169,18 @@ remove_stale_path_cmds() {
     done
 }
 
+write_mgr_datadir() {
+    local dest="/etc/boinc-client/config.properties"
+    local want="data_dir=${BOINC_DIR}"
+    ensure_dir /etc/boinc-client || run sudo mkdir -p /etc/boinc-client
+    if [[ -f "$dest" ]] && grep -qx "$want" "$dest"; then
+        return 0
+    fi
+    log "write ${dest}"
+    printf '%s\n' "$want" | sudo tee "$dest" >/dev/null
+    sudo chmod 0644 "$dest"
+}
+
 remove_flatpak_boinc
 
 if systemctl --user list-unit-files boinc-client.service >/dev/null 2>&1; then
@@ -189,6 +201,7 @@ fi
 
 migrate_data_dir
 remove_stale_path_cmds
+write_mgr_datadir
 
 rpc_file="${BOINC_DIR}/gui_rpc_auth.cfg"
 secret="${DOTFILES_HOME}/.config/dot-files/boinc-rpc.password"
@@ -334,9 +347,9 @@ if [[ -f "$rpc_file" ]]; then
 fi
 if [[ "$current_rpc" != "$rpc_password" ]]; then
     printf '%s\n' "$rpc_password" >"$rpc_file"
-    chmod 600 "$rpc_file"
     boinc_changed=1
 fi
+chmod 644 "$rpc_file"
 
 install_boinc_file "${src}/cc_config.xml" "${BOINC_DIR}/cc_config.xml"
 log "link ${BOINC_DIR}/global_prefs_override.xml -> ${prefs_src}"
@@ -356,6 +369,7 @@ rm -f "$tmp"
 install_boinc_file "${src}/boinc-config.sh" /usr/local/bin/boinc-config 0755 1
 install_boinc_file "${src}/boinc-status.sh" /usr/local/bin/boinc-status 0755 1
 install_boinc_file "${src}/boinc-status-all.sh" /usr/local/bin/boinc-status-all 0755 1
+install_user_desktop "${src}/boincmgr.desktop"
 
 systemctl --user daemon-reload
 enable_user_service boinc-client.service
@@ -379,4 +393,4 @@ BOINC_SECRET="$secret" BOINC_ROLE="$role" BOINC_DIR="$BOINC_DIR" \
     /usr/local/bin/boinc-config || \
     warn "boinc-config failed; retry with /usr/local/bin/boinc-config"
 log "status: boinc-status"
-log "manager: boincmgr"
+log "manager: boincmgr --datadir ${BOINC_DIR}"
