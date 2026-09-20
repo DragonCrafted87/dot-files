@@ -173,6 +173,25 @@ remove_stale_path_cmds() {
     fi
 }
 
+# boincmgr / boinccmd look for gui_rpc_auth.cfg in:
+#   --datadir, cwd, data_dir from /etc/boinc-client/config.properties,
+#   then /var/lib/boinc.
+write_config_properties() {
+    local conf_dir=/etc/boinc-client
+    local conf="${conf_dir}/config.properties"
+    local tmp
+    run sudo mkdir -p "$conf_dir"
+    tmp="$(mktemp)"
+    printf 'data_dir=%s\n' "$BOINC_DIR" >"$tmp"
+    if [[ -f "$conf" ]] && cmp -s "$tmp" "$conf"; then
+        rm -f "$tmp"
+        return 0
+    fi
+    log "write ${conf} data_dir=${BOINC_DIR}"
+    run sudo install -m 0644 "$tmp" "$conf"
+    rm -f "$tmp"
+}
+
 link_rpc_auth() {
     local dest_dir=/var/lib/boinc
     local dest="${dest_dir}/gui_rpc_auth.cfg"
@@ -355,6 +374,7 @@ if [[ "$current_rpc" != "$rpc_password" ]]; then
     boinc_changed=1
 fi
 chmod 644 "$rpc_file"
+write_config_properties
 link_rpc_auth
 
 install_boinc_file "${src}/cc_config.xml" "${BOINC_DIR}/cc_config.xml"
