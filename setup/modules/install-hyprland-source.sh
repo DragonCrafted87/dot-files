@@ -366,12 +366,10 @@ build_meson_src() {
 }
 
 ensure_iniparser_pc() {
-    # OM 6.0 lib64iniparser-devel 4.2.1 has headers + .so but no iniparser.pc.
-    if pkg-config --exists iniparser 2>/dev/null; then
-        log "iniparser.pc already present"
-        return 0
-    fi
-    local so=""
+    # OM 6.0 lib64iniparser-devel 4.2.1 has headers under
+    # /usr/include/iniparser/ and no iniparser.pc. hyprtoolkit includes
+    # "iniparser.h", so Cflags must point at that subdirectory.
+    local so="" inc="/usr/include"
     for cand in /usr/lib64/libiniparser.so /usr/lib/libiniparser.so; do
         if [[ -e "$cand" ]]; then
             so="$cand"
@@ -379,8 +377,15 @@ ensure_iniparser_pc() {
         fi
     done
     [[ -n "$so" ]] || die "libiniparser.so missing; install lib64iniparser-devel"
+    if [[ -f /usr/include/iniparser/iniparser.h ]]; then
+        inc=/usr/include/iniparser
+    elif [[ -f /usr/include/iniparser.h ]]; then
+        inc=/usr/include
+    else
+        die "iniparser.h missing; install lib64iniparser-devel"
+    fi
     local pc="${PREFIX}/lib64/pkgconfig/iniparser.pc"
-    log "write ${pc} (distro package has no pkg-config file)"
+    log "write ${pc} (includedir=${inc})"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         return 0
     fi
@@ -389,13 +394,13 @@ ensure_iniparser_pc() {
 prefix=/usr
 exec_prefix=\${prefix}
 libdir=$(dirname "$so")
-includedir=/usr/include
+includedir=${inc}
 
 Name: iniparser
 Description: INI file parser
 Version: 4.2.1
 Libs: -L\${libdir} -liniparser
-Cflags: -I\${includedir}
+Cflags: -I\${includedir} -I/usr/include
 EOF
 }
 
