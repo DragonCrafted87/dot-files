@@ -192,20 +192,6 @@ write_config_properties() {
     rm -f "$tmp"
 }
 
-link_rpc_auth() {
-    local dest_dir=/var/lib/boinc
-    local dest="${dest_dir}/gui_rpc_auth.cfg"
-    run sudo mkdir -p "$dest_dir"
-    if [[ -L "$dest" ]] && [[ "$(readlink "$dest")" == "$rpc_file" ]]; then
-        return 0
-    fi
-    log "link ${dest} -> ${rpc_file}"
-    if [[ -e "$dest" || -L "$dest" ]]; then
-        run sudo rm -f "$dest"
-    fi
-    run sudo ln -sfn "$rpc_file" "$dest"
-}
-
 remove_flatpak_boinc
 
 if systemctl --user list-unit-files boinc-client.service >/dev/null 2>&1; then
@@ -375,7 +361,6 @@ if [[ "$current_rpc" != "$rpc_password" ]]; then
 fi
 chmod 644 "$rpc_file"
 write_config_properties
-link_rpc_auth
 
 install_boinc_file "${src}/cc_config.xml" "${BOINC_DIR}/cc_config.xml"
 log "link ${BOINC_DIR}/global_prefs_override.xml -> ${prefs_src}"
