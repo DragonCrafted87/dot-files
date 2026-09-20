@@ -264,7 +264,7 @@ build_cmake_src() {
     local src="$1"
     shift || true
     local extra=("$@")
-    local name jobs target
+    local name jobs
 
     [[ -f "${src}/CMakeLists.txt" ]] || die "no CMakeLists.txt in ${src}"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
@@ -276,12 +276,12 @@ build_cmake_src() {
     cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" "${extra[@]}"
     name="$(basename "$src")"
     jobs="$(nproc)"
-    # hyprgraphics (and some siblings) add test binaries to "all". Those
-    # tests trip lld --no-allow-shlib-undefined against hyprutils. Install
-    # only needs the library/tool target.
-    target="$name"
-    if ! cmake --build "${src}/build" --config Release -j"$jobs" --target "$target"; then
-        log "no cmake target ${target}; building default target"
+    # Default target "all" also builds installable helpers (hyprcursor-util,
+    # hyprctl, ...). hyprgraphics is the exception: its test binaries are on
+    # "all" and fail to link with lld --no-allow-shlib-undefined.
+    if [[ "$name" == "hyprgraphics" ]]; then
+        cmake --build "${src}/build" --config Release -j"$jobs" --target hyprgraphics
+    else
         cmake --build "${src}/build" --config Release -j"$jobs"
     fi
     sudo cmake --install "${src}/build"
