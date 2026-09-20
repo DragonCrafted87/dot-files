@@ -5,9 +5,6 @@
 #
 # Code/ is handled by configure-vscode. Linking the whole Chromium profile
 # replaces Local State and VS Code rewrites settings.json to {}.
-# gtk-3.0 / gtk-4.0 are NOT linked. edu.berkeley.BOINC uses --persist=.
-# which makes bwrap create ~/.config/gtk-3.0 as a symlink. A real dir or a
-# symlink-to-repo at that path both abort the sandbox.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -34,7 +31,7 @@ for source_path in "${config_dirs[@]}"; do
     dest_path="${CONFIG_TARGET_DIR}/${dest_name}"
 
     case "$dest_name" in
-        Code | gtk-3.0 | gtk-4.0)
+        Code)
             continue
             ;;
     esac

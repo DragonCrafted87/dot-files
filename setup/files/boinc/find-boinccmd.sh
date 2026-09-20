@@ -1,30 +1,21 @@
 #!/usr/bin/env bash
 # shellcheck shell=bash
-# Resolve boinccmd after the Flatpak install.
+# Resolve boinccmd after the source install.
 
-BOINC_FLATPAK="${BOINC_FLATPAK:-edu.berkeley.BOINC}"
 OWNER="${SUDO_USER:-${DOTFILES_USER:-dragon}}"
-BOINC_DIR="${BOINC_DIR:-${DOTFILES_HOME:-/home/${OWNER}}/.var/app/${BOINC_FLATPAK}}"
+BOINC_DIR="${BOINC_DIR:-${DOTFILES_HOME:-/home/${OWNER}}/.local/share/boinc}"
 BOINC_HOST="${BOINC_HOST:-127.0.0.1}"
 ROLE_FILE="${BOINC_ROLE_FILE:-/home/${OWNER}/.config/dot-files/role}"
 ROOT_FILE="${DOTFILES_ROOT_FILE:-/home/${OWNER}/.config/dot-files/root}"
 
 find_boinccmd() {
     local candidate
-    if [[ -x /usr/local/bin/boinccmd ]]; then
-        printf '%s\n' /usr/local/bin/boinccmd
-        return 0
-    fi
-    for candidate in /usr/bin/boinccmd /usr/libexec/boinc/boinccmd; do
+    for candidate in /usr/local/bin/boinccmd /usr/bin/boinccmd /usr/libexec/boinc/boinccmd; do
         if [[ -x "$candidate" ]]; then
             printf '%s\n' "$candidate"
             return 0
         fi
     done
-    if command -v flatpak >/dev/null 2>&1 && flatpak info "$BOINC_FLATPAK" >/dev/null 2>&1; then
-        printf '%s\n' /usr/local/bin/boinccmd
-        return 0
-    fi
     if command -v boinccmd >/dev/null 2>&1; then
         command -v boinccmd
         return 0
@@ -34,10 +25,10 @@ find_boinccmd() {
 
 BOINCCMD="$(find_boinccmd || true)"
 if [[ -z "${BOINCCMD}" ]]; then
-    printf 'error: boinccmd not found; install edu.berkeley.BOINC\n' >&2
+    printf 'error: boinccmd not found; rebuild BOINC with setup/modules/install-boinc.sh\n' >&2
     exit 1
 fi
-export PATH BOINCCMD BOINC_HOST BOINC_DIR BOINC_FLATPAK
+export PATH BOINCCMD BOINC_HOST BOINC_DIR
 
 boinc_cmd() {
     timeout 8 "$BOINCCMD" --host "$BOINC_HOST" "$@"
@@ -89,26 +80,17 @@ boinc_role() {
 }
 
 boinc_prefs_src() {
-    local mode="${1:-active}"
     local role repo candidate
     role="$(boinc_role)"
     repo="$(dotfiles_root)" || return 1
-    if [[ "$mode" == idle ]]; then
-        candidate="${repo}/setup/files/boinc/prefs/${role}-idle.xml"
-        if [[ -f "$candidate" ]]; then
-            printf '%s\n' "$candidate"
-            return 0
-        fi
-    fi
     candidate="${repo}/setup/files/boinc/prefs/${role}.xml"
     [[ -f "$candidate" ]] || return 1
     printf '%s\n' "$candidate"
 }
 
 link_boinc_prefs() {
-    local mode="${1:-active}"
     local src dest
-    src="$(boinc_prefs_src "$mode")" || return 1
+    src="$(boinc_prefs_src)" || return 1
     dest="${BOINC_DIR}/global_prefs_override.xml"
     mkdir -p "$BOINC_DIR"
     ln -sfn "$src" "$dest"
