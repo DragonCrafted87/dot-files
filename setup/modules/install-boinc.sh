@@ -98,11 +98,11 @@ sync_boinc_source() {
 build_boinc() {
     install_build_deps
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
-        log "would build BOINC ${BOINC_VERSION} (${BOINC_TAG}) CC=${CC:-} in ${SRC_DIR}"
+        log "would build BOINC ${BOINC_VERSION} (${BOINC_TAG}) CC=${CC:-} CFLAGS=${CFLAGS:-} in ${SRC_DIR}"
         return 0
     fi
     sync_boinc_source
-    log "BOINC compilers ${CC:-cc} / ${CXX:-c++}"
+    log "BOINC compilers ${CC:-cc} / ${CXX:-c++} CFLAGS=${CFLAGS:-} CXXFLAGS=${CXXFLAGS:-}"
     (
         cd "$SRC_DIR"
         ./_autosetup
@@ -115,7 +115,9 @@ build_boinc() {
             --with-ssl \
             --with-x \
             CC="${CC:-clang}" \
-            CXX="${CXX:-clang++}"
+            CXX="${CXX:-clang++}" \
+            CFLAGS="${CFLAGS:-}" \
+            CXXFLAGS="${CXXFLAGS:-}"
         make -j"$(nproc)"
         sudo make install
     )
@@ -155,6 +157,18 @@ migrate_data_dir() {
     ensure_dir "$BOINC_DIR"
 }
 
+remove_stale_path_cmds() {
+    local stale
+    for stale in find-boinccmd.sh find-boinccmd \
+        boinc-session.sh boinc-session \
+        boinc-config.sh boinc-status.sh boinc-status-all.sh; do
+        if [[ -e "/usr/local/bin/${stale}" ]]; then
+            log "remove /usr/local/bin/${stale}"
+            run sudo rm -f "/usr/local/bin/${stale}"
+        fi
+    done
+}
+
 remove_flatpak_boinc
 
 if systemctl --user list-unit-files boinc-client.service >/dev/null 2>&1; then
@@ -174,6 +188,7 @@ else
 fi
 
 migrate_data_dir
+remove_stale_path_cmds
 
 rpc_file="${BOINC_DIR}/gui_rpc_auth.cfg"
 secret="${DOTFILES_HOME}/.config/dot-files/boinc-rpc.password"
@@ -257,12 +272,6 @@ ensure_dir /etc/boinc-client || run sudo mkdir -p /etc/boinc-client
 install -m 0644 "${src}/boinc-client.service" \
     "${DOTFILES_HOME}/.config/systemd/user/boinc-client.service"
 
-# Drop leftover session-switch helper from the Flatpak era.
-if [[ -e /usr/local/bin/boinc-session.sh ]]; then
-    log "remove /usr/local/bin/boinc-session.sh"
-    sudo rm -f /usr/local/bin/boinc-session.sh
-fi
-
 boinc_changed=0
 install_boinc_file() {
     local from="$1"
@@ -343,10 +352,10 @@ fi
 install_boinc_file "$tmp" "${BOINC_DIR}/remote_hosts.cfg"
 rm -f "$tmp"
 
-install_boinc_file "${src}/find-boinccmd.sh" /usr/local/bin/find-boinccmd.sh 0644 1
-install_boinc_file "${src}/boinc-config.sh" /usr/local/bin/boinc-config.sh 0755 1
-install_boinc_file "${src}/boinc-status.sh" /usr/local/bin/boinc-status.sh 0755 1
-install_boinc_file "${src}/boinc-status-all.sh" /usr/local/bin/boinc-status-all.sh 0755 1
+# Repo copies keep the .sh suffix; PATH names do not.
+install_boinc_file "${src}/boinc-config.sh" /usr/local/bin/boinc-config 0755 1
+install_boinc_file "${src}/boinc-status.sh" /usr/local/bin/boinc-status 0755 1
+install_boinc_file "${src}/boinc-status-all.sh" /usr/local/bin/boinc-status-all 0755 1
 
 systemctl --user daemon-reload
 enable_user_service boinc-client.service
@@ -367,7 +376,7 @@ fi
 log "prefs ${role} from ${prefs_src}"
 log "apply role prefs and attach Science United"
 BOINC_SECRET="$secret" BOINC_ROLE="$role" BOINC_DIR="$BOINC_DIR" \
-    /usr/local/bin/boinc-config.sh || \
-    warn "boinc-config failed; retry with /usr/local/bin/boinc-config.sh"
-log "status: /usr/local/bin/boinc-status.sh"
+    /usr/local/bin/boinc-config || \
+    warn "boinc-config failed; retry with /usr/local/bin/boinc-config"
+log "status: boinc-status"
 log "manager: boincmgr"

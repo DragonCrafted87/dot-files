@@ -174,13 +174,23 @@ The old Flatpak app is uninstalled on the next role run. The compile is
 skipped when `/usr/local/share/boinc/.dotfiles-version` already matches
 the pinned version.
 
+Source builds pick up `bashrc.d/compiler.bashrc` (`clang`, `lld`,
+`-march=native`). On AMD family 23+ that is the matching `znver*` ISA,
+not a hard-coded `znver1`.
+
 ```text
 ~/.config/systemd/user/boinc-client.service
 ~/.local/share/boinc/                     data dir
 ~/.cache/boinc-build/boinc                source checkout
 /usr/local/bin/boinc{,mgr,cmd}
+/usr/local/bin/boinc-config
+/usr/local/bin/boinc-status
+/usr/local/bin/boinc-status-all
 /usr/local/share/boinc/.dotfiles-version
 ```
+
+Repo copies of the helpers keep the `.sh` suffix under
+`setup/files/boinc/`. PATH names do not.
 
 Existing Flatpak data under `~/.var/app/edu.berkeley.BOINC` is moved to
 `~/.local/share/boinc` once. `loginctl enable-linger` keeps the user unit
@@ -189,9 +199,9 @@ desktop session.
 
 ```bash
 boincmgr
-/usr/local/bin/boinc-config.sh
-/usr/local/bin/boinc-status.sh
-/usr/local/bin/boinc-status-all.sh
+boinc-config
+boinc-status
+boinc-status-all
 systemctl --user status boinc-client.service
 ```
 
@@ -199,10 +209,10 @@ Fill `files/boinc/hosts.list` with real hostnames so each client allows
 GUI RPC from the others. Role prefs live in `files/boinc/prefs/<role>.xml`
 and are linked to `~/.local/share/boinc/global_prefs_override.xml`.
 
-`/usr/local/bin/boinc-config.sh` always retargets that override from the
-role XML and tells the client `--read_global_prefs_override`. After
-prefs are applied it attaches Science United if the secret file has a
-login. `BOINC_REPLACE=1` detaches and reattaches.
+`boinc-config` always retargets that override from the role XML and tells
+the client `--read_global_prefs_override`. After prefs are applied it
+attaches Science United if the secret file has a login. `BOINC_REPLACE=1`
+detaches and reattaches.
 
 `~/.config/dot-files/boinc-rpc.password` holds `rpc_password`,
 `science_united_user` (the Science United **email**), and
@@ -235,7 +245,7 @@ Current `global_preferences` overrides:
 | `server`      | yes              | 80%     | 100%      | 30%                  | 0          | 40% / 30%     | yes              |
 
 None of the roles run on battery. Edit the XML under `files/boinc/prefs/`
-and re-run `install-boinc.sh` or `boinc-config.sh`.
+and re-run `install-boinc.sh` or `boinc-config`.
 
 Docker image manager is a standalone placeholder, not part of every server:
 
