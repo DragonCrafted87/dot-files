@@ -3,7 +3,8 @@
 # prefix. Distro packages from install-hyprland-session stay in /usr. Ly
 # gets a second session so the two stacks can be chosen independently.
 #
-# Tags live in setup/versions.conf (loaded by lib.sh). Fedora discussion
+# Tags live in setup/versions.conf. Compilers and common flags come from
+# bashrc.d/compiler.bashrc via lib.sh. Fedora discussion
 # #284 is the closest published dep list; package names below are the
 # OpenMandriva translations of that set plus current hypr* build
 # requirements (C++26, cmake, Qt6 for a few utilities).
@@ -167,15 +168,12 @@ install_build_deps() {
 }
 
 export_prefix_env() {
+    # CC/CXX/CFLAGS/CXXFLAGS/LDFLAGS come from bashrc.d/compiler.bashrc
+    # via load_compiler_env in lib.sh. Only prefix search paths belong here.
     export PATH="${PREFIX}/bin:${PATH:-/usr/bin}"
     export PKG_CONFIG_PATH="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
     export CMAKE_PREFIX_PATH="${PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
     export LD_LIBRARY_PATH="${PREFIX}/lib64:${PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-    export CC="${CC:-clang}"
-    export CXX="${CXX:-clang++}"
-    if command -v ld.lld >/dev/null 2>&1; then
-        export LDFLAGS="${LDFLAGS:-} -fuse-ld=lld"
-    fi
 }
 
 ensure_tagged_repo() {
@@ -234,6 +232,7 @@ ensure_hyprland_tarball() {
 }
 
 cmake_flags() {
+    # Compilers and *FLAGS are already exported by compiler.bashrc.
     printf '%s\n' \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="$PREFIX" \
@@ -241,14 +240,27 @@ cmake_flags() {
         -DCMAKE_INSTALL_LIBDIR=lib64 \
         -DCMAKE_INSTALL_RPATH="${PREFIX}/lib64;${PREFIX}/lib" \
         -DCMAKE_BUILD_RPATH="${PREFIX}/lib64;${PREFIX}/lib" \
-        -DCMAKE_C_COMPILER="${CC:-clang}" \
-        -DCMAKE_CXX_COMPILER="${CXX:-clang++}"
+        -DBUILD_TESTING=OFF \
+        -DCMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC:-clang}}" \
+        -DCMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER:-${CXX:-clang++}}" \
+        -DCMAKE_C_FLAGS="${CFLAGS:-}" \
+        -DCMAKE_CXX_FLAGS="${CXXFLAGS:-}" \
+        -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS:-}" \
+        -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS:-}" \
+        -DCMAKE_MODULE_LINKER_FLAGS="${LDFLAGS:-}"
+    if [[ -n "${AR:-}" ]]; then
+        printf '%s\n' "-DCMAKE_AR=${AR}"
+    fi
+    if [[ -n "${RANLIB:-}" ]]; then
+        printf '%s\n' "-DCMAKE_RANLIB=${RANLIB}"
+    fi
 }
 
 build_cmake_src() {
     local src="$1"
     shift || true
     local extra=("$@")
+    local name jobs target
 
     [[ -f "${src}/CMakeLists.txt" ]] || die "no CMakeLists.txt in ${src}"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
@@ -258,7 +270,16 @@ build_cmake_src() {
     rm -rf "${src}/build"
     # shellcheck disable=SC2046
     cmake -S "$src" -B "${src}/build" $(cmake_flags) "${extra[@]}"
-    cmake --build "${src}/build" --config Release -j"$(nproc)"
+    name="$(basename "$src")"
+    jobs="$(nproc)"
+    # hyprgraphics (and some siblings) add test binaries to "all". Those
+    # tests trip lld --no-allow-shlib-undefined against hyprutils. Install
+    # only needs the library/tool target.
+    target="$name"
+    if ! cmake --build "${src}/build" --config Release -j"$jobs" --target "$target"; then
+        log "no cmake target ${target}; building default target"
+        cmake --build "${src}/build" --config Release -j"$jobs"
+    fi
     sudo cmake --install "${src}/build"
 }
 
@@ -375,6 +396,7 @@ configure_ly_source_session() {
 
 build_stack() {
     export_prefix_env
+    log "compiler ${CC:-unset} / ${CXX:-unset} CFLAGS=${CFLAGS:-} CXXFLAGS=${CXXFLAGS:-} LDFLAGS=${LDFLAGS:-}"
     ensure_dir "$SRC_ROOT"
     if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
         sudo mkdir -p "$PREFIX"
