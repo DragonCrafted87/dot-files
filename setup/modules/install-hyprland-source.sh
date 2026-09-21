@@ -135,11 +135,7 @@ install_build_deps() {
     )
     for group in "${groups[@]}"; do
         # shellcheck disable=SC2086
-        if picked="$(pick_pkg $group)"; then
-            pkgs+=("$picked")
-        else
-            warn "no package matched: $group"
-        fi
+        if picked="$(pick_pkg $group)"; then pkgs+=("$picked"); else warn "no package matched: $group"; fi
     done
     [[ "${#pkgs[@]}" -gt 0 ]] && ensure_packages "${pkgs[@]}"
 }
@@ -175,12 +171,20 @@ ensure_tagged_repo() {
     git -C "$dir" submodule update --init --recursive
 }
 
+patch_hyprland_python() {
+    local f="${SRC_ROOT}/Hyprland/meta/generateLuaStubs.py"
+    [[ -f "$f" ]] || return 0
+    log "patch ${f} for pre-3.12 python"
+    sed -i -E 's/^([ \t]*)type ([A-Za-z_][A-Za-z0-9_]*) = /\1\2 = /' "$f"
+}
+
 ensure_hyprland_tarball() {
     local dest="${SRC_ROOT}/Hyprland"
     local tarball="${SRC_ROOT}/source-${HYPRLAND_TAG}.tar.gz"
     local url="https://github.com/hyprwm/Hyprland/releases/download/${HYPRLAND_TAG}/source-${HYPRLAND_TAG}.tar.gz"
     if [[ -d "$dest" && -f "${dest}/CMakeLists.txt" ]]; then
         log "Hyprland sources already unpacked at ${dest}"
+        patch_hyprland_python
         return 0
     fi
     log "fetch Hyprland ${HYPRLAND_TAG} release tarball"
@@ -190,6 +194,7 @@ ensure_hyprland_tarball() {
     rm -rf "$dest"
     mkdir -p "$dest"
     tar -xzf "$tarball" -C "$dest" --strip-components=1
+    patch_hyprland_python
 }
 
 cmake_config_flags=()
