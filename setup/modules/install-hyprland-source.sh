@@ -424,7 +424,7 @@ build_stack() {
     ensure_libinput
     ensure_re2
     ensure_hyprland_tarball
-    build_cmake_src "${SRC_ROOT}/Hyprland" -DNO_UWSM:STRING=true
+    build_cmake_src "${SRC_ROOT}/Hyprland" -DNO_UWSM:STRING=true -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
     ensure_tagged_repo https://github.com/hyprwm/hyprland-qt-support.git "${SRC_ROOT}/hyprland-qt-support" "$HYPRLAND_QT_SUPPORT_TAG"
     build_cmake_src "${SRC_ROOT}/hyprland-qt-support"
     ensure_tagged_repo https://github.com/hyprwm/hyprqt6engine.git "${SRC_ROOT}/hyprqt6engine" "$HYPRQT6ENGINE_TAG"
