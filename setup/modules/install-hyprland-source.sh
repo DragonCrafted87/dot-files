@@ -223,7 +223,7 @@ fill_cmake_config_flags() {
 cmake_skip_target() {
     case "$1" in
         *test*|*Test*|*tests*|hyprgraphics_image|hyprgraphics_arg|simpleWindow|commitThread|attachments|output) return 0 ;;
-        check-*|generate-lua-stubs|*lua-stub*) return 0 ;;
+        check-*|generate-lua-stubs|*lua-stub*|fuzz*|json_exhaustive*) return 0 ;;
     esac
     return 1
 }
@@ -328,8 +328,13 @@ ensure_re2() {
 }
 
 ensure_glaze() {
-    ensure_tagged_repo https://github.com/stephenberry/glaze.git "${SRC_ROOT}/glaze" "$GLAZE_TAG"
-    build_cmake_src "${SRC_ROOT}/glaze" -Dglaze_ENABLE_TESTING=OFF -DBUILD_TESTING=OFF
+    local src="${SRC_ROOT}/glaze"
+    ensure_tagged_repo https://github.com/stephenberry/glaze.git "$src" "$GLAZE_TAG"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would install glaze ${GLAZE_TAG} headers"; return 0; }
+    rm -rf "${src}/build"
+    fill_cmake_config_flags
+    cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" -Dglaze_ENABLE_TESTING=OFF -DBUILD_TESTING=OFF
+    sudo cmake --install "${src}/build"
 }
 
 patch_hyprland_glaze() {
