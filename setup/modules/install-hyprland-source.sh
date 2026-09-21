@@ -209,7 +209,10 @@ fill_cmake_config_flags() {
 }
 
 cmake_skip_target() {
-    case "$1" in *test*|*Test*|*tests*|hyprgraphics_image|hyprgraphics_arg|simpleWindow|commitThread|attachments|output) return 0 ;; esac
+    case "$1" in
+        *test*|*Test*|*tests*|hyprgraphics_image|hyprgraphics_arg|simpleWindow|commitThread|attachments|output) return 0 ;;
+        check-*|generate-lua-stubs|*lua-stub*) return 0 ;;
+    esac
     return 1
 }
 
