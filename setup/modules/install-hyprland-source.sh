@@ -119,6 +119,7 @@ install_build_deps() {
         "lib64ei-devel libei-devel libei" "lib64eis-devel libeis-devel"
         "lib64evdev-devel libevdev-devel" "lib64mtdev-devel mtdev-devel" "lib64xml2-devel libxml2-devel"
         "bison" "flex" "lib64canberra-devel libcanberra-devel"
+        "lib64readline-devel readline-devel libreadline-devel"
         "lib64lua-devel lua-devel lua5.5-devel lua"
         "lib64Qt6Core-devel lib64qt6core-devel qt6-qtbase-devel qt6-base-devel"
         "lib64Qt6Gui-devel lib64Qt6Widgets-devel"
