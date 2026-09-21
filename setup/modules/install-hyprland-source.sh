@@ -188,6 +188,14 @@ patch_hyprland_cxx23() {
     sed -i -E 's/set\([[:space:]]*CMAKE_CXX_STANDARD[[:space:]]+26/set(CMAKE_CXX_STANDARD 23/' "$f"
 }
 
+patch_hyprland_string_concat() {
+    local f="${SRC_ROOT}/Hyprland/hyprctl/src/main.cpp"
+    [[ -f "$f" ]] || return 0
+    log "patch ${f} string + string_view for C++23"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    sed -i -E 's/instanceSignature \+ "\/" \+ filename/instanceSignature + "\/" + std::string(filename)/' "$f"
+}
+
 ensure_hyprland_tarball() {
     local dest="${SRC_ROOT}/Hyprland"
     local tarball="${SRC_ROOT}/source-${HYPRLAND_TAG}.tar.gz"
@@ -197,6 +205,7 @@ ensure_hyprland_tarball() {
         patch_hyprland_python
         patch_hyprland_glaze
         patch_hyprland_cxx23
+        patch_hyprland_string_concat
         return 0
     fi
     log "fetch Hyprland ${HYPRLAND_TAG} release tarball"
@@ -209,6 +218,7 @@ ensure_hyprland_tarball() {
     patch_hyprland_python
     patch_hyprland_glaze
     patch_hyprland_cxx23
+    patch_hyprland_string_concat
 }
 
 cmake_config_flags=()
