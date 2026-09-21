@@ -180,6 +180,14 @@ patch_hyprland_python() {
     sed -i -E 's/^([ \t]*)type ([A-Za-z_][A-Za-z0-9_]*) = /\1\2 = /' "$f"
 }
 
+patch_hyprland_cxx23() {
+    local f="${SRC_ROOT}/Hyprland/CMakeLists.txt"
+    [[ -f "$f" ]] || return 0
+    log "pin Hyprland CMAKE_CXX_STANDARD 23 (clang 19 + glaze)"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    sed -i -E 's/set\([[:space:]]*CMAKE_CXX_STANDARD[[:space:]]+26/set(CMAKE_CXX_STANDARD 23/' "$f"
+}
+
 ensure_hyprland_tarball() {
     local dest="${SRC_ROOT}/Hyprland"
     local tarball="${SRC_ROOT}/source-${HYPRLAND_TAG}.tar.gz"
@@ -188,6 +196,7 @@ ensure_hyprland_tarball() {
         log "Hyprland sources already unpacked at ${dest}"
         patch_hyprland_python
         patch_hyprland_glaze
+        patch_hyprland_cxx23
         return 0
     fi
     log "fetch Hyprland ${HYPRLAND_TAG} release tarball"
@@ -199,6 +208,7 @@ ensure_hyprland_tarball() {
     tar -xzf "$tarball" -C "$dest" --strip-components=1
     patch_hyprland_python
     patch_hyprland_glaze
+    patch_hyprland_cxx23
 }
 
 cmake_config_flags=()
