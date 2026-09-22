@@ -102,9 +102,12 @@ nosuid
 ntfs
 objcopy
 objdump
+piper
 ppa
 projectm
 ranlib
+ratbagctl
+ratbagd
 rcon
 replacecpp
 replaceh
@@ -121,6 +124,7 @@ thumbcache
 timedatectl
 tmpfs
 tolower
+udevadm
 uhc
 usermod
 vnc
