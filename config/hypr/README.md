@@ -86,6 +86,26 @@ python3 ~/.config/hypr/scripts/litra-camera-lights.py off
 hidraw access needs `setup/modules/configure-litra-glow.sh` (udev rule
 plus the `video` group).
 
+## Logitech G603
+
+Windows G HUB on the work PC overwrites onboard Piper profiles. Hyprland
+starts `scripts/reset-piper-profile.sh watch`, which applies profile 0
+through `ratbagctl` (Piper has no CLI) and re-applies when the Lightspeed
+receiver or G603 hidraw node appears. A udev rule also starts the user
+oneshot `reset-piper-profile.service`. Role module:
+`configure-piper-g603`.
+
+```bash
+bash ~/.config/hypr/scripts/reset-piper-profile.sh apply
+bash ~/.config/hypr/scripts/reset-piper-profile.sh status
+reset-piper-profile
+piper-g603-status
+```
+
+IDs: device `046d:406c`, Lightspeed receiver `046d:c539`, Bluetooth
+`046d:b01c`. Override the match or profile with `PIPER_DEVICE_MATCH` and
+`PIPER_PROFILE`.
+
 ## Steam / Proton
 
 `scripts/steam-proton-wrap.sh` is the shared launch wrapper. It reads the
