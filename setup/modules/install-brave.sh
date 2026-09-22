@@ -23,4 +23,6 @@ EOF
     fi
 fi
 
-ensure_packages brave-browser
+ensure_packages \
+    brave-browser \
+    qt5-qtwayland
