@@ -1,8 +1,11 @@
 [Unit]
 Description=Reset Piper/ratbag profile 0 on the Logitech G603
 Documentation=file://%h/dot-files/config/hypr/README.md
-After=graphical-session.target
+After=ratbagd.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/bash %h/.config/hypr/scripts/reset-piper-profile.sh apply
+ExecStart=%h/.config/hypr/scripts/reset-piper-profile.sh apply
+
+[Install]
+WantedBy=default.target

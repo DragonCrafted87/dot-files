@@ -1,37 +1,36 @@
-# shellcheck shell=bash
+#!/usr/bin/env bash
 # Force a Piper/ratbag profile after Windows G HUB rewrites onboard storage.
-# Piper itself has no CLI; ratbagctl talks to ratbagd (same backend).
-# Run with bash; Hyprland exec-once and the user oneshot pass the interpreter.
+# Piper has no CLI; ratbagctl talks to ratbagd (same backend).
+# Started by udev via reset-piper-profile.service, or by hand.
 set -euo pipefail
 
 PROFILE="${PIPER_PROFILE:-0}"
 MATCH="${PIPER_DEVICE_MATCH:-G603}"
 ATTEMPTS="${PIPER_ATTEMPTS:-12}"
 RETRY_SLEEP="${PIPER_RETRY_SLEEP:-0.5}"
-DEBOUNCE_SECS="${PIPER_DEBOUNCE_SECS:-2}"
 QUIET="${PIPER_QUIET:-0}"
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 LOCK_FILE="${STATE_DIR}/reset-piper-profile.lock"
-STAMP_FILE="${STATE_DIR}/reset-piper-profile.stamp"
 
 usage() {
     cat <<'EOF'
-Usage: reset-piper-profile.sh [apply|watch|status|help]
+Usage: reset-piper-profile.sh [apply|status|help]
 
 apply   Set matching ratbag devices to profile 0 (default).
-watch   Apply once, then re-apply when USB/hidraw devices appear.
 status  Print ratbag devices and the active profile.
 
 Piper is GUI-only. This uses ratbagctl against ratbagd. Default match is
 G603 (USB 046d:406c, Lightspeed 046d:c539, Bluetooth 046d:b01c).
+
+udev starts reset-piper-profile.service on plug-in. apply retries briefly
+so ratbagd can see the device after the udev event.
 
 Env:
   PIPER_PROFILE          Profile index (default 0)
   PIPER_DEVICE_MATCH     Comma-separated name/id needles (default G603)
   PIPER_ATTEMPTS         ratbagd settle retries (default 12)
   PIPER_RETRY_SLEEP      Seconds between retries (default 0.5)
-  PIPER_DEBOUNCE_SECS    Watch re-apply floor (default 2)
 EOF
 }
 
@@ -123,7 +122,6 @@ apply_profile() {
                 fi
             done <<<"$pairs"
             if [[ "$ok" -eq 1 ]]; then
-                date +%s >"$STAMP_FILE"
                 return 0
             fi
         fi
@@ -136,45 +134,6 @@ apply_profile() {
         return 0
     fi
     return 1
-}
-
-debounced_apply() {
-    local now last=0
-    mkdir -p "$STATE_DIR"
-    now="$(date +%s)"
-    if [[ -f "$STAMP_FILE" ]]; then
-        last="$(cat "$STAMP_FILE" 2>/dev/null || printf '0')"
-    fi
-    if ((now - last < DEBOUNCE_SECS)); then
-        return 0
-    fi
-    with_lock apply_profile || true
-}
-
-is_watch_event() {
-    local line="$1"
-    [[ "$line" == *" add "* ]] || return 1
-    case "${line,,}" in
-        *046d* | *g603* | *hidraw* | *mouse* | *lightspeed*) return 0 ;;
-    esac
-    return 1
-}
-
-watch_devices() {
-    need_ratbag || return 1
-    if ! command -v udevadm >/dev/null 2>&1; then
-        printf 'udevadm not found\n' >&2
-        return 1
-    fi
-    with_lock apply_profile || true
-    printf 'watching udev for G603 / USB mouse add events\n'
-    local line
-    while IFS= read -r line; do
-        if is_watch_event "$line"; then
-            sleep "$RETRY_SLEEP"
-            debounced_apply
-        fi
-    done < <(udevadm monitor --udev --subsystem-match=usb --subsystem-match=hidraw --subsystem-match=input)
 }
 
 show_status() {
@@ -208,9 +167,6 @@ cmd="${1:-apply}"
 case "$cmd" in
     apply | reset | "")
         with_lock apply_profile
-        ;;
-    watch)
-        watch_devices
         ;;
     status)
         show_status

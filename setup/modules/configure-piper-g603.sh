@@ -1,4 +1,4 @@
-# shellcheck shell=bash
+#!/usr/bin/env bash
 # Install Piper/ratbagd and reset the G603 to profile 0 on USB plug-in.
 # Windows G HUB on the work PC overwrites onboard profiles; ratbagctl is
 # the CLI for the same daemon Piper uses.
@@ -53,4 +53,5 @@ if [[ -f "$src_unit" ]]; then
         run install -m 0644 "$src_unit" "$dest_unit"
         run systemctl --user daemon-reload || true
     fi
+    enable_user_service reset-piper-profile.service
 fi
