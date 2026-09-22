@@ -3,6 +3,7 @@ AOC
 Accrescent
 EDID
 EVIOCGRAB
+G603
 GTK
 GrapheneOS
 Gudeman
@@ -10,12 +11,14 @@ Hyprcursor
 Insta
 LTS
 Liberica
+Lightspeed
 Litra
 Lucida
 MJPG
 PCM
 PDIF
 PROGRAMFILES
+Piper
 Piriform
 RTC
 Speccy
@@ -52,8 +55,12 @@ nohup
 omp
 osd
 pci
+piper
 prefs
 quickshell
+ratbag
+ratbagctl
+ratbagd
 runewyrm
 srv
 startmenu
