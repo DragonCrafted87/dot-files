@@ -60,6 +60,9 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
   `install-gaming-packages`, KDE chrome → `configure-mime-defaults`).
 - `configure-litra-glow` installs hidraw udev for Logitech Litra Glow
   (`046d:c900`) and adds the user to `video`.
+- `configure-piper-g603` installs `piper` / `ratbagd`, a udev rule for
+  the G603 / Lightspeed receiver, and a user oneshot that forces ratbag
+  profile 0 after Windows G HUB overwrites onboard storage.
 - Modules run in a subprocess (`bash module.sh`), so env vars do not
   survive back to `role.sh`. Cross-module flags and other short-lived
   files go in `/tmp` (example:
@@ -102,6 +105,13 @@ to the monitor under the cursor, then focus it.
 The filename is hyphenated. Keep `# pylint: disable=invalid-name` at the
 top. Call it with `python3`; do not rely on a shebang plus executable
 bit (pre-commit `check-executables-have-shebangs`).
+
+### Logitech G603
+
+Windows G HUB on the work computer overwrites onboard profiles. Hyprland
+`exec-once` runs `reset-piper-profile.sh watch`, which sets Piper profile
+0 through `ratbagctl` and re-applies when the USB receiver enumerates.
+Role module: `configure-piper-g603`.
 
 ### Litra Glow + Insta360 Link
 
@@ -174,6 +184,7 @@ pre-commit run --all-files
 | Jabra Speak 710         | USB FS `5-2.1`, calls                               |
 | Insta360 Link           | USB HS `5-2.2`, V4L2 `/dev/video0`, MJPG            |
 | Litra Glow pair         | USB `5-2.3` and `5-2.4`, `046d:c900`                |
+| Logitech G603           | Lightspeed `046d:c539` / device `046d:406c`         |
 | Valve Index / 3D camera | other controller (`16:00.0`), ignore for desk calls |
 
 PipeWire is 1.4.x + WirePlumber. Volume CLI is `wpctl`.
