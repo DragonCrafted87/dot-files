@@ -88,16 +88,16 @@ plus the `video` group).
 
 ## Logitech G603
 
-Windows G HUB on the work PC overwrites onboard Piper profiles. Hyprland
-starts `scripts/reset-piper-profile.sh watch`, which applies profile 0
-through `ratbagctl` (Piper has no CLI) and re-applies when the Lightspeed
-receiver or G603 hidraw node appears. A udev rule also starts the user
-oneshot `reset-piper-profile.service`. Role module:
+Windows G HUB on the work PC overwrites onboard Piper profiles. A udev
+rule starts the user oneshot `reset-piper-profile.service`, which runs
+`scripts/reset-piper-profile.sh apply` and sets profile 0 through
+`ratbagctl`. The same unit is enabled for `default.target` so login also
+resets a mouse that was already plugged in. Role module:
 `configure-piper-g603`.
 
 ```bash
-bash ~/.config/hypr/scripts/reset-piper-profile.sh apply
-bash ~/.config/hypr/scripts/reset-piper-profile.sh status
+~/.config/hypr/scripts/reset-piper-profile.sh apply
+~/.config/hypr/scripts/reset-piper-profile.sh status
 reset-piper-profile
 piper-g603-status
 ```
