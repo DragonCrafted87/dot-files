@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -152,7 +153,9 @@ def _safe_name(text: str) -> str:
             keep.append(char)
         else:
             keep.append("-")
-    name = "".join(keep).strip("-")
+    name = re.sub(r"-+", "-", "".join(keep)).strip("-")
+    name = re.sub(r"-(?:jpg|jpeg|png|webp)$", "", name)
+    name = re.sub(r"^file-", "", name)
     return name[:80] or "astro"
 
 
@@ -270,32 +273,6 @@ def start_hyprpaper() -> bool:
     return False
 
 
-def _hyprctl_paper(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["hyprctl", "hyprpaper", *args],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-
-
-def apply_via_ipc(mapping: dict[str, str]) -> bool:
-    if not _hyprpaper_running() and not start_hyprpaper():
-        return False
-    ok = True
-    for monitor, image in mapping.items():
-        _hyprctl_paper("preload", image)
-        result = _hyprctl_paper("wallpaper", f"{monitor},{image}")
-        text = ((result.stdout or "") + (result.stderr or "")).lower()
-        if result.returncode != 0 or "error" in text or "unknown" in text:
-            result = _hyprctl_paper("reload", f"{monitor},{image}")
-            text = ((result.stdout or "") + (result.stderr or "")).lower()
-        if result.returncode != 0 or "error" in text:
-            print(f"astro-wallpaper: hyprctl failed for {monitor}: {text.strip()}", file=sys.stderr)
-            ok = False
-    return ok
-
-
 def apply_images(images: list[Path], monitors: list[str]) -> dict[str, str]:
     if not images or not monitors:
         return {}
@@ -314,10 +291,10 @@ def apply_images(images: list[Path], monitors: list[str]) -> dict[str, str]:
         + "\n",
         encoding="utf-8",
     )
+    # Config already has preload + wallpaper. Restarting applies it.
+    # hyprctl against the socket races the new process and is noise.
     stop_hyprpaper()
-    if not start_hyprpaper():
-        return mapping
-    apply_via_ipc(mapping)
+    start_hyprpaper()
     return mapping
 
 
@@ -351,9 +328,6 @@ def cmd_apply(force_fetch: bool) -> int:
     mapping = apply_images(images, monitors)
     for monitor, image in mapping.items():
         print(f"{monitor}: {image}")
-    active = _hyprctl_paper("listactive")
-    if active.stdout.strip():
-        print(active.stdout.rstrip())
     return 0
 
 
@@ -369,9 +343,6 @@ def cmd_status() -> int:
     monitors = _enabled_monitors()
     print("monitors: " + (", ".join(monitors) if monitors else "none"))
     print(f"cached files: {len(cached_images())}")
-    active = _hyprctl_paper("listactive")
-    if active.stdout.strip():
-        print(active.stdout.rstrip())
     return 0
 
 
