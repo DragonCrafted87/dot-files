@@ -108,6 +108,11 @@ Rectangle {
                 Menu {
                     id: appMenu
                     MenuItem {
+                        text: "Close"
+                        enabled: !!(root.controller && root.controller.findRunning(modelData))
+                        onTriggered: root.controller.closeRunning(modelData)
+                    }
+                    MenuItem {
                         text: "Open desktop file"
                         onTriggered: root.controller.openDesktopFile(modelData)
                     }
