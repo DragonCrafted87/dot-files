@@ -206,6 +206,8 @@ Rectangle {
             spacing: 8
 
             readonly property var sinkAudio: Pipewire.defaultAudioSink?.audio ?? null
+            readonly property real volStep: 0.025
+            readonly property real volMax: 1.5
             readonly property real vol: {
                 const a = sinkAudio
                 if (!a) return 0
@@ -214,6 +216,33 @@ Rectangle {
             }
             readonly property bool muted: sinkAudio ? !!sinkAudio.muted : true
             readonly property bool over: vol > 1
+            readonly property real volFill: {
+                if (muted) return 0
+                return Math.max(0, Math.min(1, vol / volMax))
+            }
+
+            function snapVolume(v) {
+                const step = volStep
+                if (typeof v !== "number" || !isFinite(v))
+                    return 0
+                return Math.max(0, Math.min(volMax, Math.round(v / step) * step))
+            }
+
+            function setVolumeFromRatio(ratio) {
+                const a = sinkAudio
+                if (!a) return
+                const clamped = Math.max(0, Math.min(1, ratio))
+                a.volume = snapVolume(clamped * volMax)
+                a.muted = false
+            }
+
+            function nudgeVolume(dir) {
+                const a = sinkAudio
+                if (!a) return
+                const current = (typeof a.volume === "number" && isFinite(a.volume)) ? a.volume : 0
+                a.volume = snapVolume(current + (dir * volStep))
+                a.muted = false
+            }
 
             Text {
                 text: {
@@ -244,35 +273,42 @@ Rectangle {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: parent.width * Math.min(1, parent.parent.muted ? 0 : parent.parent.vol)
+                    width: parent.width * parent.parent.volFill
                     radius: parent.radius
                     color: parent.parent.over ? "#EF2929" : "#729FCF"
+                }
+                Rectangle {
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    x: parent.width / parent.parent.volMax
+                    width: 1
+                    color: "#888A85"
                 }
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: mouse => {
-                        const a = parent.parent.sinkAudio
-                        if (!a) return
-                        a.volume = Math.max(0, Math.min(1.5, mouse.x / width))
-                        a.muted = false
-                    }
+                    hoverEnabled: true
+                    onClicked: mouse => parent.parent.setVolumeFromRatio(mouse.x / width)
                     onPositionChanged: mouse => {
                         if (!pressed) return
-                        const a = parent.parent.sinkAudio
-                        if (!a) return
-                        a.volume = Math.max(0, Math.min(1.5, mouse.x / width))
-                        a.muted = false
+                        parent.parent.setVolumeFromRatio(mouse.x / width)
+                    }
+                    onWheel: wheel => {
+                        const delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.pixelDelta.y
+                        if (delta === 0)
+                            return
+                        parent.parent.nudgeVolume(delta > 0 ? 1 : -1)
+                        wheel.accepted = true
                     }
                 }
             }
 
             Text {
                 text: !parent.sinkAudio ? "--%"
-                      : Math.round((parent.muted ? 0 : parent.vol) * 100) + "%"
+                      : (Math.round((parent.muted ? 0 : parent.vol) * 1000) / 10) + "%"
                 color: parent.over ? "#EF2929" : "#D3D7CF"
                 font.pixelSize: 11
-                Layout.preferredWidth: 40
+                Layout.preferredWidth: 48
                 horizontalAlignment: Text.AlignRight
             }
         }
