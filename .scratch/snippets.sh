@@ -11,3 +11,5 @@ update-dot-files && update-role
 
 sudo rm -rf /opt/hyprland-0.56.2 && rm -rf ~/.cache/hyprland-source && ~/dot-files/setup/modules/install-hyprland-source.sh
 ~/dot-files/setup/modules/install-hyprland-source.sh
+
+git push --force-with-lease origin xxxxxxxxxxxxxxxxxxxx

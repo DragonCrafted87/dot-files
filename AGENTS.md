@@ -63,6 +63,9 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
 - `configure-piper-g603` installs `piper` / `ratbagd`, a udev rule for
   the G603 / Lightspeed receiver, and a user oneshot that forces ratbag
   profile 0 after Windows G HUB overwrites onboard storage.
+- `configure-astro-wallpaper` installs `hyprpaper` and a daily user
+  timer. `scripts/astro-wallpaper.py` pulls astronomy stills and sets one
+  image per enabled monitor.
 - Modules run in a subprocess (`bash module.sh`), so env vars do not
   survive back to `role.sh`. Cross-module flags and other short-lived
   files go in `/tmp` (example:
@@ -108,10 +111,15 @@ bit (pre-commit `check-executables-have-shebangs`).
 
 ### Logitech G603
 
-Windows G HUB on the work computer overwrites onboard profiles. Hyprland
-`exec-once` runs `reset-piper-profile.sh watch`, which sets Piper profile
-0 through `ratbagctl` and re-applies when the USB receiver enumerates.
-Role module: `configure-piper-g603`.
+Windows G HUB on the work computer overwrites onboard profiles. A udev
+rule starts `reset-piper-profile.service`, which sets Piper profile 0
+through `ratbagctl`. Role module: `configure-piper-g603`.
+
+### Astronomy wallpapers
+
+`astro-wallpaper.sh apply` at login. Daily timer at 06:30 runs `refresh`.
+`display-switch.sh` re-applies after a layout change. One still per
+enabled monitor via hyprpaper. `SUPER+SHIFT+W` forces a new set.
 
 ### Litra Glow + Insta360 Link
 

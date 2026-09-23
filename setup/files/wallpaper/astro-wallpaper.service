@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh per-monitor astronomy wallpapers
+Documentation=file://%h/dot-files/config/hypr/README.md
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/hypr/scripts/astro-wallpaper.sh refresh
