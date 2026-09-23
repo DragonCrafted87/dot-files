@@ -10,6 +10,7 @@ PROFILE_SH="${SCRIPT_DIR}/display-profile.sh"
 MONITORS_D="${SCRIPT_DIR}/../conf.d/monitors.d"
 HOSTS_D="${SCRIPT_DIR}/../conf.d/hosts.d"
 AUDIO_SH="${SCRIPT_DIR}/display-audio.sh"
+WALLPAPER_SH="${SCRIPT_DIR}/astro-wallpaper.sh"
 ENSURE_SH="${SCRIPT_DIR}/ensure-monitors-runtime.sh"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 PROFILE_FILE="${STATE_DIR}/display-profile"
@@ -179,6 +180,9 @@ apply_profile() {
     "$PROFILE_SH" "$profile"
     if [[ -x "$AUDIO_SH" ]]; then
         "$AUDIO_SH" "$profile" || true
+    fi
+    if [[ -x "$WALLPAPER_SH" ]]; then
+        "$WALLPAPER_SH" apply || true
     fi
     save_profile "$profile"
 }
