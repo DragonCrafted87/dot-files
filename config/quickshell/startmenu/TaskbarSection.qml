@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
@@ -89,6 +90,15 @@ Rectangle {
         root.windowFocused()
     }
 
+    function closeWindow(address) {
+        if (!address) return
+        closeProc.command = [
+            "sh", "-c",
+            'hyprctl dispatch closewindow address:"' + address + '"'
+        ]
+        closeProc.running = true
+    }
+
     Timer {
         id: refreshKick
         interval: 30
@@ -127,6 +137,12 @@ Rectangle {
     Process {
         id: restoreProc
         command: []
+    }
+
+    Process {
+        id: closeProc
+        command: []
+        onExited: root.refresh()
     }
 
     onMinimizedOnlyChanged: root.refresh()
@@ -234,8 +250,23 @@ Rectangle {
                     id: winMouse
                     anchors.fill: parent
                     hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.restoreWindow(address)
+                    onClicked: event => {
+                        if (event.button === Qt.RightButton) {
+                            winMenu.popup()
+                            return
+                        }
+                        root.restoreWindow(address)
+                    }
+                }
+
+                Menu {
+                    id: winMenu
+                    MenuItem {
+                        text: "Close"
+                        onTriggered: root.closeWindow(address)
+                    }
                 }
             }
 
