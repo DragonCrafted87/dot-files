@@ -6,8 +6,10 @@ from __future__ import annotations
 import json
 import os
 import random
+import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -23,6 +25,7 @@ CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "hy
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "hypr"
 STATE_FILE = STATE_DIR / "astro-wallpaper.json"
 HYPRPAPER_CONF = STATE_DIR / "hyprpaper.conf"
+HYPRPAPER_LOG = STATE_DIR / "hyprpaper.log"
 KEEP_DAYS = int(os.environ.get("ASTRO_WALLPAPER_KEEP_DAYS", "21"))
 MIN_WIDTH = int(os.environ.get("ASTRO_WALLPAPER_MIN_WIDTH", "1600"))
 CATEGORIES = [
@@ -145,7 +148,7 @@ def _safe_name(text: str) -> str:
     for char in text.lower():
         if char.isalnum():
             keep.append(char)
-        elif char in {"-", "_", "."}:
+        elif char in {"-", "_"}:
             keep.append(char)
         else:
             keep.append("-")
@@ -219,26 +222,78 @@ def prune_cache() -> None:
 def write_hyprpaper_conf(mapping: dict[str, str]) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     lines = ["splash = false", "ipc = on"]
-    seen: set[str] = set()
-    for image in mapping.values():
-        if image not in seen:
-            lines.append(f"preload = {image}")
-            seen.add(image)
     for monitor, image in mapping.items():
-        lines.append(f"wallpaper = {monitor},{image}")
+        lines.extend(
+            [
+                "wallpaper {",
+                f"    monitor = {monitor}",
+                f"    path = {image}",
+                "    fit_mode = cover",
+                "}",
+            ]
+        )
     HYPRPAPER_CONF.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def restart_hyprpaper() -> None:
-    subprocess.run(["pkill", "-x", "hyprpaper"], check=False)
+def _hyprpaper_running() -> bool:
+    result = subprocess.run(["pgrep", "-x", "hyprpaper"], check=False, capture_output=True)
+    return result.returncode == 0
+
+
+def ensure_hyprpaper() -> bool:
+    if shutil.which("hyprpaper") is None:
+        print("astro-wallpaper: hyprpaper is not installed", file=sys.stderr)
+        return False
+    if _hyprpaper_running():
+        return True
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
     if not HYPRPAPER_CONF.is_file():
-        return
-    subprocess.Popen(  # noqa: S603
-        ["hyprpaper", "-c", str(HYPRPAPER_CONF)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
+        HYPRPAPER_CONF.write_text("splash = false\nipc = on\n", encoding="utf-8")
+    with HYPRPAPER_LOG.open("ab") as log:
+        subprocess.Popen(  # noqa: S603
+            ["hyprpaper", "-c", str(HYPRPAPER_CONF)],
+            stdout=log,
+            stderr=log,
+            start_new_session=True,
+        )
+    for _ in range(20):
+        if _hyprpaper_running():
+            return True
+        time.sleep(0.1)
+    print(f"astro-wallpaper: hyprpaper failed to start; see {HYPRPAPER_LOG}", file=sys.stderr)
+    return False
+
+
+def _hyprctl_paper(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["hyprctl", "hyprpaper", *args],
+        check=False,
+        capture_output=True,
+        text=True,
     )
+
+
+def apply_via_ipc(mapping: dict[str, str]) -> bool:
+    if not ensure_hyprpaper():
+        return False
+    ok = True
+    for monitor, image in mapping.items():
+        attempts = [
+            ["wallpaper", f"{monitor}, {image}, cover"],
+            ["wallpaper", f"{monitor},{image}"],
+            ["reload", f"{monitor},{image}"],
+        ]
+        applied = False
+        for args in attempts:
+            result = _hyprctl_paper(*args)
+            text = (result.stdout or "") + (result.stderr or "")
+            if result.returncode == 0 and "error" not in text.lower():
+                applied = True
+                break
+        if not applied:
+            print(f"astro-wallpaper: hyprctl failed for {monitor}", file=sys.stderr)
+            ok = False
+    return ok
 
 
 def apply_images(images: list[Path], monitors: list[str]) -> dict[str, str]:
@@ -259,8 +314,10 @@ def apply_images(images: list[Path], monitors: list[str]) -> dict[str, str]:
         + "\n",
         encoding="utf-8",
     )
-    if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") or monitors:
-        restart_hyprpaper()
+    if not apply_via_ipc(mapping):
+        subprocess.run(["pkill", "-x", "hyprpaper"], check=False)
+        time.sleep(0.2)
+        ensure_hyprpaper()
     return mapping
 
 
@@ -294,12 +351,17 @@ def cmd_apply(force_fetch: bool) -> int:
     mapping = apply_images(images, monitors)
     for monitor, image in mapping.items():
         print(f"{monitor}: {image}")
+    active = _hyprctl_paper("listactive")
+    if active.stdout.strip():
+        print(active.stdout.rstrip())
     return 0
 
 
 def cmd_status() -> int:
     print(f"cache: {CACHE_DIR}")
     print(f"conf:  {HYPRPAPER_CONF}")
+    print(f"hyprpaper: {'running' if _hyprpaper_running() else 'not running'}")
+    print(f"hyprpaper bin: {shutil.which('hyprpaper') or 'missing'}")
     if STATE_FILE.is_file():
         print(STATE_FILE.read_text(encoding="utf-8").rstrip())
     else:
@@ -307,6 +369,9 @@ def cmd_status() -> int:
     monitors = _enabled_monitors()
     print("monitors: " + (", ".join(monitors) if monitors else "none"))
     print(f"cached files: {len(cached_images())}")
+    active = _hyprctl_paper("listactive")
+    if active.stdout.strip():
+        print(active.stdout.rstrip())
     return 0
 
 
