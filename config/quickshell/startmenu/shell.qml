@@ -18,6 +18,7 @@ ShellRoot {
     property int menuMarginTop: 8
     property int openWorkspaceId: 1
     property int monitorWidth: 1920
+    property int monitorHeight: 1080
     property int flyoutWidth: 260
     property int flyoutGap: 8
 
@@ -26,6 +27,15 @@ ShellRoot {
     readonly property int flyoutMarginLeft: flyoutOnLeft
         ? Math.max(8, menuMarginLeft - flyoutWidth - flyoutGap)
         : (menuMarginLeft + menuBaseW + flyoutGap)
+    readonly property int flyoutMarginTop: {
+        const y = menuMarginTop + appsSection.y + appsSection.flyoutAlignY
+        return Math.max(8, Math.round(y))
+    }
+    readonly property int flyoutHeight: {
+        const remaining = monitorHeight - flyoutMarginTop - 8
+        const wanted = appsFlyout.implicitHeight
+        return Math.max(96, Math.min(wanted, Math.max(96, remaining)))
+    }
 
     readonly property string cursorPath:
         (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/qs-startmenu-cursor.txt"
@@ -34,6 +44,7 @@ ShellRoot {
         const h = mon.height || 1080
         const w = mon.width || 1920
         root.monitorWidth = w
+        root.monitorHeight = h
         root.menuH = Math.max(420, Math.min(h - 16, Math.round(h * 0.88)))
         root.menuBaseW = Math.max(380, Math.min(460, Math.round(w * 0.22)))
     }
@@ -182,7 +193,7 @@ ShellRoot {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     Layout.minimumHeight: 160
-                    Layout.preferredHeight: Math.round(root.menuH * 0.46)
+                    Layout.preferredHeight: implicitHeight
                     openWorkspaceId: root.openWorkspaceId
                     categoryWidth: Math.max(132, root.menuBaseW - 24)
                     onAppLaunched: root.closeMenu()
@@ -191,10 +202,10 @@ ShellRoot {
                 TaskbarSection {
                     id: taskbarSection
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.minimumHeight: 72
-                    Layout.preferredHeight: Math.round(root.menuH * 0.2)
-                    Layout.maximumHeight: Math.round(root.menuH * 0.28)
+                    Layout.fillHeight: false
+                    Layout.preferredHeight: implicitHeight
+                    Layout.minimumHeight: implicitHeight
+                    Layout.maximumHeight: implicitHeight
                     minimizedOnly: true
                     targetWorkspaceId: root.openWorkspaceId
                     onWindowFocused: root.closeMenu()
@@ -203,17 +214,20 @@ ShellRoot {
                 TraySection {
                     id: traySection
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.max(128, Math.round(root.menuH * 0.2))
-                    Layout.maximumHeight: Math.round(root.menuH * 0.28)
+                    Layout.fillHeight: false
+                    Layout.preferredHeight: implicitHeight
+                    Layout.minimumHeight: implicitHeight
+                    Layout.maximumHeight: implicitHeight
                     menuWindow: menuWindow
                     onTrayMenuRequested: root.chromeVisible = false
                 }
 
                 PowerSection {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 52
-                    Layout.minimumHeight: 48
-                    Layout.maximumHeight: 64
+                    Layout.fillHeight: false
+                    Layout.preferredHeight: implicitHeight
+                    Layout.minimumHeight: implicitHeight
+                    Layout.maximumHeight: implicitHeight
                     onActionTriggered: root.closeMenu()
                 }
             }
@@ -233,14 +247,15 @@ ShellRoot {
         }
         margins {
             left: root.flyoutMarginLeft
-            top: root.menuMarginTop
+            top: root.flyoutMarginTop
         }
 
         width: root.flyoutWidth
-        height: root.menuH
+        height: root.flyoutHeight
         color: "transparent"
 
         AppsFlyout {
+            id: appsFlyout
             anchors.fill: parent
             controller: appsSection
         }
