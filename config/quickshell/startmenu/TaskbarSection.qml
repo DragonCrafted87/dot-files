@@ -14,9 +14,18 @@ Rectangle {
 
     signal windowFocused()
     property bool minimizedOnly: true
+    property bool autoFlipping: false
     property int targetWorkspaceId: 1
     property int refreshReq: 0
     property int refreshSeen: 0
+    readonly property int rowHeight: 32
+    readonly property int listGap: 2
+    readonly property int headerH: 18
+    readonly property int maxVisibleRows: 8
+    implicitHeight: {
+        const rows = Math.max(1, Math.min(winModel.count, maxVisibleRows))
+        return 16 + 4 + headerH + rows * (rowHeight + listGap)
+    }
 
     readonly property string runtimeDir:
         Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
@@ -33,22 +42,34 @@ Rectangle {
             refreshKick.start()
     }
 
+    function isMinimizedClient(c) {
+        const ws = (c.workspace && c.workspace.name) ? String(c.workspace.name) : ""
+        return ws.indexOf("special") === 0 || ws.indexOf("minimized") !== -1
+    }
+
     function parseClients(raw) {
         winModel.clear()
         if (!raw || !String(raw).trim()) {
             console.log("clients empty payload")
+            if (root.minimizedOnly)
+                root.showAllWindows()
             return
         }
         try {
             const clients = JSON.parse(raw)
-            const filtered = clients.filter(c => {
-                if (!c || !c.address) return false
-                const ws = (c.workspace && c.workspace.name) ? String(c.workspace.name) : ""
-                if (root.minimizedOnly) {
-                    return ws.indexOf("special") === 0 || ws.indexOf("minimized") !== -1
+            const usable = clients.filter(c => c && c.address)
+            const minimized = usable.filter(c => root.isMinimizedClient(c))
+            let filtered
+            if (root.minimizedOnly) {
+                if (minimized.length === 0) {
+                    root.showAllWindows()
+                    filtered = usable
+                } else {
+                    filtered = minimized
                 }
-                return true
-            })
+            } else {
+                filtered = usable
+            }
             filtered.sort((a, b) => {
                 const ca = (a.initialClass || a.class || "").toLowerCase()
                 const cb = (b.initialClass || b.class || "").toLowerCase()
@@ -145,7 +166,18 @@ Rectangle {
         onExited: root.refresh()
     }
 
-    onMinimizedOnlyChanged: root.refresh()
+    function showAllWindows() {
+        if (!root.minimizedOnly)
+            return
+        root.autoFlipping = true
+        root.minimizedOnly = false
+        root.autoFlipping = false
+    }
+
+    onMinimizedOnlyChanged: {
+        if (!root.autoFlipping)
+            root.refresh()
+    }
     Component.onCompleted: root.refresh()
 
     ColumnLayout {
@@ -209,7 +241,7 @@ Rectangle {
                 required property string address
 
                 width: winList.width
-                height: 32
+                height: root.rowHeight
                 radius: 6
                 color: winMouse.containsMouse ? "#555753" : "transparent"
 
