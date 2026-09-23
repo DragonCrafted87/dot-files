@@ -80,22 +80,9 @@ Rectangle {
         ].filter(s => s && s.length > 1)
     }
 
-    function toplevelMatches(t, needles) {
-        if (!t) return false
-        const ipc = t.lastIpcObject || {}
-        const cls = String(ipc.class || ipc.initialClass || "").toLowerCase()
-        const title = String(t.title || ipc.title || "").toLowerCase()
-        for (let n = 0; n < needles.length; n++) {
-            const needle = needles[n]
-            if (cls === needle || cls.indexOf(needle) !== -1 || title.indexOf(needle) !== -1)
-                return true
-        }
-        return false
-    }
-
-    function listRunning(entry) {
+    function findRunning(entry) {
         const needles = root.entryNeedles(entry)
-        if (!needles.length) return []
+        if (!needles.length) return null
         let tops = []
         try {
             Hyprland.refreshToplevels()
@@ -103,21 +90,19 @@ Rectangle {
         } catch (e) {
             tops = []
         }
-        return tops.filter(t => root.toplevelMatches(t, needles))
-    }
-
-    function findRunning(entry) {
-        const running = root.listRunning(entry)
-        return running.length ? running[0] : null
-    }
-
-    function closeRunning(entry) {
-        const running = root.listRunning(entry)
-        for (let i = 0; i < running.length; i++) {
-            const t = running[i]
-            if (t && t.address)
-                Hyprland.dispatch("closewindow address:" + t.address)
+        for (let i = 0; i < tops.length; i++) {
+            const t = tops[i]
+            if (!t) continue
+            const ipc = t.lastIpcObject || {}
+            const cls = String(ipc.class || ipc.initialClass || "").toLowerCase()
+            const title = String(t.title || ipc.title || "").toLowerCase()
+            for (let n = 0; n < needles.length; n++) {
+                const needle = needles[n]
+                if (cls === needle || cls.indexOf(needle) !== -1 || title.indexOf(needle) !== -1)
+                    return t
+            }
         }
+        return null
     }
 
     function launchOrSwitch(entry) {
