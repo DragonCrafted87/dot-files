@@ -13,19 +13,38 @@ ShellRoot {
     property bool chromeVisible: true
 
     property int menuBaseW: 380
-    property int menuH: 720
     property int menuMarginLeft: 8
     property int menuMarginTop: 8
     property int openWorkspaceId: 1
     property int monitorWidth: 1920
+    property int monitorHeight: 1080
     property int flyoutWidth: 260
     property int flyoutGap: 8
+    readonly property int menuPad: 44
+    readonly property int powerH: 52
+    readonly property int menuMaxH: Math.max(280, monitorHeight - 16)
+    readonly property int menuNaturalH: menuPad
+        + appsSection.implicitHeight
+        + taskbarSection.implicitHeight
+        + traySection.implicitHeight
+        + powerH
+    readonly property int menuH: Math.max(280, Math.min(menuMaxH, menuNaturalH))
+    readonly property bool menuCapped: menuNaturalH > menuMaxH
 
     readonly property bool flyoutOpen: menuOpen && chromeVisible && appsSection.flyoutOpen
     readonly property bool flyoutOnLeft: (menuMarginLeft + menuBaseW + flyoutGap + flyoutWidth) > (monitorWidth - 8)
     readonly property int flyoutMarginLeft: flyoutOnLeft
         ? Math.max(8, menuMarginLeft - flyoutWidth - flyoutGap)
         : (menuMarginLeft + menuBaseW + flyoutGap)
+    readonly property int flyoutMarginTop: {
+        const y = menuMarginTop + appsSection.y + appsSection.flyoutAlignY
+        return Math.max(8, Math.round(y))
+    }
+    readonly property int flyoutHeight: {
+        const remaining = monitorHeight - flyoutMarginTop - 8
+        const wanted = appsFlyout.implicitHeight
+        return Math.max(96, Math.min(wanted, Math.max(96, remaining)))
+    }
 
     readonly property string cursorPath:
         (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/qs-startmenu-cursor.txt"
@@ -34,7 +53,7 @@ ShellRoot {
         const h = mon.height || 1080
         const w = mon.width || 1920
         root.monitorWidth = w
-        root.menuH = Math.max(420, Math.min(h - 16, Math.round(h * 0.88)))
+        root.monitorHeight = h
         root.menuBaseW = Math.max(380, Math.min(460, Math.round(w * 0.22)))
     }
 
@@ -180,9 +199,10 @@ ShellRoot {
                 AppsSection {
                     id: appsSection
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.minimumHeight: 160
-                    Layout.preferredHeight: Math.round(root.menuH * 0.46)
+                    Layout.fillHeight: root.menuCapped
+                    Layout.preferredHeight: implicitHeight
+                    Layout.minimumHeight: root.menuCapped ? 160 : implicitHeight
+                    Layout.maximumHeight: implicitHeight
                     openWorkspaceId: root.openWorkspaceId
                     categoryWidth: Math.max(132, root.menuBaseW - 24)
                     onAppLaunched: root.closeMenu()
@@ -191,10 +211,10 @@ ShellRoot {
                 TaskbarSection {
                     id: taskbarSection
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.minimumHeight: 72
-                    Layout.preferredHeight: Math.round(root.menuH * 0.2)
-                    Layout.maximumHeight: Math.round(root.menuH * 0.28)
+                    Layout.fillHeight: false
+                    Layout.preferredHeight: implicitHeight
+                    Layout.minimumHeight: implicitHeight
+                    Layout.maximumHeight: implicitHeight
                     minimizedOnly: true
                     targetWorkspaceId: root.openWorkspaceId
                     onWindowFocused: root.closeMenu()
@@ -203,17 +223,20 @@ ShellRoot {
                 TraySection {
                     id: traySection
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.max(128, Math.round(root.menuH * 0.2))
-                    Layout.maximumHeight: Math.round(root.menuH * 0.28)
+                    Layout.fillHeight: false
+                    Layout.preferredHeight: implicitHeight
+                    Layout.minimumHeight: implicitHeight
+                    Layout.maximumHeight: implicitHeight
                     menuWindow: menuWindow
                     onTrayMenuRequested: root.chromeVisible = false
                 }
 
                 PowerSection {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 52
-                    Layout.minimumHeight: 48
-                    Layout.maximumHeight: 64
+                    Layout.fillHeight: false
+                    Layout.preferredHeight: root.powerH
+                    Layout.minimumHeight: root.powerH
+                    Layout.maximumHeight: root.powerH
                     onActionTriggered: root.closeMenu()
                 }
             }
@@ -233,14 +256,15 @@ ShellRoot {
         }
         margins {
             left: root.flyoutMarginLeft
-            top: root.menuMarginTop
+            top: root.flyoutMarginTop
         }
 
         width: root.flyoutWidth
-        height: root.menuH
+        height: root.flyoutHeight
         color: "transparent"
 
         AppsFlyout {
+            id: appsFlyout
             anchors.fill: parent
             controller: appsSection
         }

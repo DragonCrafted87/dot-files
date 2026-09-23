@@ -22,6 +22,8 @@ Rectangle {
 
     property string clockText: "--:--"
     property string dateText: ""
+    readonly property int clockPixelSize: 22
+    implicitHeight: Math.max(176, trayCol.implicitHeight + 16)
     property string netText: "net --"
     property string cpuText: "cpu --"
     property string memText: "mem --"
@@ -125,7 +127,10 @@ Rectangle {
     }
 
     ColumnLayout {
-        anchors.fill: parent
+        id: trayCol
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
         anchors.margins: 8
         spacing: 6
 
@@ -352,13 +357,14 @@ Rectangle {
             Text {
                 text: root.clockText
                 color: "#729FCF"
-                font.pixelSize: 22
+                font.pixelSize: root.clockPixelSize
                 font.bold: true
             }
             Text {
                 text: root.dateText
                 color: "#729FCF"
-                font.pixelSize: 12
+                font.pixelSize: root.clockPixelSize
+                font.bold: true
             }
         }
     }

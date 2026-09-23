@@ -15,6 +15,12 @@ Rectangle {
     property string title: controller ? controller.flyoutTitle : ""
     property string refreshKey: controller ? (controller.filterCat + "|" + controller.searchText) : ""
     readonly property int rowStep: 36
+    readonly property int titleH: 16
+    implicitHeight: {
+        const n = Math.max(1, appList.count)
+        const rows = Math.min(n, 16)
+        return 16 + 4 + titleH + rows * rowStep
+    }
 
     ColumnLayout {
         anchors.fill: parent
