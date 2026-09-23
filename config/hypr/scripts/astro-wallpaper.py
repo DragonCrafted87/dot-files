@@ -14,7 +14,9 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date, datetime, timezone
+from datetime import date
+from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 from typing import Any
 
@@ -22,8 +24,14 @@ USER_AGENT = (
     "DragonCrafted87-dot-files/astro-wallpaper "
     "(+https://github.com/DragonCrafted87/dot-files)"
 )
-CACHE_DIR = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "hypr" / "astro-wallpapers"
-STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "hypr"
+CACHE_DIR = (
+    Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    / "hypr"
+    / "astro-wallpapers"
+)
+STATE_DIR = (
+    Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "hypr"
+)
 STATE_FILE = STATE_DIR / "astro-wallpaper.json"
 HYPRPAPER_CONF = STATE_DIR / "hyprpaper.conf"
 HYPRPAPER_LOG = STATE_DIR / "hyprpaper.log"
@@ -238,7 +246,9 @@ def write_hyprpaper_conf(mapping: dict[str, str]) -> None:
 
 
 def _hyprpaper_running() -> bool:
-    result = subprocess.run(["pgrep", "-x", "hyprpaper"], check=False, capture_output=True)
+    result = subprocess.run(
+        ["pgrep", "-x", "hyprpaper"], check=False, capture_output=True
+    )
     return result.returncode == 0
 
 
@@ -259,7 +269,7 @@ def start_hyprpaper() -> bool:
         HYPRPAPER_CONF.write_text("splash = false\nipc = on\n", encoding="utf-8")
     with HYPRPAPER_LOG.open("ab") as log:
         log.write(b"\n--- start ---\n")
-        subprocess.Popen(  # noqa: S603
+        subprocess.Popen(  # noqa: S603 pylint: disable=consider-using-with
             ["hyprpaper", "-c", str(HYPRPAPER_CONF)],
             stdout=log,
             stderr=log,
@@ -269,7 +279,10 @@ def start_hyprpaper() -> bool:
         if _hyprpaper_running():
             return True
         time.sleep(0.1)
-    print(f"astro-wallpaper: hyprpaper failed to start; see {HYPRPAPER_LOG}", file=sys.stderr)
+    print(
+        f"astro-wallpaper: hyprpaper failed to start; see {HYPRPAPER_LOG}",
+        file=sys.stderr,
+    )
     return False
 
 
