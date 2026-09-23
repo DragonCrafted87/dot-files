@@ -106,6 +106,27 @@ IDs: device `046d:406c`, Lightspeed receiver `046d:c539`, Bluetooth
 `046d:b01c`. Override the match or profile with `PIPER_DEVICE_MATCH` and
 `PIPER_PROFILE`.
 
+## Astronomy wallpapers
+
+`scripts/astro-wallpaper.py` downloads stills of nebulae, galaxies,
+planets, comets, and clusters, then gives each enabled monitor its own
+image through `hyprpaper`. Login runs `apply` (reuse today's cache).
+A user timer at 06:30 refreshes the set. `display-switch.sh` re-applies
+after a layout change so theater / workshare keep a wallpaper.
+
+```bash
+~/.config/hypr/scripts/astro-wallpaper.sh apply
+~/.config/hypr/scripts/astro-wallpaper.sh refresh
+~/.config/hypr/scripts/astro-wallpaper.sh status
+astro-wallpaper-refresh
+```
+
+`SUPER+SHIFT+W` forces a new set. Cache lives in
+`~/.cache/hypr/astro-wallpapers/`. Generated hyprpaper config is
+`~/.local/state/hypr/hyprpaper.conf`. Optional `NASA_API_KEY` improves
+APOD quota; Wikimedia Commons is the default pool. Role module:
+`configure-astro-wallpaper`.
+
 ## Steam / Proton
 
 `scripts/steam-proton-wrap.sh` is the shared launch wrapper. It reads the
