@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Role shorthand and repo helpers.
 # Saved role: ~/.config/dot-files/role
+# Saved subroles: ~/.config/dot-files/subroles
 # Repo location: $DOTFILES_ROOT, else ~/.config/dot-files/root, else ~/dot-files
 
 dotfiles-root() {
@@ -68,7 +69,7 @@ update-role() {
 
     if [[ -z "$role" ]]; then
         printf 'no role saved at %s\n' "$role_file" >&2
-        printf 'pass workstation, laptop, htpc, or server once\n' >&2
+        printf 'pass workstation, htpc, or server once\n' >&2
         return 1
     fi
     if [[ ! -f "$setup" ]]; then
@@ -86,4 +87,31 @@ update-role() {
     local rc=$?
     cd "$cwd" || true
     return "$rc"
+}
+
+enable-subrole() {
+    if [[ -z "${1:-}" ]]; then
+        printf 'usage: enable-subrole NAME\n' >&2
+        return 1
+    fi
+    update-role --enable-subrole "$1"
+}
+
+disable-subrole() {
+    if [[ -z "${1:-}" ]]; then
+        printf 'usage: disable-subrole NAME\n' >&2
+        return 1
+    fi
+    update-role --disable-subrole "$1"
+}
+
+list-subroles() {
+    local repo setup
+    repo="$(dotfiles-root)" || return 1
+    setup="${repo}/setup/role.sh"
+    if [[ ! -f "$setup" ]]; then
+        printf 'missing %s\n' "$setup" >&2
+        return 1
+    fi
+    bash "$setup" --list-subroles
 }

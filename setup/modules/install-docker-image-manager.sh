@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Placeholder for the still-undecided Docker image manager on one server
-# (Portainer, Harbor, etc.). Run this module by hand on that box later.
+# Back-compat wrapper. Docker image management lives under the
+# artifact-repo subrole now.
 #
-#   ~/dot-files/setup/modules/install-docker-image-manager.sh
+#   ~/dot-files/setup/role.sh --enable-subrole artifact-repo
 
 set -euo pipefail
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
+# shellcheck disable=SC1091
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/subroles.sh"
 
 require_user
-log "docker image manager is not chosen yet; install docker only"
-ensure_packages docker docker-compose
-enable_service docker.service
-warn "pick a manager and fill this module in; this script does not deploy one"
+warn "install-docker-image-manager is now artifact-repo; enabling that subrole"
+enable_saved_subrole artifact-repo
+run_module install-artifact-repo-manager

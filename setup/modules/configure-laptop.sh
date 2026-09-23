@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Laptop-only steps.
+# Laptop subrole. Power profiles on battery-capable boxes.
 
 set -euo pipefail
 # shellcheck disable=SC1091
