@@ -13,7 +13,6 @@ ShellRoot {
     property bool chromeVisible: true
 
     property int menuBaseW: 380
-    property int menuH: 720
     property int menuMarginLeft: 8
     property int menuMarginTop: 8
     property int openWorkspaceId: 1
@@ -21,6 +20,16 @@ ShellRoot {
     property int monitorHeight: 1080
     property int flyoutWidth: 260
     property int flyoutGap: 8
+    readonly property int menuPad: 44
+    readonly property int powerH: 52
+    readonly property int menuMaxH: Math.max(280, monitorHeight - 16)
+    readonly property int menuNaturalH: menuPad
+        + appsSection.implicitHeight
+        + taskbarSection.implicitHeight
+        + traySection.implicitHeight
+        + powerH
+    readonly property int menuH: Math.max(280, Math.min(menuMaxH, menuNaturalH))
+    readonly property bool menuCapped: menuNaturalH > menuMaxH
 
     readonly property bool flyoutOpen: menuOpen && chromeVisible && appsSection.flyoutOpen
     readonly property bool flyoutOnLeft: (menuMarginLeft + menuBaseW + flyoutGap + flyoutWidth) > (monitorWidth - 8)
@@ -45,7 +54,6 @@ ShellRoot {
         const w = mon.width || 1920
         root.monitorWidth = w
         root.monitorHeight = h
-        root.menuH = Math.max(420, Math.min(h - 16, Math.round(h * 0.88)))
         root.menuBaseW = Math.max(380, Math.min(460, Math.round(w * 0.22)))
     }
 
@@ -191,9 +199,10 @@ ShellRoot {
                 AppsSection {
                     id: appsSection
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.minimumHeight: 160
+                    Layout.fillHeight: root.menuCapped
                     Layout.preferredHeight: implicitHeight
+                    Layout.minimumHeight: root.menuCapped ? 160 : implicitHeight
+                    Layout.maximumHeight: implicitHeight
                     openWorkspaceId: root.openWorkspaceId
                     categoryWidth: Math.max(132, root.menuBaseW - 24)
                     onAppLaunched: root.closeMenu()
@@ -225,9 +234,9 @@ ShellRoot {
                 PowerSection {
                     Layout.fillWidth: true
                     Layout.fillHeight: false
-                    Layout.preferredHeight: implicitHeight
-                    Layout.minimumHeight: implicitHeight
-                    Layout.maximumHeight: implicitHeight
+                    Layout.preferredHeight: root.powerH
+                    Layout.minimumHeight: root.powerH
+                    Layout.maximumHeight: root.powerH
                     onActionTriggered: root.closeMenu()
                 }
             }
