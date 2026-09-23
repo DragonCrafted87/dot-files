@@ -216,6 +216,10 @@ Rectangle {
             }
             readonly property bool muted: sinkAudio ? !!sinkAudio.muted : true
             readonly property bool over: vol > 1
+            readonly property real volFill: {
+                if (muted) return 0
+                return Math.max(0, Math.min(1, vol / volMax))
+            }
 
             function snapVolume(v) {
                 const step = volStep
@@ -227,7 +231,8 @@ Rectangle {
             function setVolumeFromRatio(ratio) {
                 const a = sinkAudio
                 if (!a) return
-                a.volume = snapVolume(ratio * volMax)
+                const clamped = Math.max(0, Math.min(1, ratio))
+                a.volume = snapVolume(clamped * volMax)
                 a.muted = false
             }
 
@@ -268,9 +273,16 @@ Rectangle {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: parent.width * Math.min(1, parent.parent.muted ? 0 : parent.parent.vol)
+                    width: parent.width * parent.parent.volFill
                     radius: parent.radius
                     color: parent.parent.over ? "#EF2929" : "#729FCF"
+                }
+                Rectangle {
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    x: parent.width / parent.parent.volMax
+                    width: 1
+                    color: "#888A85"
                 }
                 MouseArea {
                     anchors.fill: parent
