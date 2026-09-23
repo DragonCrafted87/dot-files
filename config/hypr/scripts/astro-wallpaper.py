@@ -220,18 +220,17 @@ def prune_cache() -> None:
 
 
 def write_hyprpaper_conf(mapping: dict[str, str]) -> None:
+    """Classic hyprpaper keywords. OM's build rejects wallpaper { } blocks."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     lines = ["splash = false", "ipc = on"]
+    seen: set[str] = set()
+    for image in mapping.values():
+        if image in seen:
+            continue
+        lines.append(f"preload = {image}")
+        seen.add(image)
     for monitor, image in mapping.items():
-        lines.extend(
-            [
-                "wallpaper {",
-                f"    monitor = {monitor}",
-                f"    path = {image}",
-                "    fit_mode = cover",
-                "}",
-            ]
-        )
+        lines.append(f"wallpaper = {monitor},{image}")
     HYPRPAPER_CONF.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -240,23 +239,30 @@ def _hyprpaper_running() -> bool:
     return result.returncode == 0
 
 
-def ensure_hyprpaper() -> bool:
+def stop_hyprpaper() -> None:
+    subprocess.run(["pkill", "-x", "hyprpaper"], check=False)
+    for _ in range(20):
+        if not _hyprpaper_running():
+            return
+        time.sleep(0.05)
+
+
+def start_hyprpaper() -> bool:
     if shutil.which("hyprpaper") is None:
         print("astro-wallpaper: hyprpaper is not installed", file=sys.stderr)
         return False
-    if _hyprpaper_running():
-        return True
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     if not HYPRPAPER_CONF.is_file():
         HYPRPAPER_CONF.write_text("splash = false\nipc = on\n", encoding="utf-8")
     with HYPRPAPER_LOG.open("ab") as log:
+        log.write(b"\n--- start ---\n")
         subprocess.Popen(  # noqa: S603
             ["hyprpaper", "-c", str(HYPRPAPER_CONF)],
             stdout=log,
             stderr=log,
             start_new_session=True,
         )
-    for _ in range(20):
+    for _ in range(30):
         if _hyprpaper_running():
             return True
         time.sleep(0.1)
@@ -274,24 +280,18 @@ def _hyprctl_paper(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 def apply_via_ipc(mapping: dict[str, str]) -> bool:
-    if not ensure_hyprpaper():
+    if not _hyprpaper_running() and not start_hyprpaper():
         return False
     ok = True
     for monitor, image in mapping.items():
-        attempts = [
-            ["wallpaper", f"{monitor}, {image}, cover"],
-            ["wallpaper", f"{monitor},{image}"],
-            ["reload", f"{monitor},{image}"],
-        ]
-        applied = False
-        for args in attempts:
-            result = _hyprctl_paper(*args)
-            text = (result.stdout or "") + (result.stderr or "")
-            if result.returncode == 0 and "error" not in text.lower():
-                applied = True
-                break
-        if not applied:
-            print(f"astro-wallpaper: hyprctl failed for {monitor}", file=sys.stderr)
+        _hyprctl_paper("preload", image)
+        result = _hyprctl_paper("wallpaper", f"{monitor},{image}")
+        text = ((result.stdout or "") + (result.stderr or "")).lower()
+        if result.returncode != 0 or "error" in text or "unknown" in text:
+            result = _hyprctl_paper("reload", f"{monitor},{image}")
+            text = ((result.stdout or "") + (result.stderr or "")).lower()
+        if result.returncode != 0 or "error" in text:
+            print(f"astro-wallpaper: hyprctl failed for {monitor}: {text.strip()}", file=sys.stderr)
             ok = False
     return ok
 
@@ -314,10 +314,10 @@ def apply_images(images: list[Path], monitors: list[str]) -> dict[str, str]:
         + "\n",
         encoding="utf-8",
     )
-    if not apply_via_ipc(mapping):
-        subprocess.run(["pkill", "-x", "hyprpaper"], check=False)
-        time.sleep(0.2)
-        ensure_hyprpaper()
+    stop_hyprpaper()
+    if not start_hyprpaper():
+        return mapping
+    apply_via_ipc(mapping)
     return mapping
 
 
