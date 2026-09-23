@@ -2,12 +2,16 @@
 # Apply or reset a machine role. Module lists live in roles.conf.
 #
 #   ./setup/role.sh workstation
+#   ./setup/role.sh --enable-subrole laptop
 #   ./setup/role.sh --reset workstation
 #   ./setup/role.sh --reset --force workstation
 #
 # --reset strips toward the ISO-minus-strip baseline. It does not re-run
 # modules. After a forced reset, run role.sh again without --reset.
 # --reset must be a real VT (Ctrl+Alt+F3) or SSH, not Ly/Hyprland/Plasma.
+#
+# Subroles are saved in ~/.config/dot-files/subroles and re-applied on
+# every later role run. They are not derived from the hostname.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -15,24 +19,34 @@ set -euo pipefail
 
 usage() {
     cat >&2 <<EOF
-usage: $0 [options] <role>
+usage: $0 [options] [role]
 
-Roles: workstation, laptop, htpc, server
+Roles: workstation, htpc, server
+       laptop is accepted as a shorthand for workstation + subrole laptop
+
+Subroles: $(known_subroles | paste -sd, -)
 
 Options:
-  --reset              list packages that a force-reset would remove
-  --force              with --reset, actually strip to the ISO baseline
-  --dry-run            print actions without changing the system
-  --hostname NAME      set the static hostname
-  -h, --help           show this help
+  --enable-subrole NAME    save NAME and apply its modules
+  --disable-subrole NAME   drop NAME from the saved list
+  --list-subroles          print known and enabled subroles
+  --reset                  list packages that a force-reset would remove
+  --force                  with --reset, actually strip to the ISO baseline
+  --dry-run                print actions without changing the system
+  --hostname NAME          set the static hostname
+  -h, --help               show this help
 EOF
     exit 1
 }
 
 role=""
+cli_role=0
 do_reset=0
 force=0
+list_subroles=0
 hostname_arg=""
+enable_subroles=()
+disable_subroles=()
 
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -54,6 +68,25 @@ while [[ "$#" -gt 0 ]]; do
         --hostname=*)
             hostname_arg="${1#--hostname=}"
             ;;
+        --enable-subrole)
+            [[ "$#" -ge 2 ]] || usage
+            enable_subroles+=("$2")
+            shift
+            ;;
+        --enable-subrole=*)
+            enable_subroles+=("${1#--enable-subrole=}")
+            ;;
+        --disable-subrole)
+            [[ "$#" -ge 2 ]] || usage
+            disable_subroles+=("$2")
+            shift
+            ;;
+        --disable-subrole=*)
+            disable_subroles+=("${1#--disable-subrole=}")
+            ;;
+        --list-subroles)
+            list_subroles=1
+            ;;
         -h | --help)
             usage
             ;;
@@ -70,13 +103,25 @@ while [[ "$#" -gt 0 ]]; do
                 usage
             fi
             role="$1"
+            cli_role=1
             ;;
     esac
     shift
 done
 
-[[ -n "$role" ]] || usage
-valid_role "$role" || die "unknown role ${role}"
+require_user
+
+if [[ "$list_subroles" -eq 1 ]]; then
+    log "known subroles"
+    known_subroles
+    log "enabled subroles ($(subroles_file))"
+    if [[ -z "$(read_saved_subroles)" ]]; then
+        printf '(none)\n'
+    else
+        read_saved_subroles
+    fi
+    exit 0
+fi
 
 if [[ "$force" -eq 1 && "$do_reset" -eq 0 ]]; then
     die "--force is only used with --reset"
@@ -90,8 +135,6 @@ else
     export RESET_CONFIRM
 fi
 
-require_user
-
 if ! command -v git >/dev/null 2>&1; then
     log "bootstrap git (missing on this root)"
     if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
@@ -103,7 +146,27 @@ if ! command -v git >/dev/null 2>&1; then
 fi
 
 ensure_hostname "${hostname_arg}"
+
+role="$(migrate_legacy_laptop_role "$role")"
+if [[ -z "$role" ]]; then
+    role="$(read_saved_role || true)"
+    role="$(migrate_legacy_laptop_role "$role")"
+fi
+[[ -n "$role" ]] || die "no role saved; pass workstation, htpc, or server once"
+valid_role "$role" || die "unknown role ${role}"
+
+for name in "${enable_subroles[@]}"; do
+    enable_saved_subrole "$name"
+done
+for name in "${disable_subroles[@]}"; do
+    if ! valid_subrole "$name" && ! has_subrole "$name"; then
+        die "unknown subrole ${name}"
+    fi
+    disable_saved_subrole "$name"
+done
+
 record_role "$role"
+load_subroles_env
 
 if [[ "$do_reset" -eq 1 ]]; then
     log "strip toward ISO baseline (role packages come back on the next plain run)"
@@ -117,9 +180,27 @@ if [[ "$do_reset" -eq 1 ]]; then
     exit 0
 fi
 
-while IFS= read -r module; do
-    [[ -n "$module" ]] || continue
-    run_module "$module"
-done < <(role_modules "$role")
+run_full=1
+if [[ "$cli_role" -eq 0 && ("${#enable_subroles[@]}" -gt 0 || "${#disable_subroles[@]}" -gt 0) ]]; then
+    run_full=0
+fi
+
+if [[ "$run_full" -eq 1 ]]; then
+    while IFS= read -r module; do
+        [[ -n "$module" ]] || continue
+        run_module "$module"
+    done < <(role_modules "$role")
+else
+    for name in "${enable_subroles[@]}"; do
+        while IFS= read -r module; do
+            [[ -n "$module" ]] || continue
+            run_module "$module"
+        done < <(subrole_modules "$name")
+    done
+    if [[ "${#disable_subroles[@]}" -gt 0 && "${#enable_subroles[@]}" -eq 0 ]]; then
+        log "disabled subroles: ${disable_subroles[*]}"
+        log "packages already installed are left in place; next update-role skips those modules"
+    fi
+fi
 
 restart_qs_if_needed
