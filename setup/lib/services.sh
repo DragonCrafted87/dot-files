@@ -84,4 +84,3 @@ ensure_systemd_dropin() {
     printf '%s\n' "$contents" | sudo tee "$dest" >/dev/null
     run sudo systemctl daemon-reload
 }
-
