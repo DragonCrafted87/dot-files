@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dynamic host subroles. Sourced after lib.sh.
+# Dynamic host subroles. Sourced by setup/lib/lib.sh.
 # Saved list: ~/.config/dot-files/subroles
 # roles.conf sections: [subrole.<name>]
 # Not derived from the hostname.

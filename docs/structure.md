@@ -16,7 +16,7 @@ consumed by the modules.
 ## Subdivide module scripts
 
 Done. Modules live under `setup/modules/<area>/`. `roles.conf` still
-stores the basename; `find_module` in `lib.sh` looks the file up.
+stores the basename; `find_module` in `setup/lib/lib.sh` looks the file up.
 
 ```text
 setup/modules/

@@ -5,7 +5,7 @@
 # Bluetooth paddles/profiles use xpadneo when that stack is wanted.
 set -euo pipefail
 # shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/lib.sh"
+. "${REPO_ROOT:-$DOTFILES_ROOT}/setup/lib/lib.sh"
 
 require_user
 
