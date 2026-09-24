@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Sourced by setup/lib/lib.sh. Not an entry point.
 
 ensure_dir() {

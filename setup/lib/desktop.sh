@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Sourced by setup/lib/lib.sh. Not an entry point.
 
 # Modules run in a subprocess, so a restart request has to survive on disk.
