@@ -11,6 +11,25 @@ layouts live in `conf.d/monitors.d/` and are the source of truth.
 Startup runs `display-switch.sh restore` once (`exec-once`). Reloads do
 not re-run restore.
 
+## Graphical session (systemd)
+
+ly launches `Hyprland.desktop` (`Exec=Hyprland`), not the UWSM session.
+`graphical-session.target` has `RefuseManualStart=yes`, so a raw compositor
+never reaches it and `WantedBy=graphical-session.target` units stay dead
+(hypridle, hyprpolkitagent, mako, network-mounts).
+
+`scripts/graphical-session.sh start` (exec-once) imports compositor env
+into the user systemd and starts `hyprland-session.service`, which
+`BindsTo=` the target. `exec-shutdown` runs `stop` so session units go
+away with the compositor. Linger still starts `default.target` at boot;
+that path must not claim a graphical session.
+
+```bash
+~/.config/hypr/scripts/graphical-session.sh start
+~/.config/hypr/scripts/graphical-session.sh status
+~/.config/hypr/scripts/graphical-session.sh stop
+```
+
 File names:
 
 - `monitors.d/<hostname>.conf` — single layout for that host
