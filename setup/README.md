@@ -1,9 +1,10 @@
 # setup
 
 One control script at this directory root applies a machine role by
-calling modules under `modules/`.
+calling modules under `modules/<area>/`.
 Re-running a role is the intended
 upgrade path. What each role runs is listed in `roles.conf`.
+`roles.conf` stores module basenames; `setup/lib/lib.sh` looks each one up.
 
 ```bash
 ~/dot-files/setup/role.sh workstation
@@ -63,8 +64,23 @@ want is listed.
 A single module can be run on its own:
 
 ```bash
-~/dot-files/setup/modules/link-user-config.sh
+~/dot-files/setup/modules/common/link-user-config.sh
 ```
+
+## Module areas
+
+Scripts sit under `modules/<area>/` so the tree shows why they exist.
+`roles.conf` still lists the basename.
+
+| Area      | What lives there                                       |
+| --------- | ------------------------------------------------------ |
+| `common`  | ssh, sudoers, repos, timezone, plasma removal, links   |
+| `desktop` | Hyprland, Brave, Flatpak, CUPS, gaming, MIME, VS Code  |
+| `network` | mounts, bluetooth, NFS server                          |
+| `compute` | BOINC, k3s, python-dev, MakeMKV, artifact/docker stubs |
+| `host`    | `configure-laptop` / `htpc` / `server` leftovers       |
+
+Do not name folders after roles. Laptop is a workstation overlay.
 
 ## Roles
 
@@ -141,7 +157,7 @@ Login autostart runs `~/bin/sync-makemkv-desktops.sh`, which writes one
 ones. Re-run that script after plugging in a USB Blu-ray drive.
 
 ```bash
-~/dot-files/setup/modules/install-makemkv.sh
+~/dot-files/setup/modules/compute/install-makemkv.sh
 ~/bin/sync-makemkv-desktops.sh
 ```
 
@@ -165,7 +181,7 @@ QFG5 is copied when present; a launcher is created only if that ScummVM
 build lists the game.
 
 ```bash
-~/dot-files/setup/modules/install-scummvm-quest-for-glory.sh
+~/dot-files/setup/modules/desktop/install-scummvm-quest-for-glory.sh
 ```
 
 ## BOINC
@@ -251,13 +267,13 @@ and re-run `install-boinc.sh` or `boinc-config`.
 Docker image manager is a standalone placeholder, not part of every server:
 
 ```bash
-~/dot-files/setup/modules/install-docker-image-manager.sh
+~/dot-files/setup/modules/compute/install-docker-image-manager.sh
 ```
 
 ## Config links
 
-`modules/link-user-config.sh` links every directory in repo `config/`
-into `~/.config` with the same name:
+`modules/common/link-user-config.sh` links every directory in repo
+`config/` into `~/.config` with the same name:
 
 ```text
 config/hyprland    ->  ~/.config/hyprland

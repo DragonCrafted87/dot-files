@@ -16,10 +16,13 @@
 # every later role run. They are not derived from the hostname.
 
 set -euo pipefail
-# shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
-# shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/subroles.sh"
+if [[ -n "${REPO_ROOT:-}" || -n "${DOTFILES_ROOT:-}" ]]; then
+    # shellcheck disable=SC1091
+    . "${REPO_ROOT:-$DOTFILES_ROOT}/setup/lib/lib.sh"
+else
+    # shellcheck disable=SC1091
+    . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/lib.sh"
+fi
 
 usage() {
     cat >&2 <<EOF
@@ -172,7 +175,7 @@ load_subroles_env
 
 if [[ "$do_reset" -eq 1 ]]; then
     log "strip toward ISO baseline (role packages come back on the next plain run)"
-    OMV_ROLE="$role" bash "${SETUP_DIR}/modules/prune-extra-packages.sh"
+    OMV_ROLE="$role" bash "$(find_module prune-extra-packages)"
     if [[ "$force" -eq 1 && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
         log "baseline strip finished. home files were left in place."
         log "log in on a VT or SSH and run: $0 ${role}"

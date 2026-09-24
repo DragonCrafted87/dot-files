@@ -53,7 +53,9 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
 - Lists in `setup/roles.conf`. `[common]` always runs. `laptop` is a
   subrole of `workstation` (`[subrole.laptop]`).
 - Roles: `workstation`, `htpc`, `server`.
-- Modules are `setup/modules/<name>.sh` and source `setup/lib.sh`.
+- Modules source `${REPO_ROOT:-$DOTFILES_ROOT}/setup/lib/lib.sh`.
+- `setup/lib/lib.sh` is the only import. It loads the pieces under `setup/lib/`.
+- `roles.conf` stores the basename. `run_module` looks the file up.
 - Prefer adding a module + a `roles.conf` line over growing an unrelated
   script. Color/theme work for an app belongs in that app's install
   module (office → `install-office-printing`, games →

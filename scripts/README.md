@@ -2,14 +2,14 @@
 
 Helpers called from `bashrc.d`, not part of the role installer.
 
-| File                                       | Used by                               |
-| ------------------------------------------ | ------------------------------------- |
-| `ffmpeg.py` + `ffmpeg_tools/`              | `bashrc.d/ffmpeg.bashrc`              |
-| `config/jellyfin.job.example`              | `ffmpeg-jellyfin-init` / sort         |
-| `dictation.py`                             | `bashrc.d/ai.bashrc` (`ai-dictate`)   |
-| `mc_mod_downloader.py` + `mc_modlist.conf` | `bashrc.d/minecraft.bashrc`           |
-| `config/podcast-downloader.json`           | `bashrc.d/podcast.bashrc`             |
-| `install-omp.sh`                           | `setup/modules/install-oh-my-posh.sh` |
+| File                                       | Used by                                      |
+| ------------------------------------------ | -------------------------------------------- |
+| `ffmpeg.py` + `ffmpeg_tools/`              | `bashrc.d/ffmpeg.bashrc`                     |
+| `config/jellyfin.job.example`              | `ffmpeg-jellyfin-init` / sort                |
+| `dictation.py`                             | `bashrc.d/ai.bashrc` (`ai-dictate`)          |
+| `mc_mod_downloader.py` + `mc_modlist.conf` | `bashrc.d/minecraft.bashrc`                  |
+| `config/podcast-downloader.json`           | `bashrc.d/podcast.bashrc`                    |
+| `install-omp.sh`                           | `setup/modules/common/install-oh-my-posh.sh` |
 
 `ffmpeg.py` is the CLI. Implementation is under `ffmpeg_tools/`.
 `audio_audible.py` is unfinished on purpose. The bash functions are

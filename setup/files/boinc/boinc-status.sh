@@ -20,7 +20,7 @@ boinc_cmd() {
 }
 
 if [[ ! -x "$BOINCCMD" ]]; then
-    printf 'error: %s is missing; rebuild BOINC with setup/modules/install-boinc.sh\n' "$BOINCCMD" >&2
+    printf 'error: %s is missing; rebuild BOINC with setup/modules/compute/install-boinc.sh\n' "$BOINCCMD" >&2
     exit 1
 fi
 
