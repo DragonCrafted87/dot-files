@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Sourced by setup/lib/lib.sh. Not an entry point.
 
 # Resolve setup/modules/<name>.sh or setup/modules/<area>/<name>.sh.
