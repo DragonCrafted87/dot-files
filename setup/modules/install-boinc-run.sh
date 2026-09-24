@@ -8,7 +8,7 @@ set -euo pipefail
 
 require_user
 
-remove_flatpak_boinc
+remove_distro_boinc
 
 if systemctl --user list-unit-files boinc-client.service >/dev/null 2>&1; then
     if systemctl --user is-active --quiet boinc-client.service; then

@@ -12,11 +12,3 @@ Tracked after the Tango Dark pass. Not scheduled.
 ## local builds
 
 - current version of hyprland
-
-## BOINC
-
-- After every machine has the native `/usr/local` client, drop leftover
-  Flatpak references: `edu.berkeley.BOINC`, the
-  `~/.var/app/edu.berkeley.BOINC` migration in `install-boinc.sh`, and
-  any docs that still mention the Flathub app. Keep the uninstall step
-  until that sweep so a late box still gets cleaned up.

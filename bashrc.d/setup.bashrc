@@ -60,7 +60,7 @@ update-role() {
     }
     setup="${repo}/setup/role.sh"
 
-    if [[ "${1:-}" == workstation || "${1:-}" == laptop || "${1:-}" == htpc || "${1:-}" == server ]]; then
+    if [[ "${1:-}" == workstation || "${1:-}" == htpc || "${1:-}" == server ]]; then
         role="$1"
         shift
     elif [[ -f "$role_file" ]]; then

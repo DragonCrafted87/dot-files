@@ -8,7 +8,9 @@
 #
 # --reset strips toward the ISO-minus-strip baseline. It does not re-run
 # modules. After a forced reset, run role.sh again without --reset.
-# --reset must be a real VT (Ctrl+Alt+F3) or SSH, not Ly/Hyprland/Plasma.
+# --reset --force must be a real VT (Ctrl+Alt+F3) or SSH, not
+# Ly/Hyprland/Plasma. A bare --reset only lists extras and may run
+# from a graphical session.
 #
 # Subroles are saved in ~/.config/dot-files/subroles and re-applied on
 # every later role run. They are not derived from the hostname.
@@ -24,7 +26,7 @@ usage() {
 usage: $0 [options] [role]
 
 Roles: workstation, htpc, server
-       laptop is accepted as a shorthand for workstation + subrole laptop
+       laptop is a subrole: --enable-subrole laptop
 
 Subroles: $(known_subroles | paste -sd, -)
 
@@ -149,10 +151,14 @@ fi
 
 ensure_hostname "${hostname_arg}"
 
-role="$(migrate_legacy_laptop_role "$role")"
+if [[ "$role" == "laptop" ]]; then
+    die "laptop is a subrole; run: $0 workstation --enable-subrole laptop"
+fi
 if [[ -z "$role" ]]; then
     role="$(read_saved_role || true)"
-    role="$(migrate_legacy_laptop_role "$role")"
+fi
+if [[ "$role" == "laptop" ]]; then
+    die "saved role is laptop; write workstation to ~/.config/dot-files/role and enable-subrole laptop"
 fi
 [[ -n "$role" ]] || die "no role saved; pass workstation, htpc, or server once"
 valid_role "$role" || die "unknown role ${role}"

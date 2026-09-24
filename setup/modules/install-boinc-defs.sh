@@ -2,6 +2,7 @@
 # BOINC source-build helpers: deps, compile, data-dir migrate, rpc lookup.
 # Sourced from install-boinc.sh. Not a standalone role module.
 
+
 set -euo pipefail
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
@@ -15,7 +16,6 @@ BOINC_PREFIX="${BOINC_PREFIX:-/usr/local}"
 STAMP="${BOINC_PREFIX}/share/boinc/.dotfiles-version"
 BUILD_ROOT="${DOTFILES_HOME}/.cache/boinc-build"
 SRC_DIR="${BUILD_ROOT}/boinc"
-OLD_DATA_DIR="${DOTFILES_HOME}/.var/app/edu.berkeley.BOINC"
 BOINC_DIR="${DOTFILES_HOME}/.local/share/boinc"
 
 install_build_deps() {
@@ -104,13 +104,7 @@ build_boinc() {
     log "installed BOINC ${BOINC_VERSION} to ${BOINC_PREFIX}"
 }
 
-remove_flatpak_boinc() {
-    if command -v flatpak >/dev/null 2>&1; then
-        if flatpak info edu.berkeley.BOINC >/dev/null 2>&1; then
-            log "remove Flatpak edu.berkeley.BOINC"
-            run sudo flatpak uninstall -y edu.berkeley.BOINC || run flatpak uninstall -y edu.berkeley.BOINC || true
-        fi
-    fi
+remove_distro_boinc() {
     if [[ -f /etc/yum.repos.d/boinc-stable.repo ]]; then
         run sudo rm -f /etc/yum.repos.d/boinc-stable.repo
     fi
@@ -118,16 +112,6 @@ remove_flatpak_boinc() {
 }
 
 migrate_data_dir() {
-    ensure_dir "$(dirname "$BOINC_DIR")"
-    if [[ -d "$BOINC_DIR" ]]; then
-        return 0
-    fi
-    if [[ -d "$OLD_DATA_DIR" ]]; then
-        log "migrate BOINC data ${OLD_DATA_DIR} -> ${BOINC_DIR}"
-        [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
-        mv "$OLD_DATA_DIR" "$BOINC_DIR"
-        return 0
-    fi
     ensure_dir "$BOINC_DIR"
 }
 

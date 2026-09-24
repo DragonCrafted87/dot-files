@@ -50,9 +50,9 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
 
 ## Setup modules
 
-- Lists in `setup/roles.conf`. `[common]` always runs. `laptop` is
-  `@workstation` plus laptop-only modules.
-- Roles: `workstation`, `laptop`, `htpc`, `server`.
+- Lists in `setup/roles.conf`. `[common]` always runs. `laptop` is a
+  subrole of `workstation` (`[subrole.laptop]`).
+- Roles: `workstation`, `htpc`, `server`.
 - Modules are `setup/modules/<name>.sh` and source `setup/lib.sh`.
 - Prefer adding a module + a `roles.conf` line over growing an unrelated
   script. Color/theme work for an app belongs in that app's install
