@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BOINC source-build helpers: deps, compile, data-dir migrate, rpc lookup.
+# BOINC source-build helpers: deps, compile, data dir, rpc lookup.
 # Sourced from install-boinc.sh. Not a standalone role module.
 
 
@@ -102,17 +102,6 @@ build_boinc() {
     sudo mkdir -p "$(dirname "$STAMP")"
     printf '%s\n' "$BOINC_VERSION" | sudo tee "$STAMP" >/dev/null
     log "installed BOINC ${BOINC_VERSION} to ${BOINC_PREFIX}"
-}
-
-remove_distro_boinc() {
-    if [[ -f /etc/yum.repos.d/boinc-stable.repo ]]; then
-        run sudo rm -f /etc/yum.repos.d/boinc-stable.repo
-    fi
-    remove_packages boinc-client boinc-manager || true
-}
-
-migrate_data_dir() {
-    ensure_dir "$BOINC_DIR"
 }
 
 remove_stale_path_cmds() {

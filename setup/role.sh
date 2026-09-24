@@ -151,14 +151,8 @@ fi
 
 ensure_hostname "${hostname_arg}"
 
-if [[ "$role" == "laptop" ]]; then
-    die "laptop is a subrole; run: $0 workstation --enable-subrole laptop"
-fi
 if [[ -z "$role" ]]; then
     role="$(read_saved_role || true)"
-fi
-if [[ "$role" == "laptop" ]]; then
-    die "saved role is laptop; write workstation to ~/.config/dot-files/role and enable-subrole laptop"
 fi
 [[ -n "$role" ]] || die "no role saved; pass workstation, htpc, or server once"
 valid_role "$role" || die "unknown role ${role}"

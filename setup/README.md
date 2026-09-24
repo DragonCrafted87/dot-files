@@ -172,10 +172,9 @@ build lists the game.
 
 Every role builds the client and manager from tagged source
 `client_release/8.2/8.2.13`. Override with `BOINC_VERSION`. OpenMandriva
-has no working BOINC rpms; Fedora packages ABI-mismatch and are removed.
-The compile is
-skipped when `/usr/local/share/boinc/.dotfiles-version` already matches
-the pinned version.
+has no working BOINC rpms. The compile is skipped when
+`/usr/local/share/boinc/.dotfiles-version` already matches the pinned
+version.
 
 Source builds pick up `bashrc.d/compiler.bashrc` (`clang`, `lld`,
 `-march=native`). On AMD family 23+ that is the matching `znver*` ISA,
