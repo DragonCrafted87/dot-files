@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Enable the Hyprland-related user units that are already in use.
-# Distro audio/dbus sockets are left alone. network-mounts.service is
-# custom and is only enabled if that unit file is present.
+# Distro audio/dbus sockets are left alone. These WantedBy
+# graphical-session.target, which hyprland-session.service binds after
+# login (ly -> Hyprland.desktop does not start that target).
+# network-mounts.service is custom and is enabled in install-network-mounts.
 
 set -euo pipefail
 # shellcheck disable=SC1091
