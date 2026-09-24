@@ -118,33 +118,6 @@ read_saved_role() {
     tr -d '[:space:]' <"$file"
 }
 
-# Old installs saved "laptop" as the top-level role. That is now
-# workstation plus the laptop subrole.
-migrate_legacy_laptop_role() {
-    local requested="${1:-}"
-    local file="${CONFIG_TARGET_DIR}/dot-files/role"
-    local current=""
-    if [[ -f "$file" ]]; then
-        current="$(tr -d '[:space:]' <"$file")"
-    fi
-    if [[ "$current" == "laptop" ]]; then
-        log "migrate saved role laptop -> workstation + subrole laptop"
-        enable_saved_subrole laptop
-        current="workstation"
-    fi
-    if [[ "$requested" == "laptop" ]]; then
-        log "laptop is a subrole of workstation"
-        enable_saved_subrole laptop
-        printf '%s\n' workstation
-        return 0
-    fi
-    if [[ -n "$requested" ]]; then
-        printf '%s\n' "$requested"
-    else
-        printf '%s\n' "$current"
-    fi
-}
-
 valid_role() {
     case "${1:-}" in
         workstation | htpc | server) return 0 ;;

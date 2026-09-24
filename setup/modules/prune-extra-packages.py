@@ -123,7 +123,8 @@ def main() -> int:
     dry = os.environ.get("DOTFILES_DRY_RUN", "0") == "1"
     force = os.environ.get("RESET_CONFIRM", "") == "yes"
 
-    require_reset_session()
+    if force:
+        require_reset_session()
 
     iso_file = first_existing(
         PACKAGES / "iso-installed.txt",

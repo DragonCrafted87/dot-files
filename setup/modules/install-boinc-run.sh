@@ -8,8 +8,6 @@ set -euo pipefail
 
 require_user
 
-remove_flatpak_boinc
-
 if systemctl --user list-unit-files boinc-client.service >/dev/null 2>&1; then
     if systemctl --user is-active --quiet boinc-client.service; then
         log "stop user boinc-client before rebuild"
@@ -26,7 +24,7 @@ else
     build_boinc
 fi
 
-migrate_data_dir
+ensure_dir "$BOINC_DIR"
 remove_stale_path_cmds
 
 rpc_file="${BOINC_DIR}/gui_rpc_auth.cfg"

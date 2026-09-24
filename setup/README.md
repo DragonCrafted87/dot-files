@@ -7,13 +7,13 @@ upgrade path. What each role runs is listed in `roles.conf`.
 
 ```bash
 ~/dot-files/setup/role.sh workstation
-~/dot-files/setup/role.sh laptop
+~/dot-files/setup/role.sh workstation --enable-subrole laptop
 ~/dot-files/setup/role.sh htpc
 ~/dot-files/setup/role.sh server
 ```
 
 ```bash
-~/dot-files/setup/role.sh --hostname study.lan laptop
+~/dot-files/setup/role.sh --hostname study.lan workstation --enable-subrole laptop
 ~/dot-files/setup/role.sh --dry-run server
 ```
 
@@ -36,7 +36,8 @@ and sshd:
    this computer
 1. `git clone git@github.com:DragonCrafted87/dot-files.git ~/dot-files`
 
-Same role names as `role.sh`: `workstation`, `laptop`, `htpc`, `server`.
+Same role names as `role.sh`: `workstation`, `htpc`, `server`.
+Laptop is a subrole (`--enable-subrole laptop`), not a top-level role.
 After the clone, SSH in and run the role:
 
 ```bash
@@ -51,11 +52,12 @@ user-installed rpms and extra Flatpaks (Plasma leftovers included).
 ```bash
 ./setup/role.sh --reset workstation
 ./setup/role.sh --reset --force workstation
-./setup/role.sh --dry-run --reset laptop
+./setup/role.sh --dry-run --reset workstation
 ```
 
-The first run only prints the extras. Add `--force` to actually remove
-them. Add names to `files/packages/never-remove.list` if something you
+The first run only prints the extras and may run from a graphical
+session. `--force` actually removes them and must run from a real VT
+or SSH. Add names to `files/packages/never-remove.list` if something you
 want is listed.
 
 A single module can be run on its own:
@@ -67,14 +69,15 @@ A single module can be run on its own:
 ## Roles
 
 Edit `roles.conf` to change the module lists. `[common]` runs for every
-role. `laptop` includes `@workstation` and then laptop-only modules.
+role. `laptop` is `[subrole.laptop]` on top of `workstation`.
 
 | Role          | Extra modules                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------------- |
 | `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, KDE Connect, BOINC Manager |
-| `laptop`      | workstation plus `configure-laptop` (power-profiles-daemon)                                           |
 | `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client                                                      |
 | `server`      | CLI baseline, k3s, BOINC client; no GUI session                                                       |
+
+`enable-subrole laptop` adds `configure-laptop` (power-profiles-daemon).
 
 Dolphin is the Hyprland file manager (`SUPER+E`). After
 `remove-plasma-sddm` strips Plasma, it has no KService/MIME map unless
@@ -169,10 +172,9 @@ build lists the game.
 
 Every role builds the client and manager from tagged source
 `client_release/8.2/8.2.13`. Override with `BOINC_VERSION`. OpenMandriva
-has no working BOINC rpms; Fedora packages ABI-mismatch and are removed.
-The old Flatpak app is uninstalled on the next role run. The compile is
-skipped when `/usr/local/share/boinc/.dotfiles-version` already matches
-the pinned version.
+has no working BOINC rpms. The compile is skipped when
+`/usr/local/share/boinc/.dotfiles-version` already matches the pinned
+version.
 
 Source builds pick up `bashrc.d/compiler.bashrc` (`clang`, `lld`,
 `-march=native`). On AMD family 23+ that is the matching `znver*` ISA,
@@ -192,8 +194,7 @@ not a hard-coded `znver1`.
 Repo copies of the helpers keep the `.sh` suffix under
 `setup/files/boinc/`. PATH names do not.
 
-Existing Flatpak data under `~/.var/app/edu.berkeley.BOINC` is moved to
-`~/.local/share/boinc` once. `loginctl enable-linger` keeps the user unit
+`loginctl enable-linger` keeps the user unit
 running after logout so servers and the HTPC still crunch without a
 desktop session.
 
