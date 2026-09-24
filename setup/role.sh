@@ -16,10 +16,13 @@
 # every later role run. They are not derived from the hostname.
 
 set -euo pipefail
-# shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
-# shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/subroles.sh"
+if [[ -n "${REPO_ROOT:-}" || -n "${DOTFILES_ROOT:-}" ]]; then
+    # shellcheck disable=SC1091
+    . "${REPO_ROOT:-$DOTFILES_ROOT}/setup/lib/lib.sh"
+else
+    # shellcheck disable=SC1091
+    . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/lib.sh"
+fi
 
 usage() {
     cat >&2 <<EOF

@@ -4,7 +4,7 @@ One control script at this directory root applies a machine role by
 calling modules under `modules/<area>/`.
 Re-running a role is the intended
 upgrade path. What each role runs is listed in `roles.conf`.
-`roles.conf` stores module basenames; `lib.sh` looks each one up.
+`roles.conf` stores module basenames; `setup/lib/lib.sh` looks each one up.
 
 ```bash
 ~/dot-files/setup/role.sh workstation

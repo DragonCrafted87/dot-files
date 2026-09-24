@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared compiler defaults for interactive shells and source-build modules.
 # Prefer the LLVM toolchain on OpenMandriva. Modules source this via
-# load_compiler_env in setup/lib.sh so role runs match the login shell.
+# load_compiler_env in setup/lib/lib.sh so role runs match the login shell.
 #
 # Add new common flags here instead of copying them into each installer.
 

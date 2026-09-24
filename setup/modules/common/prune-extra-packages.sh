@@ -2,6 +2,6 @@
 # Wrapper so role.sh can keep calling this module by name.
 set -euo pipefail
 # shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/lib.sh"
+. "${REPO_ROOT:-$DOTFILES_ROOT}/setup/lib/lib.sh"
 require_user
 exec python3 "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/prune-extra-packages.py" "$@"
