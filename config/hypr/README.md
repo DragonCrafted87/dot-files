@@ -83,8 +83,8 @@ python3 ~/.config/hypr/scripts/litra-camera-lights.py on
 python3 ~/.config/hypr/scripts/litra-camera-lights.py off
 ```
 
-hidraw access needs `setup/modules/configure-litra-glow.sh` (udev rule
-plus the `video` group).
+hidraw access needs `setup/modules/desktop/configure-litra-glow.sh` (udev
+rule plus the `video` group).
 
 ## Logitech G603
 

@@ -172,7 +172,7 @@ load_subroles_env
 
 if [[ "$do_reset" -eq 1 ]]; then
     log "strip toward ISO baseline (role packages come back on the next plain run)"
-    OMV_ROLE="$role" bash "${SETUP_DIR}/modules/prune-extra-packages.sh"
+    OMV_ROLE="$role" bash "$(find_module prune-extra-packages)"
     if [[ "$force" -eq 1 && "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
         log "baseline strip finished. home files were left in place."
         log "log in on a VT or SSH and run: $0 ${role}"

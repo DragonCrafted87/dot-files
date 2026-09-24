@@ -486,10 +486,52 @@ restart_qs_if_needed() {
     nohup "$starter" >/dev/null 2>&1 &
 }
 
+# Resolve setup/modules/<name>.sh or setup/modules/<area>/<name>.sh.
+# roles.conf stores the basename. A name with a slash is taken as a path
+# under setup/modules/.
+find_module() {
+    local module="${1:-}"
+    local base="${SETUP_DIR}/modules"
+    local path candidate
+    local matches=()
+
+    [[ -n "$module" ]] || return 1
+    module="${module%.sh}"
+
+    if [[ "$module" == */* ]]; then
+        path="${base}/${module}.sh"
+        if [[ -f "$path" ]]; then
+            printf '%s\n' "$path"
+            return 0
+        fi
+        return 1
+    fi
+
+    path="${base}/${module}.sh"
+    if [[ -f "$path" ]]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+
+    for candidate in "${base}"/*/"${module}.sh"; do
+        [[ -f "$candidate" ]] || continue
+        matches+=("$candidate")
+    done
+
+    if [[ "${#matches[@]}" -eq 1 ]]; then
+        printf '%s\n' "${matches[0]}"
+        return 0
+    fi
+    if [[ "${#matches[@]}" -gt 1 ]]; then
+        die "ambiguous module ${module}: ${matches[*]}"
+    fi
+    return 1
+}
+
 run_module() {
     local module="$1"
-    local path="${SETUP_DIR}/modules/${module}.sh"
-    [[ -f "$path" ]] || die "missing module: ${path}"
+    local path
+    path="$(find_module "$module")" || die "missing module: ${module}"
     log "module ${module}"
     # shellcheck disable=SC1090
     bash "$path"

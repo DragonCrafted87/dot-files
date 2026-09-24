@@ -15,13 +15,8 @@ consumed by the modules.
 
 ## Subdivide module scripts
 
-`setup/modules/` is a flat list of ~35 scripts. Role membership is in
-`roles.conf`, which is good, but the directory itself does not show
-*why* a script exists.
-
-A later split could be by job, still invoked as today
-(`modules/<name>.sh` via a tiny lookup, or `modules/<area>/<name>.sh`
-with `roles.conf` storing the basename):
+Done. Modules live under `setup/modules/<area>/`. `roles.conf` still
+stores the basename; `find_module` in `lib.sh` looks the file up.
 
 ```text
 setup/modules/
