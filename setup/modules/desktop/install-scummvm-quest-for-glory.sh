@@ -22,11 +22,7 @@ ICON_BASE="https://raw.githubusercontent.com/scummvm/scummvm-icons/master/icons"
 SCUMMVM_APP_ICON_URL="https://raw.githubusercontent.com/scummvm/scummvm-media/master/scummvm_icon_256.png"
 DATA_HOME="${XDG_DATA_HOME:-${DOTFILES_HOME}/.local/share}"
 HICOLOR_DIR="${DATA_HOME}/icons/hicolor/256x256/apps"
-DESKTOP_DIR="${XDG_DESKTOP_DIR:-}"
-if [[ -z "$DESKTOP_DIR" ]] && command -v xdg-user-dir >/dev/null 2>&1; then
-    DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
-fi
-DESKTOP_DIR="${DESKTOP_DIR:-${DOTFILES_HOME}/Desktop}"
+DESKTOP_DIR="${DESKTOP_DIR:-$(resolve_desktop_dir)}"
 APPS_DIR="${DATA_HOME}/applications"
 MARKER="X-DotFiles-QFG"
 

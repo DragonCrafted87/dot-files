@@ -2,7 +2,7 @@
 # Network mounts for workstation and laptop. Failures are logged and
 # ignored so a missing VPN or offline laptop does not fail the user unit.
 
-MOUNTPOINT="${HOME}/Network"
+MOUNTPOINT="${HOME}/network"
 CREDENTIALS="${HOME}/.smbcredentials"
 RCLONE_REMOTE="dragon-onedrive"
 RCLONE_SHARE="Dragon-OneDrive"
@@ -34,6 +34,57 @@ retire_legacy_cifs_dir() {
     elif [[ -d "$old" ]]; then
         log "warning: leftover ${old} is not empty"
     fi
+}
+
+unmount_under() {
+    local root="$1"
+    local target
+    local -a targets=()
+
+    mapfile -t targets < <(findmnt -n -l -o TARGET | awk -v p="$root" '$0 == p || index($0, p "/") == 1' | sort -r)
+    for target in "${targets[@]}"; do
+        [[ -n "$target" ]] || continue
+        log "unmounting ${target}"
+        if sudo umount "$target" 2>/dev/null; then
+            continue
+        fi
+        if umount "$target" 2>/dev/null; then
+            continue
+        fi
+        if command -v fusermount3 >/dev/null 2>&1 && fusermount3 -u "$target" 2>/dev/null; then
+            continue
+        fi
+        if command -v fusermount >/dev/null 2>&1 && fusermount -u "$target" 2>/dev/null; then
+            continue
+        fi
+        log "failed: could not unmount ${target}"
+    done
+}
+
+# Move ~/Network to ~/network after dropping child mounts.
+retire_legacy_mount_root() {
+    local old="${HOME}/Network"
+    local new="${HOME}/network"
+
+    if [[ ! -e "$old" && ! -L "$old" ]]; then
+        return 0
+    fi
+
+    unmount_under "$old"
+    retire_legacy_cifs_dir "${old}/Storage"
+    retire_legacy_cifs_dir "${old}/Unrestricted"
+    retire_legacy_cifs_dir "${old}/Backups"
+
+    if [[ ! -e "$new" && ! -L "$new" ]]; then
+        log "renaming ${old} -> ${new}"
+        mv "$old" "$new"
+        return 0
+    fi
+    if [[ -d "$old" && -z "$(find "$old" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+        rmdir "$old" 2>/dev/null || true
+        return 0
+    fi
+    log "warning: leftover ${old} is not empty"
 }
 
 cifs_host() {
@@ -136,6 +187,7 @@ mount_rclone() {
 }
 
 log "network mount start"
+retire_legacy_mount_root
 retire_legacy_cifs_dir "${MOUNTPOINT}/Storage"
 retire_legacy_cifs_dir "${MOUNTPOINT}/Unrestricted"
 retire_legacy_cifs_dir "${MOUNTPOINT}/Backups"

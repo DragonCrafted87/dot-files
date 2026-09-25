@@ -35,4 +35,5 @@ ensure_packages \
     cifs-utils \
     nfs-utils \
     samba-client \
-    inotify-tools
+    inotify-tools \
+    xdg-user-dirs
