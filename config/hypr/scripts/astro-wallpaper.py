@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -70,6 +71,25 @@ def _download(url: str, dest: Path, timeout: int = 60) -> None:
     tmp.replace(dest)
 
 
+def image_kind(path: Path) -> str | None:
+    """Return jpeg/png/webp from magic bytes. hyprpaper dies on GIF named .jpg."""
+    try:
+        header = path.read_bytes()[:16]
+    except OSError:
+        return None
+    if header.startswith(b"\xff\xd8\xff"):
+        return "jpeg"
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if header.startswith(b"RIFF") and header[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def image_is_supported(path: Path) -> bool:
+    return image_kind(path) is not None
+
+
 def _enabled_monitors() -> list[str]:
     try:
         raw = subprocess.check_output(["hyprctl", "monitors", "-j"], text=True)
@@ -86,6 +106,25 @@ def _enabled_monitors() -> list[str]:
         if name:
             names.append(name)
     return names
+
+
+def _wait_enabled_monitors(timeout: float = 5.0) -> list[str]:
+    """Wait until hyprctl reports a stable non-empty enabled set."""
+    deadline = time.monotonic() + timeout
+    last: list[str] = []
+    stable = 0
+    names: list[str] = []
+    while time.monotonic() < deadline:
+        names = _enabled_monitors()
+        if names and names == last:
+            stable += 1
+            if stable >= 2:
+                return names
+        else:
+            stable = 0
+            last = names
+        time.sleep(0.25)
+    return names or _enabled_monitors()
 
 
 def _commons_candidates(category: str, limit: int = 40) -> list[dict[str, str]]:
@@ -198,16 +237,21 @@ def fetch_pool(needed: int) -> list[Path]:
         seen.add(url)
         dest = CACHE_DIR / f"{stamp}-{_safe_name(item['title'])}{_ext_for(url)}"
         if dest.exists() and dest.stat().st_size > 0:
-            saved.append(dest)
-            continue
+            if image_is_supported(dest):
+                saved.append(dest)
+                continue
+            dest.unlink(missing_ok=True)
         try:
             _download(url, dest)
         except (urllib.error.URLError, TimeoutError, OSError):
             if dest.exists():
                 dest.unlink()
             continue
-        if dest.exists() and dest.stat().st_size > 0:
+        if dest.exists() and dest.stat().st_size > 0 and image_is_supported(dest):
             saved.append(dest)
+            continue
+        if dest.exists():
+            dest.unlink()
     return saved
 
 
@@ -217,7 +261,9 @@ def cached_images() -> list[Path]:
     files = [
         path
         for path in CACHE_DIR.iterdir()
-        if path.is_file() and path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}
+        if path.is_file()
+        and path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}
+        and image_is_supported(path)
     ]
     files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
     return files
@@ -225,8 +271,14 @@ def cached_images() -> list[Path]:
 
 def prune_cache() -> None:
     cutoff = datetime.now(timezone.utc).timestamp() - KEEP_DAYS * 86400
-    for path in cached_images():
-        if path.stat().st_mtime < cutoff:
+    if not CACHE_DIR.is_dir():
+        return
+    for path in list(CACHE_DIR.iterdir()):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}:
+            continue
+        if not image_is_supported(path) or path.stat().st_mtime < cutoff:
             path.unlink(missing_ok=True)
 
 
@@ -277,7 +329,8 @@ def start_hyprpaper() -> bool:
         )
     for _ in range(30):
         if _hyprpaper_running():
-            return True
+            time.sleep(0.2)
+            return _hyprpaper_running()
         time.sleep(0.1)
     print(
         f"astro-wallpaper: hyprpaper failed to start; see {HYPRPAPER_LOG}",
@@ -321,7 +374,8 @@ def cmd_fetch() -> list[Path]:
 
 
 def cmd_apply(force_fetch: bool) -> int:
-    monitors = _enabled_monitors()
+    prune_cache()
+    monitors = _wait_enabled_monitors()
     today = date.today().isoformat()
     state: dict[str, Any] = {}
     if STATE_FILE.is_file():
@@ -359,6 +413,29 @@ def cmd_status() -> int:
     return 0
 
 
+def cmd_selftest() -> int:
+    tmp = Path(tempfile.mkdtemp(prefix="astro-wallpaper-selftest-"))
+    try:
+        gif = tmp / "virgo.jpg"
+        gif.write_bytes(b"GIF87a" + b"\x00" * 16)
+        jpeg = tmp / "ok.jpg"
+        jpeg.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 16)
+        png = tmp / "ok.png"
+        png.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 8)
+        if image_kind(gif) is not None:
+            print("selftest: GIF named .jpg was accepted", file=sys.stderr)
+            return 1
+        if image_kind(jpeg) != "jpeg" or image_kind(png) != "png":
+            print("selftest: jpeg/png magic failed", file=sys.stderr)
+            return 1
+        print("selftest ok")
+        return 0
+    finally:
+        for path in tmp.iterdir():
+            path.unlink()
+        tmp.rmdir()
+
+
 def usage() -> None:
     print("Usage: astro-wallpaper.py [apply|refresh|status|help]")
 
@@ -371,6 +448,8 @@ def main() -> int:
         return cmd_apply(force_fetch=True)
     if cmd == "status":
         return cmd_status()
+    if cmd == "selftest":
+        return cmd_selftest()
     if cmd in {"-h", "--help", "help"}:
         usage()
         return 0

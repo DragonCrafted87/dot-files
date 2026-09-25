@@ -47,6 +47,32 @@ Rectangle {
         return ws.indexOf("special") === 0 || ws.indexOf("minimized") !== -1
     }
 
+    function iconNameForClass(cls) {
+        const raw = String(cls || "")
+        const c = raw.toLowerCase()
+        if (!c)
+            return "application-x-executable"
+        // Microsoft Code: Hyprland app id is "code" / "com.microsoft.VSCode";
+        // the desktop file Icon= is "vscode".
+        if (c === "code" || c === "code-url-handler" || c === "com.microsoft.vscode")
+            return "vscode"
+        try {
+            const apps = Array.from(DesktopEntries.applications.values)
+            for (let i = 0; i < apps.length; i++) {
+                const a = apps[i]
+                if (!a || !a.icon)
+                    continue
+                const id = String(a.id || "").toLowerCase()
+                const startup = String(a.startupClass || "").toLowerCase()
+                const last = id.split(".").pop()
+                if (c === startup || c === id || (last && c === last))
+                    return a.icon
+            }
+        } catch (e) {
+        }
+        return raw
+    }
+
     function parseClients(raw) {
         winModel.clear()
         if (!raw || !String(raw).trim()) {
@@ -78,9 +104,11 @@ Rectangle {
             })
             for (let i = 0; i < filtered.length; i++) {
                 const c = filtered[i]
+                const cls = c.initialClass || c.class || ""
                 winModel.append({
                     title: c.title || "(no title)",
-                    cls: c.initialClass || c.class || "",
+                    cls: cls,
+                    iconName: root.iconNameForClass(cls),
                     wsName: (c.workspace && c.workspace.name) ? String(c.workspace.name) : "?",
                     address: String(c.address)
                 })
@@ -237,6 +265,7 @@ Rectangle {
             delegate: Rectangle {
                 required property string title
                 required property string cls
+                required property string iconName
                 required property string wsName
                 required property string address
 
@@ -254,7 +283,7 @@ Rectangle {
                     IconImage {
                         Layout.preferredWidth: 18
                         Layout.preferredHeight: 18
-                        source: Quickshell.iconPath(cls, "application-x-executable")
+                        source: Quickshell.iconPath(iconName, "application-x-executable")
                     }
 
                     ColumnLayout {
