@@ -171,8 +171,8 @@ Rectangle {
         const paths = root.desktopFileCandidates(entry)
         if (!paths.length) return
         const quoted = paths.map(p => "'" + p.replace(/'/g, "'\\''") + "'").join(" ")
-        const opener = "sh -c 'for f in " + quoted + "; do if [ -f \"$f\" ]; then exec ${EDITOR:-nano} \"$f\"; fi; done'"
-        Hyprland.dispatch("exec kitty --class desktop-file -e " + opener)
+        const opener = "sh -c 'for f in " + quoted + "; do if [ -f \"$f\" ]; then exec code -- \"$f\"; fi; done'"
+        Hyprland.dispatch("exec " + opener)
         root.appLaunched()
     }
 
