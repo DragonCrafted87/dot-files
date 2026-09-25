@@ -11,6 +11,7 @@ ShellRoot {
     id: root
     property bool menuOpen: false
     property bool chromeVisible: true
+    property bool dismissVisible: false
 
     property int menuBaseW: 380
     property int menuMarginLeft: 8
@@ -36,15 +37,8 @@ ShellRoot {
     readonly property int flyoutMarginLeft: flyoutOnLeft
         ? Math.max(8, menuMarginLeft - flyoutWidth - flyoutGap)
         : (menuMarginLeft + menuBaseW + flyoutGap)
-    readonly property int flyoutMarginTop: {
-        const y = menuMarginTop + appsSection.y + appsSection.flyoutAlignY
-        return Math.max(8, Math.round(y))
-    }
-    readonly property int flyoutHeight: {
-        const remaining = monitorHeight - flyoutMarginTop - 8
-        const wanted = appsFlyout.implicitHeight
-        return Math.max(96, Math.min(wanted, Math.max(96, remaining)))
-    }
+    readonly property int flyoutContentY: Math.max(0, Math.round(appsSection.y + appsSection.flyoutAlignY))
+    readonly property int flyoutLayerHeight: Math.max(1, monitorHeight - menuMarginTop - 8)
 
     readonly property string cursorPath:
         (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/qs-startmenu-cursor.txt"
@@ -64,6 +58,7 @@ ShellRoot {
     }
 
     function closeMenu() {
+        root.dismissVisible = false
         root.menuOpen = false
         root.chromeVisible = true
     }
@@ -157,6 +152,32 @@ ShellRoot {
 
     PwObjectTracker {
         objects: [Pipewire.defaultAudioSink]
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            visible: root.dismissVisible
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.namespace: "qs-startmenu-dismiss"
+            color: "transparent"
+
+            anchors {
+                left: true
+                right: true
+                top: true
+                bottom: true
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onPressed: Qt.callLater(root.closeMenu)
+            }
+        }
     }
 
     PanelWindow {
@@ -256,17 +277,26 @@ ShellRoot {
         }
         margins {
             left: root.flyoutMarginLeft
-            top: root.flyoutMarginTop
+            top: root.menuMarginTop
         }
 
         width: root.flyoutWidth
-        height: root.flyoutHeight
+        height: root.flyoutLayerHeight
         color: "transparent"
+        mask: Region {
+            id: flyoutMask
+            item: appsFlyout
+        }
 
         AppsFlyout {
             id: appsFlyout
-            anchors.fill: parent
+            x: 0
+            y: root.flyoutContentY
+            width: root.flyoutWidth
+            height: Math.min(implicitHeight, Math.max(1, flyoutWindow.height - y))
             controller: appsSection
+            onHeightChanged: flyoutMask.changed()
+            onYChanged: flyoutMask.changed()
         }
     }
 
@@ -275,7 +305,12 @@ ShellRoot {
             root.chromeVisible = true
             taskbarSection.refresh()
             traySection.refreshStats()
+            Qt.callLater(() => {
+                if (root.menuOpen)
+                    root.dismissVisible = true
+            })
         } else {
+            root.dismissVisible = false
             root.chromeVisible = true
         }
     }

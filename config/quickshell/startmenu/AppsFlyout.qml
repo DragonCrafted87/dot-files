@@ -12,14 +12,31 @@ Rectangle {
     border.width: 1
 
     property var controller
+    property var apps: []
     property string title: controller ? controller.flyoutTitle : ""
-    property string refreshKey: controller ? (controller.filterCat + "|" + controller.searchText) : ""
     readonly property int rowStep: 36
     readonly property int titleH: 16
-    implicitHeight: {
-        const n = Math.max(1, appList.count)
-        const rows = Math.min(n, 16)
-        return 16 + 4 + titleH + rows * rowStep
+    readonly property int chromeH: 16 + 4 + titleH
+    readonly property int appCount: Array.isArray(root.apps) ? root.apps.length : 0
+    implicitHeight: chromeH + Math.max(1, root.appCount) * rowStep
+
+    function reloadApps() {
+        const next = root.controller ? root.controller.collectApps() : []
+        root.apps = next
+        appModel.values = next
+        if (appList.contentY !== 0)
+            appList.contentY = 0
+    }
+
+    onControllerChanged: root.reloadApps()
+    Component.onCompleted: root.reloadApps()
+
+    Connections {
+        target: root.controller
+        function onFilterCatChanged() { root.reloadApps() }
+        function onSearchTextChanged() { root.reloadApps() }
+        function onHoveredCatChanged() { root.reloadApps() }
+        function onPinnedCatChanged() { root.reloadApps() }
     }
 
     ColumnLayout {
@@ -38,18 +55,16 @@ Rectangle {
             id: appList
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.preferredHeight: 0
+            implicitHeight: 0
             clip: true
             spacing: 2
             boundsBehavior: Flickable.StopAtBounds
             flickDeceleration: 10000
             maximumFlickVelocity: 8000
             model: ScriptModel {
-                values: {
-                    const _k = root.refreshKey
-                    if (!root.controller)
-                        return []
-                    return root.controller.collectApps()
-                }
+                id: appModel
+                values: root.apps
             }
 
             function scrollRows(dir) {
