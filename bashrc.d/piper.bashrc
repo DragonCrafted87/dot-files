@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Console helpers for Piper/ratbag profile reset (Logitech G603).
+# Console helpers for Piper/ratbag profile reset (Logitech G603/G604).
 
 _reset_piper_profile() {
     local script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/reset-piper-profile.sh"
@@ -11,4 +11,5 @@ _reset_piper_profile() {
 }
 
 reset-piper-profile() { _reset_piper_profile "${1:-apply}"; }
-piper-g603-status() { _reset_piper_profile status; }
+piper-status() { _reset_piper_profile status; }
+piper-g603-status() { piper-status "$@"; }

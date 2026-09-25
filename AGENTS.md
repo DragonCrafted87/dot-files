@@ -62,9 +62,10 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
   `install-gaming-packages`, KDE chrome → `configure-mime-defaults`).
 - `configure-litra-glow` installs hidraw udev for Logitech Litra Glow
   (`046d:c900`) and adds the user to `video`.
-- `configure-piper-g603` installs `piper` / `ratbagd`, a udev rule for
-  the G603 / Lightspeed receiver, and a user oneshot that forces ratbag
-  profile 0 after Windows G HUB overwrites onboard storage.
+- `configure-piper-g603` installs `piper` / `ratbagd`, udev rules for
+  G603/G604 Lightspeed HID++, a hidraw rescan oneshot so ratbagd sees
+  the mice after hid-logitech-hidpp binds, and a user oneshot that
+  forces ratbag profile 0 after Windows G HUB overwrites onboard storage.
 - `configure-astro-wallpaper` installs `hyprpaper` and a daily user
   timer. `scripts/astro-wallpaper.py` pulls astronomy stills and sets one
   image per enabled monitor.
@@ -111,11 +112,14 @@ The filename is hyphenated. Keep `# pylint: disable=invalid-name` at the
 top. Call it with `python3`; do not rely on a shebang plus executable
 bit (pre-commit `check-executables-have-shebangs`).
 
-### Logitech G603
+### Logitech G603 / G604
 
 Windows G HUB on the work computer overwrites onboard profiles. A udev
 rule starts `reset-piper-profile.service`, which sets Piper profile 0
-through `ratbagctl`. Role module: `configure-piper-g603`.
+through `ratbagctl`. hid-logitech-hidpp bind also starts
+`ratbagd-hidraw-rescan.service` so ratbagd retries Lightspeed child
+nodes that were missing at daemon start. Role module:
+`configure-piper-g603`.
 
 ### Astronomy wallpapers
 
@@ -194,7 +198,7 @@ pre-commit run --all-files
 | Jabra Speak 710         | USB FS `5-2.1`, calls                               |
 | Insta360 Link           | USB HS `5-2.2`, V4L2 `/dev/video0`, MJPG            |
 | Litra Glow pair         | USB `5-2.3` and `5-2.4`, `046d:c900`                |
-| Logitech G603           | Lightspeed `046d:c539` / device `046d:406c`         |
+| Logitech G604 (pair)    | Lightspeed `046d:c539` / device `046d:4085`         |
 | Valve Index / 3D camera | other controller (`16:00.0`), ignore for desk calls |
 
 PipeWire is 1.4.x + WirePlumber. Volume CLI is `wpctl`.

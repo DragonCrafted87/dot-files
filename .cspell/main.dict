@@ -4,6 +4,7 @@ Accrescent
 EDID
 EVIOCGRAB
 G603
+G604
 GTK
 GrapheneOS
 Gudeman
@@ -40,6 +41,7 @@ ffmetadata
 forgewyrm
 gamescope
 gudem
+hidpp
 hidraw
 hlc
 htpc
@@ -61,6 +63,7 @@ quickshell
 ratbag
 ratbagctl
 ratbagd
+rescan
 runewyrm
 srv
 startmenu

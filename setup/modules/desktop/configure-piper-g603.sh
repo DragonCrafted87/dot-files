@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install Piper/ratbagd and reset the G603 to profile 0 on USB plug-in.
+# Install Piper/ratbagd and reset G603/G604 to profile 0 on USB plug-in.
 # Windows G HUB on the work PC overwrites onboard profiles; ratbagctl is
 # the CLI for the same daemon Piper uses.
 set -euo pipefail
@@ -7,6 +7,23 @@ set -euo pipefail
 . "${REPO_ROOT:-$DOTFILES_ROOT}/setup/lib/lib.sh"
 
 require_user
+
+install_root_file() {
+    local src="$1"
+    local dest="$2"
+    local mode="${3:-0644}"
+    INSTALL_ROOT_FILE_WROTE=0
+    if [[ ! -f "$src" ]]; then
+        warn "missing ${src}"
+        return 1
+    fi
+    if [[ -f "$dest" ]] && cmp -s "$src" "$dest"; then
+        return 0
+    fi
+    log "${dest}"
+    run sudo install -m "$mode" "$src" "$dest"
+    INSTALL_ROOT_FILE_WROTE=1
+}
 
 piper_pkg="$(pick_pkg piper || true)"
 ratbag_pkg="$(pick_pkg ratbagd || true)"
@@ -21,6 +38,7 @@ fi
 
 if systemctl list-unit-files ratbagd.service >/dev/null 2>&1; then
     enable_service ratbagd.service
+    ensure_systemd_dropin ratbagd.service hidraw-rescan $'[Service]\n# Replay hidraw ADD after start so Lightspeed HID++ nodes missed at boot show up.\nExecStartPost=/usr/bin/udevadm trigger --action=add --subsystem-match=hidraw\n'
     if ! systemctl is-active --quiet ratbagd.service 2>/dev/null; then
         log "start ratbagd.service"
         run sudo systemctl start ratbagd.service || true
@@ -29,17 +47,15 @@ fi
 
 src_rules="${SETUP_FILES_DIR}/piper/99-piper-profile-reset.rules"
 dest_rules="/etc/udev/rules.d/99-piper-profile-reset.rules"
-if [[ -f "$src_rules" ]]; then
-    if [[ -f "$dest_rules" ]] && cmp -s "$src_rules" "$dest_rules"; then
-        :
-    else
-        log "udev ${dest_rules}"
-        run sudo install -m 0644 "$src_rules" "$dest_rules"
-        run sudo udevadm control --reload-rules
-        run sudo udevadm trigger --subsystem-match=usb --subsystem-match=hidraw || true
-    fi
-else
-    warn "missing ${src_rules}"
+if install_root_file "$src_rules" "$dest_rules" && [[ "${INSTALL_ROOT_FILE_WROTE}" -eq 1 ]]; then
+    run sudo udevadm control --reload-rules
+    run sudo udevadm trigger --subsystem-match=usb --subsystem-match=hid --subsystem-match=hidraw || true
+fi
+
+src_rescan="${SETUP_FILES_DIR}/piper/ratbagd-hidraw-rescan.service"
+dest_rescan="/etc/systemd/system/ratbagd-hidraw-rescan.service"
+if install_root_file "$src_rescan" "$dest_rescan" && [[ "${INSTALL_ROOT_FILE_WROTE}" -eq 1 ]]; then
+    run sudo systemctl daemon-reload
 fi
 
 src_unit="${SETUP_FILES_DIR}/piper/reset-piper-profile.service"

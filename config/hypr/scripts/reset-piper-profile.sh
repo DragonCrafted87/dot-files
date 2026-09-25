@@ -5,8 +5,8 @@
 set -euo pipefail
 
 PROFILE="${PIPER_PROFILE:-0}"
-MATCH="${PIPER_DEVICE_MATCH:-G603}"
-ATTEMPTS="${PIPER_ATTEMPTS:-12}"
+MATCH="${PIPER_DEVICE_MATCH:-G603,G604}"
+ATTEMPTS="${PIPER_ATTEMPTS:-20}"
 RETRY_SLEEP="${PIPER_RETRY_SLEEP:-0.5}"
 QUIET="${PIPER_QUIET:-0}"
 
@@ -21,15 +21,16 @@ apply   Set matching ratbag devices to profile 0 (default).
 status  Print ratbag devices and the active profile.
 
 Piper is GUI-only. This uses ratbagctl against ratbagd. Default match is
-G603 (USB 046d:406c, Lightspeed 046d:c539, Bluetooth 046d:b01c).
+G603,G604 (Lightspeed receiver 046d:c539; G603 046d:406c/b01c; G604
+046d:4085/b024).
 
 udev starts reset-piper-profile.service on plug-in. apply retries briefly
 so ratbagd can see the device after the udev event.
 
 Env:
   PIPER_PROFILE          Profile index (default 0)
-  PIPER_DEVICE_MATCH     Comma-separated name/id needles (default G603)
-  PIPER_ATTEMPTS         ratbagd settle retries (default 12)
+  PIPER_DEVICE_MATCH     Comma-separated name/id needles (default G603,G604)
+  PIPER_ATTEMPTS         ratbagd settle retries (default 20)
   PIPER_RETRY_SLEEP      Seconds between retries (default 0.5)
 EOF
 }

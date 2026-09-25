@@ -1,5 +1,5 @@
 [Unit]
-Description=Reset Piper/ratbag profile 0 on the Logitech G603
+Description=Reset Piper/ratbag profile 0 on Logitech G603/G604
 Documentation=file://%h/dot-files/config/hypr/README.md
 After=ratbagd.service
 
