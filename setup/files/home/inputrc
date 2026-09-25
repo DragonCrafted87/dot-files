@@ -1,0 +1,3 @@
+# Linked to ~/.inputrc by link-home-files.
+# CIFS still returns stored names (Media); this lets me<Tab> match.
+set completion-ignore-case on
