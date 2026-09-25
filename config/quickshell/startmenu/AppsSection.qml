@@ -106,12 +106,26 @@ Rectangle {
     function entryNeedles(entry) {
         const id = (entry.id || "").toLowerCase()
         const last = id.split(".").pop()
-        return [
-            (entry.startupClass || "").toLowerCase(),
-            id,
-            last,
-            (entry.name || "").toLowerCase()
-        ].filter(s => s && s.length > 1)
+        const name = (entry.name || "").toLowerCase()
+        const startup = (entry.startupClass || "").toLowerCase()
+        const needles = [startup, id, last, name].filter(s => s && s.length > 1)
+        const blob = [id, startup, name, entry.icon || ""].join(" ").toLowerCase()
+        // Microsoft's desktop file uses StartupWMClass=com.microsoft.VSCode
+        // while Hyprland's Wayland app_id is usually "code".
+        if (blob.indexOf("vscode") !== -1 || blob.indexOf("visual studio code") !== -1) {
+            needles.push("code", "code-url-handler", "com.microsoft.vscode")
+        }
+        return needles
+    }
+
+    function classMatchesNeedle(cls, needle) {
+        if (!cls || !needle)
+            return false
+        if (cls === needle)
+            return true
+        if (needle.length >= 4 && cls.indexOf(needle) !== -1)
+            return true
+        return false
     }
 
     function findRunning(entry) {
@@ -132,7 +146,9 @@ Rectangle {
             const title = String(t.title || ipc.title || "").toLowerCase()
             for (let n = 0; n < needles.length; n++) {
                 const needle = needles[n]
-                if (cls === needle || cls.indexOf(needle) !== -1 || title.indexOf(needle) !== -1)
+                if (root.classMatchesNeedle(cls, needle))
+                    return t
+                if (needle.length >= 6 && title.indexOf(needle) !== -1)
                     return t
             }
         }

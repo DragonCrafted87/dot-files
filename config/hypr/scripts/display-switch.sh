@@ -181,10 +181,10 @@ apply_profile() {
     if [[ -x "$AUDIO_SH" ]]; then
         "$AUDIO_SH" "$profile" || true
     fi
+    save_profile "$profile"
     if [[ -x "$WALLPAPER_SH" ]]; then
         "$WALLPAPER_SH" apply || true
     fi
-    save_profile "$profile"
 }
 
 watch_pid() {
@@ -262,6 +262,7 @@ cmd_watch() {
         [[ "$fp" == disconnected:* || "$fp" == missing:* ]] && continue
         detected="$(detect_single_profile || true)"
         [[ -n "$detected" ]] || continue
+        [[ "$detected" == "$(current_profile)" ]] && continue
         apply_profile "$detected" || true
     done
     rm -f "$WATCH_PID_FILE"

@@ -136,8 +136,10 @@ or profile with `RATBAG_DEVICE_MATCH` and `RATBAG_PROFILE`.
 `scripts/astro-wallpaper.py` downloads stills of nebulae, galaxies,
 planets, comets, and clusters, then gives each enabled monitor its own
 image through `hyprpaper`. Login runs `apply` (reuse today's cache).
-A user timer at 06:30 refreshes the set. `display-switch.sh` re-applies
-after a layout change so theater / workshare keep a wallpaper.
+A user timer at 06:30 refreshes the set. `display-switch.sh` waits for
+the new layout, then re-applies so theater / workshare / desk each get
+wallpapers. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
+`.jpg`) are dropped; hyprpaper exits if it is asked to preload one.
 
 ```bash
 ~/.config/hypr/scripts/astro-wallpaper.sh apply
@@ -182,12 +184,14 @@ BOINC idle/GPU policy lives in `setup/files/boinc/prefs/<role>.xml`
 those files.
 
 When `hosts.d/<host>.conf` sets `IDLE_MONITOR`, idle-off records
-workspaces on that output, `dpms off` that output **and** `DESK_PORTS`
-when those outputs are not `disable` in the active conf, then disables
-the idle monitor so the TV drops the link. idle-on `dpms on` the desk
-ports only when the active conf leaves them enabled, re-enables the idle
-monitor using the line from that conf, and restores those workspaces.
-theater and workshare leave the desk DPs disabled.
+workspaces on that output and `dpms off` that output **and** `DESK_PORTS`
+when those outputs are not `disable` in the active conf. It then disables
+the idle monitor only if another output stays enabled (desk), so the TV
+drops the link without leaving the compositor with zero `wl_output`s.
+theater and workshare keep HDMI and only DPMS it: disabling the last
+output crashes Brave, Quickshell, and the desktop portals. idle-on
+`dpms on` the remaining ports, re-enables the idle monitor when it was
+disabled, and restores those workspaces.
 
 Hosts without `IDLE_MONITOR` just `dpms off` / `dpms on`.
 
