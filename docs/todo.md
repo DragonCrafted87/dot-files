@@ -12,3 +12,8 @@ Tracked after the Tango Dark pass. Not scheduled.
 ## local builds
 
 - current version of hyprland
+
+## quickshell
+
+- move qs to a systemd service so it autorestarts as its crashing a lot
+- also see if we can't find whats causing the crash
