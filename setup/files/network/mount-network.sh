@@ -17,6 +17,25 @@ is_mounted() {
     findmnt -n "$target" >/dev/null 2>&1
 }
 
+# Drop mixed-case CIFS mount dirs from older installs so the lowercase
+# targets can take over. Share names on the server stay unchanged.
+retire_legacy_cifs_dir() {
+    local old="$1"
+
+    if is_mounted "$old"; then
+        log "unmounting legacy path ${old}"
+        if ! sudo umount "$old"; then
+            log "failed: could not unmount ${old}"
+            return 1
+        fi
+    fi
+    if [[ -d "$old" && -z "$(find "$old" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+        rmdir "$old" 2>/dev/null || true
+    elif [[ -d "$old" ]]; then
+        log "warning: leftover ${old} is not empty"
+    fi
+}
+
 cifs_host() {
     local share="$1"
     share="${share#//}"
@@ -77,7 +96,7 @@ mount_cifs() {
     for attempt in 1 2 3; do
         log "mounting CIFS ${share} -> ${target} (try ${attempt})"
         if sudo mount -t cifs "$share" "$target" \
-            -o credentials="$CREDENTIALS",uid="$(id -u)",gid="$(id -g)",nofail,vers=3.0,iocharset=utf8; then
+            -o credentials="$CREDENTIALS",uid="$(id -u)",gid="$(id -g)",nofail,vers=3.0,iocharset=utf8,nocase; then
             log "success: ${target} (CIFS)"
             return 0
         fi
@@ -117,16 +136,19 @@ mount_rclone() {
 }
 
 log "network mount start"
+retire_legacy_cifs_dir "${MOUNTPOINT}/Storage"
+retire_legacy_cifs_dir "${MOUNTPOINT}/Unrestricted"
+retire_legacy_cifs_dir "${MOUNTPOINT}/Backups"
 mkdir -p "${MOUNTPOINT}/Dragon-OneDrive" \
-    "${MOUNTPOINT}/Storage" \
-    "${MOUNTPOINT}/Unrestricted" \
-    "${MOUNTPOINT}/Backups" \
+    "${MOUNTPOINT}/storage" \
+    "${MOUNTPOINT}/unrestricted" \
+    "${MOUNTPOINT}/backups" \
     "${MOUNTPOINT}/castellan-data"
 
 mount_rclone "${MOUNTPOINT}/Dragon-OneDrive"
-mount_cifs //calligraphy-wyrm.stealthdragonland.net/Storage      "${MOUNTPOINT}/Storage"
-mount_cifs //calligraphy-wyrm.stealthdragonland.net/Unrestricted "${MOUNTPOINT}/Unrestricted"
-mount_cifs //calligraphy-wyrm.stealthdragonland.net/Backups      "${MOUNTPOINT}/Backups"
+mount_cifs //calligraphy-wyrm.stealthdragonland.net/Storage      "${MOUNTPOINT}/storage"
+mount_cifs //calligraphy-wyrm.stealthdragonland.net/Unrestricted "${MOUNTPOINT}/unrestricted"
+mount_cifs //calligraphy-wyrm.stealthdragonland.net/Backups      "${MOUNTPOINT}/backups"
 
 if is_mounted "${MOUNTPOINT}/castellan-data"; then
     log "already mounted: ${MOUNTPOINT}/castellan-data"

@@ -3,7 +3,7 @@
 #
 # TV
 kind: tv
-root: /home/dragon/Network/Storage/Media/tv
+root: /home/dragon/Network/storage/Media/tv
 title: ReBoot (1994) {tvdb-73025}
 
 season: 0
@@ -16,7 +16,7 @@ REBOOT_S1_D1-B1-t01 | Racing the Clock
 
 # Movie
 # kind: movie
-# root: /home/dragon/Network/Storage/Media/movies
+# root: /home/dragon/Network/storage/Media/movies
 # title: Solo Mio (2026) {imdb-tt32306991}
 # # collection: Optional Franchise Folder
 # feature: Solo_Mio-t00.mkv

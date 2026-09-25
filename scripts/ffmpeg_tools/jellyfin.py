@@ -6,7 +6,7 @@ from pathlib import Path
 from shutil import move
 
 DEFAULT_MEDIA_ROOT = environ.get(
-    "JELLYFIN_MEDIA_ROOT", "/home/dragon/Network/Storage/Media"
+    "JELLYFIN_MEDIA_ROOT", "/home/dragon/Network/storage/Media"
 )
 DEFAULT_JOB_NAME = "jellyfin.job"
 VIDEO_SUFFIXES = {".mkv", ".mp4", ".avi", ".webm", ".m4v"}

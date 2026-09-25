@@ -11,7 +11,7 @@ fi
 DESKTOP_DIR="${DESKTOP_DIR:-$HOME/Desktop}"
 APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 SETTINGS="${HOME}/.MakeMKV/settings.conf"
-DEST_DIR="${MAKEMKV_DEST_DIR:-/home/dragon/Network/Storage/Media/new-unsorted}"
+DEST_DIR="${MAKEMKV_DEST_DIR:-/home/dragon/Network/storage/Media/new-unsorted}"
 # Video always; every English audio and subtitle track; covers; no MVC 3D.
 SELECTION='-sel:all,+sel:video,+sel:(audio&eng),+sel:(subtitle&eng),+sel:attachment,-sel:mvcvideo'
 # NAME2/CMNT2: fully cleaned (spaces become underscores; MakeMKV has no hyphen cleanse).
