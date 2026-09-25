@@ -25,6 +25,7 @@ link_home "${SETUP_FILES_DIR}/home/gitconfig" "${DOTFILES_HOME}/.gitconfig"
 link_home "${SETUP_FILES_DIR}/home/nanorc" "${DOTFILES_HOME}/.nanorc"
 link_home "${SETUP_FILES_DIR}/home/dircolors" "${DOTFILES_HOME}/.dircolors"
 link_home "${SETUP_FILES_DIR}/home/gtkrc-2.0" "${DOTFILES_HOME}/.gtkrc-2.0"
+link_home "${SETUP_FILES_DIR}/home/inputrc" "${DOTFILES_HOME}/.inputrc"
 
 sshconfig_src="${SETUP_FILES_DIR}/home/ssh-config"
 if [[ -f "$sshconfig_src" ]]; then

@@ -10,22 +10,33 @@ request_qs_restart() {
     printf '1\n' >"$DOTFILES_QS_RESTART_FLAG"
 }
 
-# Install a .desktop into ~/.local/share/applications and ~/Desktop.
+# XDG desktop dir, falling back to ~/desktop when xdg-user-dir is missing
+# or reports $HOME (its unset default).
+resolve_desktop_dir() {
+    local desktop_dir="${XDG_DESKTOP_DIR:-}"
+
+    if [[ -z "$desktop_dir" ]] && command -v xdg-user-dir >/dev/null 2>&1; then
+        desktop_dir="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+    fi
+    if [[ -z "$desktop_dir" || "$desktop_dir" == "$HOME" || "$desktop_dir" == "$DOTFILES_HOME" ]]; then
+        desktop_dir="${DOTFILES_HOME}/desktop"
+    fi
+    printf '%s\n' "$desktop_dir"
+}
+
+# Install a .desktop into ~/.local/share/applications and ~/desktop.
 # Marks qs for restart when the start menu needs to reread launchers.
 install_user_desktop() {
     local src="$1"
     local name
-    local desktop_dir="${XDG_DESKTOP_DIR:-}"
+    local desktop_dir
     local apps_dir="${DOTFILES_HOME}/.local/share/applications"
     local changed=0
 
     name="$(basename "$src")"
     [[ -f "$src" ]] || die "missing ${src}"
 
-    if [[ -z "$desktop_dir" ]] && command -v xdg-user-dir >/dev/null 2>&1; then
-        desktop_dir="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
-    fi
-    desktop_dir="${desktop_dir:-${DOTFILES_HOME}/Desktop}"
+    desktop_dir="$(resolve_desktop_dir)"
 
     ensure_dir "$desktop_dir"
     ensure_dir "$apps_dir"

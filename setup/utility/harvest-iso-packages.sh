@@ -2,7 +2,7 @@
 # Dump rpm names from a live system or from an OpenMandriva LiveOS ISO.
 #
 #   sudo bash harvest-iso-packages.sh -o setup/files/iso-installed.txt
-#   sudo bash harvest-iso-packages.sh --iso ~/Downloads/openmandriva-6.0-plasma6.x11-slim.x86_64.iso
+#   sudo bash harvest-iso-packages.sh --iso ~/downloads/openmandriva-6.0-plasma6.x11-slim.x86_64.iso
 #   sudo bash harvest-iso-packages.sh --iso FILE -o setup/files/iso-installed.txt
 
 set -euo pipefail

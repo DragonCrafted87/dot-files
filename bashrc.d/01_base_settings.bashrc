@@ -6,6 +6,12 @@ HISTFILESIZE=2000
 shopt -s checkwinsize
 shopt -s histappend
 
+# Match case-insensitive CIFS lookups: readdir still returns Media, tab
+# complete would miss me<Tab> with the readline default.
+if [[ $- == *i* ]]; then
+    bind "set completion-ignore-case on" 2>/dev/null || true
+fi
+
 export WHITE='\033[1;37m'
 export BLACK='\033[0;30m'
 export BLUE='\033[0;34m'

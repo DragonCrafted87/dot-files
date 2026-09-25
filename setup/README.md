@@ -72,13 +72,13 @@ A single module can be run on its own:
 Scripts sit under `modules/<area>/` so the tree shows why they exist.
 `roles.conf` still lists the basename.
 
-| Area      | What lives there                                       |
-| --------- | ------------------------------------------------------ |
-| `common`  | ssh, sudoers, repos, timezone, plasma removal, links   |
-| `desktop` | Hyprland, Brave, Flatpak, CUPS, gaming, MIME, VS Code  |
-| `network` | mounts, bluetooth, NFS server                          |
-| `compute` | BOINC, k3s, python-dev, MakeMKV, artifact/docker stubs |
-| `host`    | `configure-laptop` / `htpc` / `server` leftovers       |
+| Area      | What lives there                                               |
+| --------- | -------------------------------------------------------------- |
+| `common`  | ssh, sudoers, repos, timezone, plasma removal, links, XDG dirs |
+| `desktop` | Hyprland, Brave, Flatpak, CUPS, gaming, MIME, VS Code          |
+| `network` | mounts, bluetooth, NFS server                                  |
+| `compute` | BOINC, k3s, python-dev, MakeMKV, artifact/docker stubs         |
+| `host`    | `configure-laptop` / `htpc` / `server` leftovers               |
 
 Do not name folders after roles. Laptop is a workstation overlay.
 
@@ -153,7 +153,7 @@ ffmpeg/Qt5 devel packages. Override the version with
 `MAKEMKV_VERSION=1.18.4`.
 
 Login autostart runs `~/bin/sync-makemkv-desktops.sh`, which writes one
-`~/Desktop/MakeMKV-srN.desktop` per attached drive and deletes stale
+`~/desktop/MakeMKV-srN.desktop` per attached drive and deletes stale
 ones. Re-run that script after plugging in a USB Blu-ray drive.
 
 ```bash

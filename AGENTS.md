@@ -69,6 +69,10 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
 - `configure-astro-wallpaper` installs `hyprpaper` and a daily user
   timer. `scripts/astro-wallpaper.py` pulls astronomy stills and sets one
   image per enabled monitor.
+- `configure-xdg-user-dirs` pins lowercase XDG dirs (`~/desktop`,
+  `~/downloads`, …) and sets `enabled=False` so login does not recreate
+  the English CamelCase names. `~/network` is the CIFS/NFS/rclone parent
+  from `install-network-mounts`.
 - Modules run in a subprocess (`bash module.sh`), so env vars do not
   survive back to `role.sh`. Cross-module flags and other short-lived
   files go in `/tmp` (example:

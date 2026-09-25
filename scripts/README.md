@@ -19,7 +19,7 @@ wrappers; `ffmpeg.py --help` and the comments above each function in
 Jellyfin sorting uses a `jellyfin.job` text file next to the rip. Init
 lists sources; you fill titles / ids; `ffmpeg-jellyfin-sort` prints the
 moves and asks before moving. Override the library root with
-`JELLYFIN_MEDIA_ROOT` (default `/home/dragon/Network/Storage/Media`).
+`JELLYFIN_MEDIA_ROOT` (default `/home/dragon/network/storage/Media`).
 
 These expect a working Python user environment from the workstation
 `install-python-dev` module (`poetry`, `requests`, and friends).
