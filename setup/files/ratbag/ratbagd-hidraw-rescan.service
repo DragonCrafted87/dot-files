@@ -1,0 +1,9 @@
+[Unit]
+Description=Replay hidraw ADD events so ratbagd sees Logitech HID++ mice
+
+[Service]
+Type=oneshot
+# Lightspeed HID++ nodes can still be waking when hid-logitech-hidpp binds.
+ExecStart=/usr/bin/sleep 2
+ExecStart=/usr/bin/systemctl start ratbagd.service
+ExecStart=/usr/bin/udevadm trigger --action=add --subsystem-match=hidraw
