@@ -107,31 +107,29 @@ rule plus the `video` group).
 
 ## Logitech G603 / G604
 
-Windows G HUB on the work PC overwrites onboard Piper profiles. A udev
-rule starts the user oneshot `reset-piper-profile.service`, which runs
-`scripts/reset-piper-profile.sh apply` and sets profile 0 through
+Windows G HUB on the work PC overwrites onboard ratbag profiles. A udev
+rule starts the user oneshot `reset-ratbag-profile.service`, which runs
+`scripts/reset-ratbag-profile.sh apply` and sets profile 0 through
 `ratbagctl`. The same unit is enabled for `default.target` so login also
 resets a mouse that was already plugged in.
 
 Lightspeed child HID++ nodes (`046d:4085` G604, `046d:406c` G603) appear
 after the `046d:c539` receiver. ratbagd ignores the receiver and only
-enumerates initialized hidraw, so Piper can open against an empty
+enumerates initialized hidraw, so a GUI client can open against an empty
 daemon. `hid-logitech-hidpp` bind starts `ratbagd-hidraw-rescan.service`,
 which waits two seconds and replays hidraw ADD events. ratbagd also
-gains an `ExecStartPost` udevadm trigger. Role module:
-`configure-piper-g603`.
+gains an `ExecStartPost` udevadm trigger. Role module: `configure-ratbag`.
 
 ```bash
-~/.config/hypr/scripts/reset-piper-profile.sh apply
-~/.config/hypr/scripts/reset-piper-profile.sh status
-reset-piper-profile
-piper-status
-piper-g603-status
+~/.config/hypr/scripts/reset-ratbag-profile.sh apply
+~/.config/hypr/scripts/reset-ratbag-profile.sh status
+reset-ratbag-profile
+ratbag-status
 ```
 
 IDs: Lightspeed receiver `046d:c539`, G603 `046d:406c` / Bluetooth
 `046d:b01c`, G604 `046d:4085` / Bluetooth `046d:b024`. Override the match
-or profile with `PIPER_DEVICE_MATCH` and `PIPER_PROFILE`.
+or profile with `RATBAG_DEVICE_MATCH` and `RATBAG_PROFILE`.
 
 ## Astronomy wallpapers
 

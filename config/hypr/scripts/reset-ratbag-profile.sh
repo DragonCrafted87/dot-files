@@ -1,37 +1,35 @@
 #!/usr/bin/env bash
-# Force a Piper/ratbag profile after Windows G HUB rewrites onboard storage.
-# Piper has no CLI; ratbagctl talks to ratbagd (same backend).
-# Started by udev via reset-piper-profile.service, or by hand.
+# Force a ratbag profile after Windows G HUB rewrites onboard storage.
+# Started by udev via reset-ratbag-profile.service, or by hand.
 set -euo pipefail
 
-PROFILE="${PIPER_PROFILE:-0}"
-MATCH="${PIPER_DEVICE_MATCH:-G603,G604}"
-ATTEMPTS="${PIPER_ATTEMPTS:-20}"
-RETRY_SLEEP="${PIPER_RETRY_SLEEP:-0.5}"
-QUIET="${PIPER_QUIET:-0}"
+PROFILE="${RATBAG_PROFILE:-0}"
+MATCH="${RATBAG_DEVICE_MATCH:-G603,G604}"
+ATTEMPTS="${RATBAG_ATTEMPTS:-20}"
+RETRY_SLEEP="${RATBAG_RETRY_SLEEP:-0.5}"
+QUIET="${RATBAG_QUIET:-0}"
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
-LOCK_FILE="${STATE_DIR}/reset-piper-profile.lock"
+LOCK_FILE="${STATE_DIR}/reset-ratbag-profile.lock"
 
 usage() {
     cat <<'EOF'
-Usage: reset-piper-profile.sh [apply|status|help]
+Usage: reset-ratbag-profile.sh [apply|status|help]
 
 apply   Set matching ratbag devices to profile 0 (default).
 status  Print ratbag devices and the active profile.
 
-Piper is GUI-only. This uses ratbagctl against ratbagd. Default match is
-G603,G604 (Lightspeed receiver 046d:c539; G603 046d:406c/b01c; G604
-046d:4085/b024).
+Uses ratbagctl against ratbagd. Default match is G603,G604 (Lightspeed
+receiver 046d:c539; G603 046d:406c/b01c; G604 046d:4085/b024).
 
-udev starts reset-piper-profile.service on plug-in. apply retries briefly
-so ratbagd can see the device after the udev event.
+udev starts reset-ratbag-profile.service on plug-in. apply retries
+briefly so ratbagd can see the device after the udev event.
 
 Env:
-  PIPER_PROFILE          Profile index (default 0)
-  PIPER_DEVICE_MATCH     Comma-separated name/id needles (default G603,G604)
-  PIPER_ATTEMPTS         ratbagd settle retries (default 20)
-  PIPER_RETRY_SLEEP      Seconds between retries (default 0.5)
+  RATBAG_PROFILE          Profile index (default 0)
+  RATBAG_DEVICE_MATCH     Comma-separated name/id needles (default G603,G604)
+  RATBAG_ATTEMPTS         ratbagd settle retries (default 20)
+  RATBAG_RETRY_SLEEP      Seconds between retries (default 0.5)
 EOF
 }
 
@@ -53,7 +51,7 @@ notify() {
 
 need_ratbag() {
     if ! command -v ratbagctl >/dev/null 2>&1; then
-        printf 'ratbagctl not found (install piper / ratbagd)\n' >&2
+        printf 'ratbagctl not found (install ratbagd)\n' >&2
         return 1
     fi
 }
@@ -104,7 +102,7 @@ apply_one() {
         printf 'failed to set %s (%s) to profile %s\n' "$name" "$id" "$PROFILE" >&2
         return 1
     fi
-    notify "Piper: ${name} -> profile ${PROFILE}"
+    notify "ratbag: ${name} -> profile ${PROFILE}"
 }
 
 apply_profile() {
@@ -158,7 +156,7 @@ with_lock() {
     mkdir -p "$STATE_DIR"
     exec 9>"$LOCK_FILE"
     if ! flock -n 9; then
-        printf 'reset-piper-profile already running\n'
+        printf 'reset-ratbag-profile already running\n'
         return 0
     fi
     "$@"

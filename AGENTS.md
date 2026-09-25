@@ -62,9 +62,9 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
   `install-gaming-packages`, KDE chrome → `configure-mime-defaults`).
 - `configure-litra-glow` installs hidraw udev for Logitech Litra Glow
   (`046d:c900`) and adds the user to `video`.
-- `configure-piper-g603` installs `piper` / `ratbagd`, udev rules for
-  G603/G604 Lightspeed HID++, a hidraw rescan oneshot so ratbagd sees
-  the mice after hid-logitech-hidpp binds, and a user oneshot that
+- `configure-ratbag` installs `ratbagd` (and the Piper GUI), udev rules
+  for G603/G604 Lightspeed HID++, a hidraw rescan oneshot so ratbagd
+  sees the mice after hid-logitech-hidpp binds, and a user oneshot that
   forces ratbag profile 0 after Windows G HUB overwrites onboard storage.
 - `configure-astro-wallpaper` installs `hyprpaper` and a daily user
   timer. `scripts/astro-wallpaper.py` pulls astronomy stills and sets one
@@ -115,11 +115,10 @@ bit (pre-commit `check-executables-have-shebangs`).
 ### Logitech G603 / G604
 
 Windows G HUB on the work computer overwrites onboard profiles. A udev
-rule starts `reset-piper-profile.service`, which sets Piper profile 0
+rule starts `reset-ratbag-profile.service`, which sets ratbag profile 0
 through `ratbagctl`. hid-logitech-hidpp bind also starts
 `ratbagd-hidraw-rescan.service` so ratbagd retries Lightspeed child
-nodes that were missing at daemon start. Role module:
-`configure-piper-g603`.
+nodes that were missing at daemon start. Role module: `configure-ratbag`.
 
 ### Astronomy wallpapers
 
