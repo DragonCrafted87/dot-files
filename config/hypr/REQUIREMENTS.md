@@ -47,6 +47,7 @@ never in the git-linked `~/.config/hypr` tree.
 | `display-profile`          | `display-switch.sh` only      | switch, profile (idle), audio, steam wrap |
 | `display-switch.pid`       | `display-switch.sh` watch     | switch start/stop/status                  |
 | `saved-monitor-workspaces` | `display-profile.sh` idle-off | profile idle-on                           |
+| `idle-monitor-disabled`    | `display-profile.sh` idle-off | profile idle-on                           |
 | `apply.lock`               | `display-profile.sh`          | profile only                              |
 
 1. `display-profile.sh` MUST NOT write `display-profile`.
@@ -169,10 +170,17 @@ Applies only when `hosts.d/<host>.conf` defines `SWITCH_PORT` and
 1. hypridle / lock MUST call `idle-display-off.sh` /
    `idle-display-on.sh`, not `display-switch.sh`.
 1. Idle MUST NOT change the saved profile or the audio sink.
-1. On runewyrm, idle-off MUST save the workspace map, DPMS the desk
-   ports if they are part of the active layout, then disable
-   `IDLE_MONITOR` so HDMI cannot wake itself.
-1. Idle-on MUST reapply the active monitor conf and restore workspaces.
+1. On runewyrm, idle-off MUST save the workspace map and DPMS the desk
+   ports if they are part of the active layout. It MUST disable
+   `IDLE_MONITOR` only when the active conf still has another enabled
+   output, so HDMI cannot wake itself. It MUST NOT disable
+   `IDLE_MONITOR` when that connector is the only enabled output
+   (theater / workshare): dropping the last `wl_output` kills Wayland
+   clients (Brave, Quickshell, portals).
+1. Idle-on MUST DPMS remaining outputs on. If idle-off disabled
+   `IDLE_MONITOR`, idle-on MUST re-enable that connector from the
+   active conf and restore workspaces. It MUST NOT re-keyword every
+   monitor on a DPMS-only wake.
 
 ## Audio
 

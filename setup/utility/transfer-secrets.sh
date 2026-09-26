@@ -54,4 +54,4 @@ done <"$list"
 
 printf '==> copied %s, skipped %s\n' "$copied" "$skipped"
 printf '    on the new box, re-run the role script or:\n'
-printf '      %s/modules/harden-secrets.sh\n' "$setup_dir"
+printf '      %s/modules/common/harden-secrets.sh\n' "$setup_dir"

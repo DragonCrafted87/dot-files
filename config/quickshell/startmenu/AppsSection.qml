@@ -28,8 +28,42 @@ Rectangle {
     property string pinnedCat: ""
     property string hoveredLabel: "All"
     property string searchText: searchField.text
+    property int flyoutAlignY: 0
+
+    readonly property int searchFieldH: 32
+    readonly property int categoryRowH: 30
+    readonly property int categoryGap: 2
+    readonly property int categoryCount: 10
 
     implicitWidth: categoryWidth + 16
+    implicitHeight: 16 + 6 + searchFieldH + categoryCount * (categoryRowH + categoryGap)
+
+    function setFlyoutAnchor(item) {
+        if (!item)
+            return
+        const p = item.mapToItem(root, 0, 0)
+        const y = Math.round(p.y)
+        if (root.flyoutAlignY !== y)
+            root.flyoutAlignY = y
+    }
+
+    function syncFlyoutAnchor() {
+        if (root.searchActive) {
+            root.setFlyoutAnchor(searchField)
+            return
+        }
+        for (let i = 0; i < catList.count; i++) {
+            const item = catList.itemAtIndex(i)
+            if (item && item.selected) {
+                root.setFlyoutAnchor(item)
+                return
+            }
+        }
+    }
+
+    onSearchActiveChanged: Qt.callLater(root.syncFlyoutAnchor)
+    onHoveredCatChanged: Qt.callLater(root.syncFlyoutAnchor)
+    onPinnedCatChanged: Qt.callLater(root.syncFlyoutAnchor)
 
     function appSearchBlob(a) {
         const keywords = Array.isArray(a.keywords) ? a.keywords.join(" ") : (a.keywords || "")
@@ -72,12 +106,26 @@ Rectangle {
     function entryNeedles(entry) {
         const id = (entry.id || "").toLowerCase()
         const last = id.split(".").pop()
-        return [
-            (entry.startupClass || "").toLowerCase(),
-            id,
-            last,
-            (entry.name || "").toLowerCase()
-        ].filter(s => s && s.length > 1)
+        const name = (entry.name || "").toLowerCase()
+        const startup = (entry.startupClass || "").toLowerCase()
+        const needles = [startup, id, last, name].filter(s => s && s.length > 1)
+        const blob = [id, startup, name, entry.icon || ""].join(" ").toLowerCase()
+        // Microsoft's desktop file uses StartupWMClass=com.microsoft.VSCode
+        // while Hyprland's Wayland app_id is usually "code".
+        if (blob.indexOf("vscode") !== -1 || blob.indexOf("visual studio code") !== -1) {
+            needles.push("code", "code-url-handler", "com.microsoft.vscode")
+        }
+        return needles
+    }
+
+    function classMatchesNeedle(cls, needle) {
+        if (!cls || !needle)
+            return false
+        if (cls === needle)
+            return true
+        if (needle.length >= 4 && cls.indexOf(needle) !== -1)
+            return true
+        return false
     }
 
     function findRunning(entry) {
@@ -98,7 +146,9 @@ Rectangle {
             const title = String(t.title || ipc.title || "").toLowerCase()
             for (let n = 0; n < needles.length; n++) {
                 const needle = needles[n]
-                if (cls === needle || cls.indexOf(needle) !== -1 || title.indexOf(needle) !== -1)
+                if (root.classMatchesNeedle(cls, needle))
+                    return t
+                if (needle.length >= 6 && title.indexOf(needle) !== -1)
                     return t
             }
         }
@@ -137,8 +187,8 @@ Rectangle {
         const paths = root.desktopFileCandidates(entry)
         if (!paths.length) return
         const quoted = paths.map(p => "'" + p.replace(/'/g, "'\\''") + "'").join(" ")
-        const opener = "sh -c 'for f in " + quoted + "; do if [ -f \"$f\" ]; then exec ${EDITOR:-nano} \"$f\"; fi; done'"
-        Hyprland.dispatch("exec kitty --class desktop-file -e " + opener)
+        const opener = "sh -c 'for f in " + quoted + "; do if [ -f \"$f\" ]; then exec code -- \"$f\"; fi; done'"
+        Hyprland.dispatch("exec " + opener)
         root.appLaunched()
     }
 
@@ -167,6 +217,7 @@ Rectangle {
         TextField {
             id: searchField
             Layout.fillWidth: true
+            Layout.preferredHeight: root.searchFieldH
             placeholderText: "Search apps…"
             color: "#EEEEEC"
             placeholderTextColor: "#555753"
@@ -188,7 +239,8 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            spacing: 2
+            spacing: root.categoryGap
+            onContentYChanged: root.syncFlyoutAnchor()
 
             model: ListModel {
                 ListElement { label: "All"; cat: "*" }
@@ -204,11 +256,12 @@ Rectangle {
             }
 
             delegate: Rectangle {
+                id: catRow
                 required property string label
                 required property string cat
                 required property int index
                 width: catList.width
-                height: 30
+                height: root.categoryRowH
                 radius: 6
                 readonly property bool selected: {
                     if (root.searchActive) return false
@@ -216,6 +269,14 @@ Rectangle {
                     return current === cat
                 }
                 color: selected ? "#729FCF" : (catMouse.containsMouse ? "#555753" : "transparent")
+                onSelectedChanged: {
+                    if (selected && !root.searchActive)
+                        root.setFlyoutAnchor(catRow)
+                }
+                onYChanged: {
+                    if (selected && !root.searchActive)
+                        root.setFlyoutAnchor(catRow)
+                }
 
                 Text {
                     anchors.left: parent.left

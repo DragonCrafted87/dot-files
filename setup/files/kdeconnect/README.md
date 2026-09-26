@@ -58,8 +58,8 @@ If that directory stays empty, the phone plugin is not sending contacts
 - Tray: `kdeconnect-indicator` (started by
   `config/hypr/scripts/start-kdeconnect.sh`).
 - SMS window: `kdeconnect-sms` (needs `qt5-qtmultimedia`).
-- Re-run `~/dot-files/setup/modules/install-kdeconnect.sh` after a role
-  reset if the firewall ports vanished.
+- Re-run `~/dot-files/setup/modules/desktop/install-kdeconnect.sh`
+  after a role reset if the firewall ports vanished.
 
 ## GrapheneOS sent-SMS quirk
 

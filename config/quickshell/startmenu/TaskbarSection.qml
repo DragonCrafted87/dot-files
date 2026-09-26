@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
@@ -13,9 +14,18 @@ Rectangle {
 
     signal windowFocused()
     property bool minimizedOnly: true
+    property bool autoFlipping: false
     property int targetWorkspaceId: 1
     property int refreshReq: 0
     property int refreshSeen: 0
+    readonly property int rowHeight: 32
+    readonly property int listGap: 2
+    readonly property int headerH: 18
+    readonly property int maxVisibleRows: 8
+    implicitHeight: {
+        const rows = Math.max(1, Math.min(winModel.count, maxVisibleRows))
+        return 16 + 4 + headerH + rows * (rowHeight + listGap)
+    }
 
     readonly property string runtimeDir:
         Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
@@ -32,22 +42,60 @@ Rectangle {
             refreshKick.start()
     }
 
+    function isMinimizedClient(c) {
+        const ws = (c.workspace && c.workspace.name) ? String(c.workspace.name) : ""
+        return ws.indexOf("special") === 0 || ws.indexOf("minimized") !== -1
+    }
+
+    function iconNameForClass(cls) {
+        const raw = String(cls || "")
+        const c = raw.toLowerCase()
+        if (!c)
+            return "application-x-executable"
+        // Microsoft Code: Hyprland app id is "code" / "com.microsoft.VSCode";
+        // the desktop file Icon= is "vscode".
+        if (c === "code" || c === "code-url-handler" || c === "com.microsoft.vscode")
+            return "vscode"
+        try {
+            const apps = Array.from(DesktopEntries.applications.values)
+            for (let i = 0; i < apps.length; i++) {
+                const a = apps[i]
+                if (!a || !a.icon)
+                    continue
+                const id = String(a.id || "").toLowerCase()
+                const startup = String(a.startupClass || "").toLowerCase()
+                const last = id.split(".").pop()
+                if (c === startup || c === id || (last && c === last))
+                    return a.icon
+            }
+        } catch (e) {
+        }
+        return raw
+    }
+
     function parseClients(raw) {
         winModel.clear()
         if (!raw || !String(raw).trim()) {
             console.log("clients empty payload")
+            if (root.minimizedOnly)
+                root.showAllWindows()
             return
         }
         try {
             const clients = JSON.parse(raw)
-            const filtered = clients.filter(c => {
-                if (!c || !c.address) return false
-                const ws = (c.workspace && c.workspace.name) ? String(c.workspace.name) : ""
-                if (root.minimizedOnly) {
-                    return ws.indexOf("special") === 0 || ws.indexOf("minimized") !== -1
+            const usable = clients.filter(c => c && c.address)
+            const minimized = usable.filter(c => root.isMinimizedClient(c))
+            let filtered
+            if (root.minimizedOnly) {
+                if (minimized.length === 0) {
+                    root.showAllWindows()
+                    filtered = usable
+                } else {
+                    filtered = minimized
                 }
-                return true
-            })
+            } else {
+                filtered = usable
+            }
             filtered.sort((a, b) => {
                 const ca = (a.initialClass || a.class || "").toLowerCase()
                 const cb = (b.initialClass || b.class || "").toLowerCase()
@@ -56,9 +104,11 @@ Rectangle {
             })
             for (let i = 0; i < filtered.length; i++) {
                 const c = filtered[i]
+                const cls = c.initialClass || c.class || ""
                 winModel.append({
                     title: c.title || "(no title)",
-                    cls: c.initialClass || c.class || "",
+                    cls: cls,
+                    iconName: root.iconNameForClass(cls),
                     wsName: (c.workspace && c.workspace.name) ? String(c.workspace.name) : "?",
                     address: String(c.address)
                 })
@@ -87,6 +137,15 @@ Rectangle {
         ]
         restoreProc.running = true
         root.windowFocused()
+    }
+
+    function closeWindow(address) {
+        if (!address) return
+        closeProc.command = [
+            "sh", "-c",
+            'hyprctl dispatch closewindow address:"' + address + '"'
+        ]
+        closeProc.running = true
     }
 
     Timer {
@@ -129,7 +188,24 @@ Rectangle {
         command: []
     }
 
-    onMinimizedOnlyChanged: root.refresh()
+    Process {
+        id: closeProc
+        command: []
+        onExited: root.refresh()
+    }
+
+    function showAllWindows() {
+        if (!root.minimizedOnly)
+            return
+        root.autoFlipping = true
+        root.minimizedOnly = false
+        root.autoFlipping = false
+    }
+
+    onMinimizedOnlyChanged: {
+        if (!root.autoFlipping)
+            root.refresh()
+    }
     Component.onCompleted: root.refresh()
 
     ColumnLayout {
@@ -189,11 +265,12 @@ Rectangle {
             delegate: Rectangle {
                 required property string title
                 required property string cls
+                required property string iconName
                 required property string wsName
                 required property string address
 
                 width: winList.width
-                height: 32
+                height: root.rowHeight
                 radius: 6
                 color: winMouse.containsMouse ? "#555753" : "transparent"
 
@@ -206,7 +283,7 @@ Rectangle {
                     IconImage {
                         Layout.preferredWidth: 18
                         Layout.preferredHeight: 18
-                        source: Quickshell.iconPath(cls, "application-x-executable")
+                        source: Quickshell.iconPath(iconName, "application-x-executable")
                     }
 
                     ColumnLayout {
@@ -234,8 +311,23 @@ Rectangle {
                     id: winMouse
                     anchors.fill: parent
                     hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.restoreWindow(address)
+                    onClicked: event => {
+                        if (event.button === Qt.RightButton) {
+                            winMenu.popup()
+                            return
+                        }
+                        root.restoreWindow(address)
+                    }
+                }
+
+                Menu {
+                    id: winMenu
+                    MenuItem {
+                        text: "Close"
+                        onTriggered: root.closeWindow(address)
+                    }
                 }
             }
 

@@ -1,7 +1,7 @@
 # config
 
 Each **directory** here is linked to `~/.config/<dirname>` by
-`setup/modules/link-user-config.sh`. Loose files in this folder are
+`setup/modules/common/link-user-config.sh`. Loose files in this folder are
 ignored. Add a new app by dropping a folder; the next `update-role`
 picks it up.
 

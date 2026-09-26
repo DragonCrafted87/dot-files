@@ -1,0 +1,9 @@
+[Unit]
+Description=HTPC graphical session extras
+Documentation=file://%h/dot-files/config/hypr/README.md
+PartOf=graphical-session.target
+After=graphical-session-pre.target hyprland-session.service
+Wants=hyprland-session.service
+
+[Install]
+WantedBy=graphical-session.target

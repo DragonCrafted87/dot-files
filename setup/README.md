@@ -1,19 +1,20 @@
 # setup
 
 One control script at this directory root applies a machine role by
-calling modules under `modules/`.
+calling modules under `modules/<area>/`.
 Re-running a role is the intended
 upgrade path. What each role runs is listed in `roles.conf`.
+`roles.conf` stores module basenames; `setup/lib/lib.sh` looks each one up.
 
 ```bash
 ~/dot-files/setup/role.sh workstation
-~/dot-files/setup/role.sh laptop
+~/dot-files/setup/role.sh workstation --enable-subrole laptop
 ~/dot-files/setup/role.sh htpc
 ~/dot-files/setup/role.sh server
 ```
 
 ```bash
-~/dot-files/setup/role.sh --hostname study.lan laptop
+~/dot-files/setup/role.sh --hostname study.lan workstation --enable-subrole laptop
 ~/dot-files/setup/role.sh --dry-run server
 ```
 
@@ -36,7 +37,8 @@ and sshd:
    this computer
 1. `git clone git@github.com:DragonCrafted87/dot-files.git ~/dot-files`
 
-Same role names as `role.sh`: `workstation`, `laptop`, `htpc`, `server`.
+Same role names as `role.sh`: `workstation`, `htpc`, `server`.
+Laptop is a subrole (`--enable-subrole laptop`), not a top-level role.
 After the clone, SSH in and run the role:
 
 ```bash
@@ -51,30 +53,47 @@ user-installed rpms and extra Flatpaks (Plasma leftovers included).
 ```bash
 ./setup/role.sh --reset workstation
 ./setup/role.sh --reset --force workstation
-./setup/role.sh --dry-run --reset laptop
+./setup/role.sh --dry-run --reset workstation
 ```
 
-The first run only prints the extras. Add `--force` to actually remove
-them. Add names to `files/packages/never-remove.list` if something you
+The first run only prints the extras and may run from a graphical
+session. `--force` actually removes them and must run from a real VT
+or SSH. Add names to `files/packages/never-remove.list` if something you
 want is listed.
 
 A single module can be run on its own:
 
 ```bash
-~/dot-files/setup/modules/link-user-config.sh
+~/dot-files/setup/modules/common/link-user-config.sh
 ```
+
+## Module areas
+
+Scripts sit under `modules/<area>/` so the tree shows why they exist.
+`roles.conf` still lists the basename.
+
+| Area      | What lives there                                                       |
+| --------- | ---------------------------------------------------------------------- |
+| `common`  | ssh, sudoers, repos, timezone, locale, plasma removal, links, XDG dirs |
+| `desktop` | Hyprland, Brave, Flatpak, CUPS, gaming, MIME, VS Code                  |
+| `network` | mounts, bluetooth, NFS server                                          |
+| `compute` | BOINC, k3s, python-dev, MakeMKV, artifact/docker stubs                 |
+| `host`    | `configure-laptop` / `htpc` / `server` leftovers                       |
+
+Do not name folders after roles. Laptop is a workstation overlay.
 
 ## Roles
 
 Edit `roles.conf` to change the module lists. `[common]` runs for every
-role. `laptop` includes `@workstation` and then laptop-only modules.
+role. `laptop` is `[subrole.laptop]` on top of `workstation`.
 
 | Role          | Extra modules                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------------- |
 | `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, KDE Connect, BOINC Manager |
-| `laptop`      | workstation plus `configure-laptop` (power-profiles-daemon)                                           |
 | `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client                                                      |
 | `server`      | CLI baseline, k3s, BOINC client; no GUI session                                                       |
+
+`enable-subrole laptop` adds `configure-laptop` (power-profiles-daemon).
 
 Dolphin is the Hyprland file manager (`SUPER+E`). After
 `remove-plasma-sddm` strips Plasma, it has no KService/MIME map unless
@@ -165,11 +184,11 @@ ffmpeg/Qt5 devel packages. Override the version with
 `MAKEMKV_VERSION=1.18.4`.
 
 Login autostart runs `~/bin/sync-makemkv-desktops.sh`, which writes one
-`~/Desktop/MakeMKV-srN.desktop` per attached drive and deletes stale
+`~/desktop/MakeMKV-srN.desktop` per attached drive and deletes stale
 ones. Re-run that script after plugging in a USB Blu-ray drive.
 
 ```bash
-~/dot-files/setup/modules/install-makemkv.sh
+~/dot-files/setup/modules/compute/install-makemkv.sh
 ~/bin/sync-makemkv-desktops.sh
 ```
 
@@ -193,17 +212,16 @@ QFG5 is copied when present; a launcher is created only if that ScummVM
 build lists the game.
 
 ```bash
-~/dot-files/setup/modules/install-scummvm-quest-for-glory.sh
+~/dot-files/setup/modules/desktop/install-scummvm-quest-for-glory.sh
 ```
 
 ## BOINC
 
 Every role builds the client and manager from tagged source
 `client_release/8.2/8.2.13`. Override with `BOINC_VERSION`. OpenMandriva
-has no working BOINC rpms; Fedora packages ABI-mismatch and are removed.
-The old Flatpak app is uninstalled on the next role run. The compile is
-skipped when `/usr/local/share/boinc/.dotfiles-version` already matches
-the pinned version.
+has no working BOINC rpms. The compile is skipped when
+`/usr/local/share/boinc/.dotfiles-version` already matches the pinned
+version.
 
 Source builds pick up `bashrc.d/compiler.bashrc` (`clang`, `lld`,
 `-march=native`). On AMD family 23+ that is the matching `znver*` ISA,
@@ -224,8 +242,7 @@ Repo copies of the helpers keep the `.sh` suffix under
 `setup/files/boinc/`.
 PATH names do not.
 
-Existing Flatpak data under `~/.var/app/edu.berkeley.BOINC` is moved to
-`~/.local/share/boinc` once. `loginctl enable-linger` keeps the user unit
+`loginctl enable-linger` keeps the user unit
 running after logout so servers and the HTPC still crunch without a
 desktop session.
 
@@ -282,13 +299,13 @@ and re-run `install-boinc.sh` or `boinc-config`.
 Docker image manager is a standalone placeholder, not part of every server:
 
 ```bash
-~/dot-files/setup/modules/install-docker-image-manager.sh
+~/dot-files/setup/modules/compute/install-docker-image-manager.sh
 ```
 
 ## Config links
 
-`modules/link-user-config.sh` links every directory in repo `config/`
-into `~/.config` with the same name:
+`modules/common/link-user-config.sh` links every directory in repo
+`config/` into `~/.config` with the same name:
 
 ```text
 config/hyprland    ->  ~/.config/hyprland

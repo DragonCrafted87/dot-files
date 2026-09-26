@@ -11,7 +11,7 @@ HOSTS_FILE="${HOSTS_FILE:-/etc/boinc-client/hosts.list}"
 RPC_AUTH_FILE="${BOINC_DIR}/gui_rpc_auth.cfg"
 
 if [[ ! -x "$BOINCCMD" ]]; then
-    printf 'error: %s is missing; rebuild BOINC with setup/modules/install-boinc.sh\n' "$BOINCCMD" >&2
+    printf 'error: %s is missing; rebuild BOINC with setup/modules/compute/install-boinc.sh\n' "$BOINCCMD" >&2
     exit 1
 fi
 

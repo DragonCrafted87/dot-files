@@ -6,16 +6,18 @@ set -euo pipefail
 HOST="$(hostname -s 2>/dev/null || hostname)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MONITORS_D="${SCRIPT_DIR}/../conf.d/monitors.d"
+HOSTS_D="${SCRIPT_DIR}/../conf.d/hosts.d"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hypr"
 PROFILE_FILE="${STATE_DIR}/display-profile"
 SAVED_WS_FILE="${STATE_DIR}/saved-monitor-workspaces"
 RESTORE_WS_PID_FILE="${STATE_DIR}/restore-ws.pid"
 APPLY_LOCK_FILE="${STATE_DIR}/apply.lock"
+IDLE_DISABLED_FILE="${STATE_DIR}/idle-monitor-disabled"
 # Sourced by monitors.conf on every reload. keyword rules vanish on
 # resetHLConfig(); this file is how the last layout survives hyprctl reload.
 RUNTIME_MONITORS_FILE="${STATE_DIR}/monitors.runtime.conf"
-RUNEWYRM_IDLE_MONITOR="HDMI-A-1"
-RUNEWYRM_DP_MONITORS=(DP-2 DP-3)
+IDLE_MONITOR=""
+DESK_PORTS=""
 QUIET=0
 LOCK_HELD=0
 
@@ -30,6 +32,31 @@ notify() {
 
 need_hypr() {
     command -v hyprctl >/dev/null 2>&1 || { echo "hyprctl not found" >&2; return 1; }
+}
+
+trim() {
+    local s="$1"
+    s="${s#"${s%%[![:space:]]*}"}"
+    s="${s%"${s##*[![:space:]]}"}"
+    printf '%s\n' "$s"
+}
+
+load_host_conf() {
+    local file="${HOSTS_D}/${HOST}.conf" line key val
+    IDLE_MONITOR=""
+    DESK_PORTS=""
+    [[ -f "$file" ]] || return 0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%%#*}"
+        line="$(trim "$line")"
+        [[ -n "$line" && "$line" == *=* ]] || continue
+        key="$(trim "${line%%=*}")"
+        val="$(trim "${line#*=}")"
+        case "$key" in
+            IDLE_MONITOR) IDLE_MONITOR="$val" ;;
+            DESK_PORTS) DESK_PORTS="$val" ;;
+        esac
+    done <"$file"
 }
 
 # hyprctl keyword monitor wants 2560x1440@143.91, not @143.91Hz.
@@ -152,6 +179,26 @@ write_runtime_monitors() {
     } >"$RUNTIME_MONITORS_FILE"
 }
 
+wait_conf_layout() {
+    local file="$1" spec name i
+    [[ -f "$file" ]] || return 1
+    for i in $(seq 1 20); do
+        local ready=1
+        while IFS= read -r spec; do
+            [[ -n "$spec" ]] || continue
+            monitor_is_disabled "$spec" && continue
+            name="$(monitor_name "$spec")"
+            if ! monitor_is_live "$name"; then
+                ready=0
+                break
+            fi
+        done < <(monitor_lines "$file")
+        [[ "$ready" -eq 1 ]] && return 0
+        sleep 0.25
+    done
+    return 1
+}
+
 apply_monitor_conf() {
     local file="$1" spec
     [[ -f "$file" ]] || { echo "missing monitor conf: $file" >&2; return 1; }
@@ -160,6 +207,7 @@ apply_monitor_conf() {
         [[ -n "$spec" ]] || continue
         keyword_monitor "$spec"
     done < <(monitor_lines "$file")
+    wait_conf_layout "$file" || true
 }
 
 monitor_spec_from_conf() {
@@ -303,18 +351,6 @@ wait_for_monitor() {
     return 1
 }
 
-layout_ready() {
-    local file spec name
-    file="$(current_conf)" || return 1
-    while IFS= read -r spec; do
-        [[ -n "$spec" ]] || continue
-        monitor_is_disabled "$spec" && continue
-        name="$(monitor_name "$spec")"
-        monitor_is_live "$name" || return 1
-    done < <(monitor_lines "$file")
-    return 0
-}
-
 workspace_on_monitor() {
     local ws="$1" mon="$2"
     hyprctl workspaces -j 2>/dev/null | python3 -c '
@@ -429,51 +465,78 @@ current_conf() {
     profile_conf "$(current_profile)" || profile_conf "$(default_profile_for_host)"
 }
 
-desk_dp_in_use() {
-    local file spec name
+desk_ports_in_use() {
+    local file spec name port
+    [[ -n "$DESK_PORTS" ]] || return 1
     file="$(current_conf)" || return 1
     while IFS= read -r spec; do
+        [[ -n "$spec" ]] || continue
+        monitor_is_disabled "$spec" && continue
         name="$(monitor_name "$spec")"
-        case "$name" in
-            DP-2|DP-3)
-                monitor_is_disabled "$spec" && return 1
+        for port in $DESK_PORTS; do
+            if [[ "$name" == "$port" ]]; then
                 return 0
-                ;;
-        esac
+            fi
+        done
     done < <(monitor_lines "$file")
     return 1
 }
 
 dpms_desk_ports() {
     local action="$1" mon
-    desk_dp_in_use || return 0
-    for mon in "${RUNEWYRM_DP_MONITORS[@]}"; do
+    desk_ports_in_use || return 0
+    for mon in $DESK_PORTS; do
         dpms "$action" "$mon"
     done
 }
 
+profile_has_other_enabled() {
+    local file="$1" spec name
+    [[ -f "$file" ]] || return 1
+    while IFS= read -r spec; do
+        [[ -n "$spec" ]] || continue
+        monitor_is_disabled "$spec" && continue
+        name="$(monitor_name "$spec")"
+        [[ "$name" == "$IDLE_MONITOR" ]] && continue
+        [[ -n "$name" ]] || continue
+        return 0
+    done < <(monitor_lines "$file")
+    return 1
+}
+
 enable_idle_monitor() {
     local file spec i
+    [[ -n "$IDLE_MONITOR" ]] || return 0
     file="$(current_conf)" || return 1
-    spec="$(monitor_spec_from_conf "$file" "$RUNEWYRM_IDLE_MONITOR" || true)"
+    spec="$(monitor_spec_from_conf "$file" "$IDLE_MONITOR" || true)"
     [[ -n "$spec" ]] || return 1
     monitor_is_disabled "$spec" && return 0
     for i in $(seq 1 12); do
         keyword_monitor "$spec"
-        dpms on "$RUNEWYRM_IDLE_MONITOR"
-        monitor_is_live "$RUNEWYRM_IDLE_MONITOR" && return 0
+        dpms on "$IDLE_MONITOR"
+        monitor_is_live "$IDLE_MONITOR" && return 0
         sleep 0.4
     done
     return 1
 }
 
-# HDMI wakes itself from DPMS-only. Disable it after the workspace map is saved.
-idle_off_runewyrm() {
+# HDMI (IDLE_MONITOR) can wake itself from DPMS-only, so desk layouts
+# disable that connector after the workspace map is saved. Single-output
+# layouts must keep the remaining wl_output; dropping it kills clients.
+idle_off_idle_monitor() {
+    local file
     save_workspace_map
-    dpms off "$RUNEWYRM_IDLE_MONITOR"
+    dpms off "$IDLE_MONITOR"
     dpms_desk_ports off
-    sleep 0.2
-    keyword_monitor "${RUNEWYRM_IDLE_MONITOR},disable"
+    file="$(current_conf || true)"
+    if [[ -n "$file" ]] && profile_has_other_enabled "$file"; then
+        sleep 0.2
+        keyword_monitor "${IDLE_MONITOR},disable"
+        mkdir -p "$STATE_DIR"
+        printf '1\n' >"$IDLE_DISABLED_FILE"
+    else
+        rm -f "$IDLE_DISABLED_FILE"
+    fi
 }
 
 idle_off_other() { dpms off; }
@@ -482,10 +545,11 @@ cmd_idle_off() {
     need_hypr
     QUIET=1
     with_apply_lock || return 0
-    case "$HOST" in
-        runewyrm) idle_off_runewyrm ;;
-        *) idle_off_other ;;
-    esac
+    if [[ -n "$IDLE_MONITOR" ]]; then
+        idle_off_idle_monitor
+    else
+        idle_off_other
+    fi
     release_apply_lock
 }
 
@@ -493,24 +557,24 @@ cmd_idle_on() {
     need_hypr
     QUIET=1
     with_apply_lock || return 0
-    sleep 1
-    local i file
+    local file
     file="$(current_conf || true)"
-    for i in $(seq 1 10); do
-        dpms on
-        dpms_desk_ports on
-        [[ -n "$file" ]] && apply_monitor_conf "$file"
-        if [[ "$HOST" == "runewyrm" ]]; then
-            enable_idle_monitor || true
+    dpms on
+    dpms_desk_ports on
+    if [[ -f "$IDLE_DISABLED_FILE" ]]; then
+        sleep 1
+        if enable_idle_monitor; then
+            rm -f "$IDLE_DISABLED_FILE"
         fi
-        layout_ready && break
-        sleep 0.5
-    done
+        if [[ -n "$file" ]]; then
+            wait_conf_layout "$file" || true
+        fi
+    fi
     restore_saved_workspaces_now || true
     release_apply_lock
     schedule_workspace_restore
-    if [[ "$HOST" == "runewyrm" ]]; then
-        refresh_cursor "$RUNEWYRM_IDLE_MONITOR"
+    if [[ -n "$IDLE_MONITOR" ]] && monitor_is_live "$IDLE_MONITOR"; then
+        refresh_cursor "$IDLE_MONITOR"
     else
         refresh_cursor
     fi
@@ -547,6 +611,7 @@ usage() { echo "Usage: display-profile.sh [apply|idle-off|idle-on|restore-ws|sta
 
 main() {
     local cmd="${1:-apply}"
+    load_host_conf
     case "$cmd" in
         apply|"") cmd_apply ;;
         idle-off) cmd_idle_off ;;

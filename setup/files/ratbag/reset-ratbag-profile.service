@@ -1,0 +1,11 @@
+[Unit]
+Description=Reset ratbag profile 0 on Logitech G603/G604
+Documentation=file://%h/dot-files/config/hypr/README.md
+After=ratbagd.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/hypr/scripts/reset-ratbag-profile.sh apply
+
+[Install]
+WantedBy=default.target

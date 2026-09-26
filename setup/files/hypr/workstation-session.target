@@ -1,0 +1,17 @@
+[Unit]
+Description=Workstation graphical session apps
+Documentation=file://%h/dot-files/config/hypr/README.md
+PartOf=graphical-session.target
+After=graphical-session-pre.target hyprland-session.service
+Wants=hyprland-session.service
+Wants=workstation-kitty.service
+Wants=workstation-brave.service
+Wants=workstation-steam.service
+Wants=workstation-discord.service
+Wants=qs-startmenu.service
+Wants=workstation-spin-border.service
+Wants=workstation-litra.service
+Wants=workstation-kdeconnect.service
+
+[Install]
+WantedBy=graphical-session.target

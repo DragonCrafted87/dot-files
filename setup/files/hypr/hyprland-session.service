@@ -1,0 +1,18 @@
+[Unit]
+Description=Bind Hyprland to graphical-session.target
+Documentation=man:systemd.special(7)
+# graphical-session*.target refuse a manual start. This oneshot is the
+# dependency that is allowed to pull them in. ly launches Hyprland.desktop
+# (not uwsm), so nothing else in this session reaches the target.
+Wants=graphical-session-pre.target
+After=graphical-session-pre.target
+BindsTo=graphical-session.target
+Before=graphical-session.target
+PropagatesStopTo=graphical-session.target
+CollectMode=inactive-or-failed
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/true
+Slice=session.slice
