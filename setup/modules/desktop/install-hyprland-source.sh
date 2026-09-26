@@ -234,6 +234,50 @@ patch_hyprland_string_concat() {
     sed -i -E 's/instanceSignature \+ "\/" \+ filename/instanceSignature + "\/" + std::string(filename)/' "$f"
 }
 
+# Rock libstdc++ has no std::ranges::starts_with. Lowercase + string::starts_with.
+patch_hyprland_truthy() {
+    local f="${SRC_ROOT}/Hyprland/src/helpers/MiscFunctions.cpp"
+    [[ -f "$f" ]] || return 0
+    grep -q 'std::ranges::starts_with' "$f" || return 0
+    log "patch ${f} truthy() for GCC 14 ranges"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    python3 - "$f" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = '''bool truthy(const std::string& str) {
+    using std::operator""sv;
+
+    if (str == "1"sv)
+        return true;
+
+    // clang-format off
+    auto str_view = str | std::views::transform([](unsigned char ch) -> char {
+        return sc<char>(std::tolower(ch));
+    });
+
+    return [&](auto&&... prefixes) -> bool {
+        return (... || std::ranges::starts_with(str_view, prefixes));
+    }("true"sv, "yes"sv, "on"sv);
+    // clang-format on
+}'''
+new = '''bool truthy(const std::string& str) {
+    if (str == "1")
+        return true;
+    std::string lower(str.size(), '\\0');
+    std::transform(str.begin(), str.end(), lower.begin(), [](unsigned char ch) -> char {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return lower.starts_with("true") || lower.starts_with("yes") || lower.starts_with("on");
+}'''
+if old not in text:
+    raise SystemExit("MiscFunctions.cpp truthy() block not found")
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+}
+
 # GCC 14 has no #embed; expand the default lua config into a byte array.
 patch_hyprland_embed() {
     local hpp="${SRC_ROOT}/Hyprland/src/config/lua/DefaultConfig.hpp"
@@ -290,6 +334,7 @@ apply_hyprland_source_patches() {
     rewrite_append_range_tree "${SRC_ROOT}/Hyprland"
     patch_hyprland_xcb_ternary
     patch_hyprland_embed
+    patch_hyprland_truthy
     if [[ "${HYPRLAND_PATCH_CXX23}" == "1" ]]; then
         patch_hyprland_cxx23
     fi
