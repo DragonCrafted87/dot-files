@@ -1,0 +1,12 @@
+[Unit]
+Description=Discord (tray, workstation session)
+PartOf=workstation-session.target
+After=hyprland-session.service
+ConditionPathExists=/var/lib/flatpak/app/com.discordapp.Discord/current/active/export/bin/com.discordapp.Discord
+
+[Service]
+Type=simple
+ExecStart=/var/lib/flatpak/app/com.discordapp.Discord/current/active/export/bin/com.discordapp.Discord --start-minimized
+Slice=session.slice
+KillMode=control-group
+TimeoutStopSec=20

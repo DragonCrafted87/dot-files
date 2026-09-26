@@ -94,10 +94,11 @@ scripts.
 - Last profile: `~/.local/state/hypr/display-profile` (not in git).
 - `exec-once` restore runs once at login. `hyprctl reload` does not
   re-apply the profile.
-- Graphical desk apps (kitty, Brave, Steam, Discord, startmenu, Litra,
-  spin-border, KDE Connect) start from `workstation-session.service` on
-  `graphical-session.target`, not from `programs-autostart.conf`. HTPC
-  extras use `htpc-session.service`.
+- Graphical desk apps start from `workstation-session.target` (one user
+  unit per app) on `graphical-session.target`, not from
+  `programs-autostart.conf`. `qs-startmenu.service` uses `Restart=always`.
+  Steam starts with `-silent`, Discord with `--start-minimized`. HTPC
+  extras use `htpc-session.target`.
 
 ### runewyrm (desk workstation)
 
@@ -137,7 +138,7 @@ enabled monitor via hyprpaper. `SUPER+SHIFT+W` forces a new set.
 ### Litra Glow + Insta360 Link
 
 `scripts/litra-camera-lights.py watch` starts from
-`workstation-session.service`. It turns every USB Litra Glow on while
+`workstation-litra.service`. It turns every USB Litra Glow on while
 the Insta360 Link (`2e1a:*`) has an open V4L2 node, with a 1.5s debounce
 so browser probes do not flash the lamps.
 

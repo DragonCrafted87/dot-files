@@ -50,11 +50,13 @@ enable_service ly.service
 # Bind unit for graphical-session.target. ly launches Hyprland.desktop, which
 # never starts that target. Hyprland exec-once starts this unit; do not enable
 # it for default.target (linger would claim a graphical session at boot).
-# Role GUI apps are workstation-session / htpc-session, WantedBy the same
-# target; enable-session-units picks one.
-install_user_unit "${SETUP_FILES_DIR}/hypr/hyprland-session.service"
-install_user_unit "${SETUP_FILES_DIR}/hypr/workstation-session.service"
-install_user_unit "${SETUP_FILES_DIR}/hypr/htpc-session.service"
+# Role GUI apps are workstation-session.target / htpc-session.target.
+src=""
+shopt -s nullglob
+for src in "${SETUP_FILES_DIR}/hypr/"*.service "${SETUP_FILES_DIR}/hypr/"*.target; do
+    install_user_unit "$src"
+done
+shopt -u nullglob
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
     systemctl --user daemon-reload
 fi

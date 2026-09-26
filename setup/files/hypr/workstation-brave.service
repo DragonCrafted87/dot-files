@@ -1,0 +1,10 @@
+[Unit]
+Description=Brave browser (workstation session)
+PartOf=workstation-session.target
+After=hyprland-session.service
+ConditionPathExists=%h/.local/bin/brave-browser
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/brave-browser
+Slice=session.slice

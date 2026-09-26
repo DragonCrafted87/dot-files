@@ -15,5 +15,5 @@ Tracked after the Tango Dark pass. Not scheduled.
 
 ## quickshell
 
-- move qs to a systemd service so it autorestarts as its crashing a lot
-- also see if we can't find whats causing the crash
+- `qs-startmenu.service` (`Restart=always`) is the startmenu supervisor
+- still see if we can't find whats causing the crash

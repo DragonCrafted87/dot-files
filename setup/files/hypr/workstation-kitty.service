@@ -1,0 +1,10 @@
+[Unit]
+Description=Kitty terminal (workstation session)
+PartOf=workstation-session.target
+After=hyprland-session.service
+ConditionPathExists=/usr/bin/kitty
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/kitty
+Slice=session.slice

@@ -24,14 +24,16 @@ into the user systemd and starts `hyprland-session.service`, which
 away with the compositor. Linger still starts `default.target` at boot;
 that path must not claim a graphical session.
 
-Desk GUI apps are not Hyprland `exec-once` lines. They are
-`workstation-session.service` (WantedBy `graphical-session.target`).
-HTPC extras use `htpc-session.service`. `enable-session-units.sh` enables
-the unit that matches `~/.config/dot-files/role`.
+Desk GUI apps are not Hyprland `exec-once` lines. They are child units of
+`workstation-session.target` (WantedBy `graphical-session.target`): kitty,
+Brave, Steam (`-silent` tray), Discord (`--start-minimized`),
+`qs-startmenu` (`Restart=always`), spin-border, Litra, KDE Connect.
+HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
+the target that matches `~/.config/dot-files/role`.
 
 ```bash
-~/.config/hypr/scripts/workstation-session.sh status
-systemctl --user status workstation-session.service
+systemctl --user status workstation-session.target
+systemctl --user status qs-startmenu.service
 ```
 
 ```bash
@@ -104,7 +106,7 @@ moves to the monitor under the cursor.
 `scripts/litra-camera-lights.py` watches the Insta360 Link (`2e1a:*`)
 and turns every USB Litra Glow (`046d:c900`) on while that camera has an
 open V4L2 node. It waits 1.5s so a browser camera probe does not flash
-the lamps. `workstation-session.service` starts the watcher.
+the lamps. `workstation-litra.service` starts the watcher.
 
 ```bash
 python3 ~/.config/hypr/scripts/litra-camera-lights.py status

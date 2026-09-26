@@ -3,7 +3,7 @@
 # Distro audio/dbus sockets are left alone. These WantedBy
 # graphical-session.target, which hyprland-session.service binds after
 # login (ly -> Hyprland.desktop does not start that target).
-# workstation-session / htpc-session hold role GUI apps.
+# workstation-session.target / htpc-session.target hold role GUI apps.
 # network-mounts.service is custom and is enabled in install-network-mounts.
 
 set -euo pipefail
@@ -16,19 +16,22 @@ enable_user_service hypridle.service
 enable_user_service hyprpolkitagent.service
 enable_user_service mako.service
 
-# Desk vs HTPC GUI apps. graphical-session.target starts the enabled unit.
+# Desk vs HTPC GUI apps. graphical-session.target starts the enabled target.
+# Drop the PR 59 oneshot unit names if they are still enabled.
 role="$(saved_role)"
+disable_user_service workstation-session.service
+disable_user_service htpc-session.service
 case "$role" in
     workstation | laptop)
-        enable_user_service workstation-session.service
-        disable_user_service htpc-session.service
+        enable_user_service workstation-session.target
+        disable_user_service htpc-session.target
         ;;
     htpc)
-        enable_user_service htpc-session.service
-        disable_user_service workstation-session.service
+        enable_user_service htpc-session.target
+        disable_user_service workstation-session.target
         ;;
     *)
-        disable_user_service workstation-session.service
-        disable_user_service htpc-session.service
+        disable_user_service workstation-session.target
+        disable_user_service htpc-session.target
         ;;
 esac
