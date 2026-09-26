@@ -654,5 +654,6 @@
     "window.commandCenter": true,
     "workbench.layoutControl.enabled": true,
     "qt-qml.doNotAskForQmllsDownload": true,
+    "qt-qml.qmlls.customExePath": "/usr/lib64/qt6/bin/qmlls",
     "githubPullRequests.pullBranch": "always",
 }
