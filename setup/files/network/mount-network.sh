@@ -6,6 +6,7 @@ MOUNTPOINT="${HOME}/network"
 CREDENTIALS="${HOME}/.smbcredentials"
 RCLONE_REMOTE="dragon-onedrive"
 RCLONE_SHARE="Dragon-OneDrive"
+RCLONE_LOCAL="dragon-onedrive"
 WAIT_SECONDS="${NETWORK_MOUNT_WAIT:-90}"
 
 log() {
@@ -17,14 +18,32 @@ is_mounted() {
     findmnt -n "$target" >/dev/null 2>&1
 }
 
-# Drop mixed-case CIFS mount dirs from older installs so the lowercase
+unmount_one() {
+    local target="$1"
+
+    if sudo umount "$target" 2>/dev/null; then
+        return 0
+    fi
+    if umount "$target" 2>/dev/null; then
+        return 0
+    fi
+    if command -v fusermount3 >/dev/null 2>&1 && fusermount3 -u "$target" 2>/dev/null; then
+        return 0
+    fi
+    if command -v fusermount >/dev/null 2>&1 && fusermount -u "$target" 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+# Drop mixed-case mount dirs from older installs so the lowercase
 # targets can take over. Share names on the server stay unchanged.
 retire_legacy_cifs_dir() {
     local old="$1"
 
     if is_mounted "$old"; then
         log "unmounting legacy path ${old}"
-        if ! sudo umount "$old"; then
+        if ! unmount_one "$old"; then
             log "failed: could not unmount ${old}"
             return 1
         fi
@@ -45,16 +64,7 @@ unmount_under() {
     for target in "${targets[@]}"; do
         [[ -n "$target" ]] || continue
         log "unmounting ${target}"
-        if sudo umount "$target" 2>/dev/null; then
-            continue
-        fi
-        if umount "$target" 2>/dev/null; then
-            continue
-        fi
-        if command -v fusermount3 >/dev/null 2>&1 && fusermount3 -u "$target" 2>/dev/null; then
-            continue
-        fi
-        if command -v fusermount >/dev/null 2>&1 && fusermount -u "$target" 2>/dev/null; then
+        if unmount_one "$target"; then
             continue
         fi
         log "failed: could not unmount ${target}"
@@ -74,6 +84,7 @@ retire_legacy_mount_root() {
     retire_legacy_cifs_dir "${old}/Storage"
     retire_legacy_cifs_dir "${old}/Unrestricted"
     retire_legacy_cifs_dir "${old}/Backups"
+    retire_legacy_cifs_dir "${old}/Dragon-OneDrive"
 
     if [[ ! -e "$new" && ! -L "$new" ]]; then
         log "renaming ${old} -> ${new}"
@@ -191,13 +202,18 @@ retire_legacy_mount_root
 retire_legacy_cifs_dir "${MOUNTPOINT}/Storage"
 retire_legacy_cifs_dir "${MOUNTPOINT}/Unrestricted"
 retire_legacy_cifs_dir "${MOUNTPOINT}/Backups"
-mkdir -p "${MOUNTPOINT}/Dragon-OneDrive" \
+retire_legacy_cifs_dir "${MOUNTPOINT}/${RCLONE_SHARE}"
+mkdir -p "${MOUNTPOINT}/${RCLONE_LOCAL}" \
     "${MOUNTPOINT}/storage" \
     "${MOUNTPOINT}/unrestricted" \
     "${MOUNTPOINT}/backups" \
     "${MOUNTPOINT}/castellan-data"
 
-mount_rclone "${MOUNTPOINT}/Dragon-OneDrive"
+if is_mounted "${MOUNTPOINT}/${RCLONE_SHARE}"; then
+    log "warning: leftover ${MOUNTPOINT}/${RCLONE_SHARE} still mounted, skip rclone"
+else
+    mount_rclone "${MOUNTPOINT}/${RCLONE_LOCAL}"
+fi
 mount_cifs //calligraphy-wyrm.stealthdragonland.net/Storage      "${MOUNTPOINT}/storage"
 mount_cifs //calligraphy-wyrm.stealthdragonland.net/Unrestricted "${MOUNTPOINT}/unrestricted"
 mount_cifs //calligraphy-wyrm.stealthdragonland.net/Backups      "${MOUNTPOINT}/backups"
