@@ -481,6 +481,8 @@ def rewrite_append(text: str) -> tuple[str, int]:
             + f"); {obj}.insert({obj}.end(), std::ranges::begin(_hypr_r), std::ranges::end(_hypr_r)); }}"
         )
         n += 1
+        if p < len(text) and text[p] == ";":
+            p += 1
         i = p
     return "".join(out), n
 
@@ -520,6 +522,8 @@ def rewrite_insert(text: str) -> tuple[str, int]:
             + f"); {obj}.insert({pos}, std::ranges::begin(_hypr_r), std::ranges::end(_hypr_r)); }}"
         )
         n += 1
+        if p < len(text) and text[p] == ";":
+            p += 1
         i = p
     return "".join(out), n
 
