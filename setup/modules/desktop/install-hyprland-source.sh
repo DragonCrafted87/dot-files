@@ -227,6 +227,35 @@ patch_hyprland_string_concat() {
     sed -i -E 's/instanceSignature \+ "\/" \+ filename/instanceSignature + "\/" + std::string(filename)/' "$f"
 }
 
+# GCC 14 has no #embed; expand the default lua config into a byte array.
+patch_hyprland_embed() {
+    local hpp="${SRC_ROOT}/Hyprland/src/config/lua/DefaultConfig.hpp"
+    local lua="${SRC_ROOT}/Hyprland/example/hyprland.lua"
+    [[ -f "$hpp" && -f "$lua" ]] || return 0
+    grep -q '^#embed ' "$hpp" || return 0
+    log "expand #embed in ${hpp} for GCC 14"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    python3 - "$hpp" "$lua" <<'PY'
+from pathlib import Path
+import sys
+
+hpp = Path(sys.argv[1])
+lua = Path(sys.argv[2])
+text = hpp.read_text(encoding="utf-8")
+marker = "#embed"
+if marker not in text:
+    raise SystemExit(0)
+bytes_list = ", ".join(str(b) for b in lua.read_bytes())
+old = """inline constexpr char             EXAMPLE_CONFIG_BYTES_LUA[] = {
+#embed "../../../example/hyprland.lua"
+};"""
+new = "inline constexpr char             EXAMPLE_CONFIG_BYTES_LUA[] = {" + bytes_list + "};"
+if old not in text:
+    raise SystemExit("DefaultConfig.hpp #embed block not found")
+hpp.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+}
+
 # GCC rejects ternary CXCBConnection vs nullptr; clang converts via operator xcb_connection_t*().
 patch_hyprland_xcb_ternary() {
     local f="${SRC_ROOT}/Hyprland/src/xwayland/XWM.hpp"
@@ -253,6 +282,7 @@ apply_hyprland_source_patches() {
     patch_hyprland_glaze
     rewrite_append_range_tree "${SRC_ROOT}/Hyprland"
     patch_hyprland_xcb_ternary
+    patch_hyprland_embed
     if [[ "${HYPRLAND_PATCH_CXX23}" == "1" ]]; then
         patch_hyprland_cxx23
     fi
