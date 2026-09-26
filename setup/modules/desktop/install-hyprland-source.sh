@@ -11,6 +11,9 @@ require_user
 HYPRLAND_TAG="${HYPRLAND_TAG:?set HYPRLAND_TAG in setup/versions.conf}"
 HYPRLAND_SOURCE_VERSION="${HYPRLAND_SOURCE_VERSION:-${HYPRLAND_TAG#v}}"
 PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland}"
+HYPRLAND_PATCH_CXX23="${HYPRLAND_PATCH_CXX23:-0}"
+HYPRLAND_PATCH_STRING_CONCAT="${HYPRLAND_PATCH_STRING_CONCAT:-0}"
+HYPRLAND_DISABLE_PCH="${HYPRLAND_DISABLE_PCH:-0}"
 SRC_ROOT="${HYPRLAND_SOURCE_SRC:-${DOTFILES_HOME}/.cache/hyprland-source}"
 STAMP="${PREFIX}/share/hyprland-source/.dotfiles-stamp"
 SESSION_DESKTOP_SRC="${SETUP_FILES_DIR}/hyprland-source/hyprland-source.desktop"
@@ -224,16 +227,20 @@ patch_hyprland_string_concat() {
     sed -i -E 's/instanceSignature \+ "\/" \+ filename/instanceSignature + "\/" + std::string(filename)/' "$f"
 }
 
+apply_hyprland_source_patches() {
+    patch_hyprland_python
+    patch_hyprland_glaze
+    [[ "${HYPRLAND_PATCH_CXX23}" == "1" ]] && patch_hyprland_cxx23
+    [[ "${HYPRLAND_PATCH_STRING_CONCAT}" == "1" ]] && patch_hyprland_string_concat
+}
+
 ensure_hyprland_tarball() {
     local dest="${SRC_ROOT}/Hyprland"
     local tarball="${SRC_ROOT}/source-${HYPRLAND_TAG}.tar.gz"
     local url="https://github.com/hyprwm/Hyprland/releases/download/${HYPRLAND_TAG}/source-${HYPRLAND_TAG}.tar.gz"
     if [[ -d "$dest" && -f "${dest}/CMakeLists.txt" ]]; then
         log "Hyprland sources already unpacked at ${dest}"
-        patch_hyprland_python
-        patch_hyprland_glaze
-        patch_hyprland_cxx23
-        patch_hyprland_string_concat
+        apply_hyprland_source_patches
         return 0
     fi
     log "fetch Hyprland ${HYPRLAND_TAG} release tarball"
@@ -243,10 +250,7 @@ ensure_hyprland_tarball() {
     rm -rf "$dest"
     mkdir -p "$dest"
     tar -xzf "$tarball" -C "$dest" --strip-components=1
-    patch_hyprland_python
-    patch_hyprland_glaze
-    patch_hyprland_cxx23
-    patch_hyprland_string_concat
+    apply_hyprland_source_patches
 }
 
 cmake_config_flags=()
@@ -392,6 +396,7 @@ patch_hyprland_glaze() {
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
     while IFS= read -r f; do
         sed -i -E "s/v7\\.2\\.0/${GLAZE_TAG}/g" "$f"
+        sed -i -E 's/find_package\(glaze 7\.\.\.<8/find_package(glaze 8...<9/' "$f"
     done < <(find "$root" -name CMakeLists.txt)
 }
 
@@ -491,7 +496,9 @@ build_stack() {
     ensure_re2
     ensure_glaze
     ensure_hyprland_tarball
-    build_cmake_src "${SRC_ROOT}/Hyprland" -DNO_UWSM:STRING=true -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+    local hyprland_cmake_extra=(-DNO_UWSM:STRING=true)
+    [[ "${HYPRLAND_DISABLE_PCH}" == "1" ]] && hyprland_cmake_extra+=(-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON)
+    build_cmake_src "${SRC_ROOT}/Hyprland" "${hyprland_cmake_extra[@]}"
     ensure_tagged_repo https://github.com/hyprwm/hyprland-qt-support.git "${SRC_ROOT}/hyprland-qt-support" "$HYPRLAND_QT_SUPPORT_TAG"
     build_cmake_src "${SRC_ROOT}/hyprland-qt-support"
     ensure_tagged_repo https://github.com/hyprwm/hyprqt6engine.git "${SRC_ROOT}/hyprqt6engine" "$HYPRQT6ENGINE_TAG"
