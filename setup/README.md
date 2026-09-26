@@ -156,8 +156,10 @@ HYPRLAND_SOURCE_FORCE=1 ~/dot-files/setup/modules/desktop/install-hyprland-sourc
 
 Override prefix or a tag (`HYPRLAND_TAG`, `AQUAMARINE_TAG`, …) in the
 environment; an exported value wins over `versions.conf`. Sources cache
-under `~/.cache/hyprland-source`. Source builds pick up
-`bashrc.d/compiler.bashrc` (`clang`, `lld`, `-march=native`).
+under `~/.cache/hyprland-source`. This module forces GCC 14 + libstdc++
+
+- mold (OpenMandriva cooker recipe; Clang 19 crashes Hyprland at
+  launch). Other source builds still use `compiler.bashrc` clang.
 
 ## KDE Connect / GrapheneOS SMS
 

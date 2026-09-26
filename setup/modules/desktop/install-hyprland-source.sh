@@ -79,14 +79,16 @@ libinput=${LIBINPUT_TAG}
 re2=${RE2_TAG}
 glaze=${GLAZE_TAG}
 prefix=${PREFIX}
-stdlib=libc++
+stdlib=libstdc++
+compiler=gcc
 EOF
 }
 
 install_build_deps() {
     local pkgs=() picked group
     local groups=(
-        "clang" "llvm" "lld" "gcc-c++ gcc-c++-14 gcc" "cmake" "meson" "ninja ninja-build" "git"
+        "gcc-c++ gcc-c++-14 gcc" "mold" "atomic-devel libatomic-devel"
+        "cmake" "meson" "ninja ninja-build" "git"
         "pkgconf pkgconfig pkgconf-pkg-config" "jq" "cpio" "hwdata"
         "wayland-devel lib64wayland-devel" "wayland-protocols-devel wayland-protocols"
         "libdrm-devel lib64drm-devel lib64drm2-devel" "libxkbcommon-devel lib64xkbcommon-devel"
@@ -131,7 +133,6 @@ install_build_deps() {
         "lib64Qt6WaylandClient-devel lib64Qt6Wayland-devel qt6-qtwayland-devel lib64qt6wayland-devel"
         "qt6-qttools-devel lib64Qt6Tools-devel"
         "automake autoconf libtool xorg-x11-util-macros util-macros"
-        "lib64c++-devel libc++-devel" "lib64c++abi-devel libc++abi-devel" "lib64unwind-devel libunwind-devel"
         "lib64iniparser-devel iniparser-devel"
     )
     for group in "${groups[@]}"; do
@@ -141,14 +142,42 @@ install_build_deps() {
     [[ "${#pkgs[@]}" -gt 0 ]] && ensure_packages "${pkgs[@]}"
 }
 
-use_libcxx() {
-    case " ${CXXFLAGS:-} " in *" -stdlib=libc++ "*) ;; *) CXXFLAGS="${CXXFLAGS:+${CXXFLAGS} }-stdlib=libc++" ;; esac
-    case " ${LDFLAGS:-} " in *" -stdlib=libc++ "*) ;; *) LDFLAGS="${LDFLAGS:+${LDFLAGS} }-stdlib=libc++" ;; esac
-    export CXXFLAGS LDFLAGS
+# OpenMandriva cooker builds Hyprland 0.56.2 with GCC. Clang 19 is known
+# to crash the compositor at launch (aquamarine.spec) and dies on glaze
+# reflection during compile. compiler.bashrc prefers LLVM; override here.
+strip_flag_from() {
+    local varname="$1" flag="$2" tok
+    local -a toks=()
+    local val="${!varname:-}"
+    for tok in $val; do
+        [[ "$tok" == "$flag" ]] && continue
+        toks+=("$tok")
+    done
+    printf -v "$varname" '%s' "${toks[*]}"
+}
+
+use_hyprland_gcc() {
+    export CC=gcc
+    export CXX=g++
+    export CMAKE_C_COMPILER=gcc
+    export CMAKE_CXX_COMPILER=g++
+    unset CMAKE_AR CMAKE_RANLIB AR RANLIB NM
+    command -v gcc-ar >/dev/null 2>&1 && export AR=gcc-ar
+    command -v gcc-ranlib >/dev/null 2>&1 && export RANLIB=gcc-ranlib
+
+    strip_flag_from CXXFLAGS -stdlib=libc++
+    strip_flag_from LDFLAGS -stdlib=libc++
+    strip_flag_from LDFLAGS -fuse-ld=lld
+    strip_flag_from CFLAGS -fuse-ld=lld
+    if command -v mold >/dev/null 2>&1; then
+        case " ${LDFLAGS:-} " in *" -fuse-ld=mold "*) ;; *) LDFLAGS="${LDFLAGS:+${LDFLAGS} }-fuse-ld=mold" ;; esac
+        export LD=mold
+    fi
+    export CFLAGS CXXFLAGS LDFLAGS
 }
 
 export_prefix_env() {
-    use_libcxx
+    use_hyprland_gcc
     export PATH="${PREFIX}/bin:${PATH:-/usr/bin}"
     export PKG_CONFIG_PATH="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
     export CMAKE_PREFIX_PATH="${PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
@@ -222,15 +251,15 @@ ensure_hyprland_tarball() {
 
 cmake_config_flags=()
 fill_cmake_config_flags() {
-    use_libcxx
+    use_hyprland_gcc
     CMAKE_EXE_LINKER_FLAGS="${LDFLAGS:-}"
     case " ${CMAKE_EXE_LINKER_FLAGS} " in *" --allow-shlib-undefined "*) ;; *) CMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS:+${CMAKE_EXE_LINKER_FLAGS} }-Wl,--allow-shlib-undefined" ;; esac
     cmake_config_flags=(
         -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PREFIX" -DCMAKE_PREFIX_PATH="$PREFIX"
         -DCMAKE_INSTALL_LIBDIR=lib64 -DCMAKE_INSTALL_RPATH="${PREFIX}/lib64;${PREFIX}/lib"
         -DCMAKE_BUILD_RPATH="${PREFIX}/lib64;${PREFIX}/lib" -DBUILD_TESTING=OFF
-        -DCMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC:-clang}}"
-        -DCMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER:-${CXX:-clang++}}"
+        -DCMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC:-gcc}}"
+        -DCMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER:-${CXX:-g++}}"
         "-DCMAKE_C_FLAGS=${CFLAGS:-}" "-DCMAKE_CXX_FLAGS=${CXXFLAGS:-}"
         "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}"
         "-DCMAKE_SHARED_LINKER_FLAGS=${LDFLAGS:-}" "-DCMAKE_MODULE_LINKER_FLAGS=${LDFLAGS:-}"
@@ -507,8 +536,9 @@ if [[ -x "${PREFIX}/bin/Hyprland" && -f "$STAMP" ]] && [[ "$(cat "$STAMP")" == "
 fi
 
 install_build_deps
-command -v clang >/dev/null 2>&1 || die "clang is not on PATH after package install"
-command -v clang++ >/dev/null 2>&1 || die "clang++ is not on PATH after package install"
+command -v gcc >/dev/null 2>&1 || die "gcc is not on PATH after package install"
+command -v g++ >/dev/null 2>&1 || die "g++ is not on PATH after package install"
+command -v mold >/dev/null 2>&1 || die "mold is not on PATH after package install"
 command -v cmake >/dev/null 2>&1 || die "cmake is not on PATH after package install"
 command -v meson >/dev/null 2>&1 || die "meson is not on PATH after package install"
 
