@@ -227,10 +227,32 @@ patch_hyprland_string_concat() {
     sed -i -E 's/instanceSignature \+ "\/" \+ filename/instanceSignature + "\/" + std::string(filename)/' "$f"
 }
 
+# GCC rejects ternary CXCBConnection vs nullptr; clang converts via operator xcb_connection_t*().
+patch_hyprland_xcb_ternary() {
+    local f="${SRC_ROOT}/Hyprland/src/xwayland/XWM.hpp"
+    [[ -f "$f" ]] || return 0
+    grep -q 'm_connection ? \*m_connection : nullptr' "$f" || return 0
+    log "patch ${f} GCC xcb connection ternary"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    python3 - "$f" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "return m_connection ? *m_connection : nullptr;"
+new = "if (!m_connection)\n            return nullptr;\n        return *m_connection;"
+if old not in text:
+    raise SystemExit(0)
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+}
+
 apply_hyprland_source_patches() {
     patch_hyprland_python
     patch_hyprland_glaze
     rewrite_append_range_tree "${SRC_ROOT}/Hyprland"
+    patch_hyprland_xcb_ternary
     if [[ "${HYPRLAND_PATCH_CXX23}" == "1" ]]; then
         patch_hyprland_cxx23
     fi
