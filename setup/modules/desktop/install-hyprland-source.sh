@@ -397,6 +397,18 @@ fill_cmake_config_flags() {
     [[ -n "${RANLIB:-}" ]] && cmake_config_flags+=("-DCMAKE_RANLIB=${RANLIB}")
 }
 
+# pkg_check_modules IMPORTED_TARGET can resolve -lhyprutils to Rock /usr/lib64
+# when another dep listed -L/usr/lib64 first. Force prefix SONAMEs in the build.
+pin_prefix_hypr_link() {
+    local build="$1" lib
+    [[ -d "$build" ]] || return 0
+    for lib in hyprutils hyprlang hyprgraphics hyprcursor hyprwire hyprtoolkit aquamarine; do
+        [[ -e "${PREFIX}/lib64/lib${lib}.so" ]] || continue
+        find "$build" \( -name CMakeCache.txt -o -name link.txt -o -name flags.make \) -exec \
+            sed -i "s|/usr/lib64/lib${lib}.so|${PREFIX}/lib64/lib${lib}.so|g" {} +
+    done
+}
+
 cmake_skip_target() {
     case "$1" in
         *test*|*Test*|*tests*|hyprgraphics_image|hyprgraphics_arg|simpleWindow|commitThread|attachments|output) return 0 ;;
@@ -595,6 +607,7 @@ build_cmake_src() {
     rm -rf "${src}/build"
     fill_cmake_config_flags
     cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" "${extra[@]}"
+    pin_prefix_hypr_link "${src}/build"
     jobs="$(nproc)"
     while IFS= read -r t; do [[ -n "$t" ]] && targets+=("$t"); done < <(cmake_installable_targets "${src}/build" | sort -u)
     if [[ "${#targets[@]}" -gt 0 ]]; then
