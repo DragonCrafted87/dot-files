@@ -84,6 +84,7 @@ retire_legacy_mount_root() {
     retire_legacy_cifs_dir "${old}/Storage"
     retire_legacy_cifs_dir "${old}/Unrestricted"
     retire_legacy_cifs_dir "${old}/Backups"
+    retire_legacy_cifs_dir "${old}/Dragon-OneDrive"
 
     if [[ ! -e "$new" && ! -L "$new" ]]; then
         log "renaming ${old} -> ${new}"
@@ -201,15 +202,15 @@ retire_legacy_mount_root
 retire_legacy_cifs_dir "${MOUNTPOINT}/Storage"
 retire_legacy_cifs_dir "${MOUNTPOINT}/Unrestricted"
 retire_legacy_cifs_dir "${MOUNTPOINT}/Backups"
-retire_legacy_cifs_dir "${MOUNTPOINT}/Dragon-OneDrive"
+retire_legacy_cifs_dir "${MOUNTPOINT}/${RCLONE_SHARE}"
 mkdir -p "${MOUNTPOINT}/${RCLONE_LOCAL}" \
     "${MOUNTPOINT}/storage" \
     "${MOUNTPOINT}/unrestricted" \
     "${MOUNTPOINT}/backups" \
     "${MOUNTPOINT}/castellan-data"
 
-if is_mounted "${MOUNTPOINT}/Dragon-OneDrive"; then
-    log "failed: leftover ${MOUNTPOINT}/Dragon-OneDrive still mounted, skip rclone"
+if is_mounted "${MOUNTPOINT}/${RCLONE_SHARE}"; then
+    log "warning: leftover ${MOUNTPOINT}/${RCLONE_SHARE} still mounted, skip rclone"
 else
     mount_rclone "${MOUNTPOINT}/${RCLONE_LOCAL}"
 fi
