@@ -60,6 +60,17 @@ record_role() {
     ensure_file_contents "${CONFIG_TARGET_DIR}/dot-files/role" "$role"
 }
 
+# Role currently being applied, else the saved file.
+saved_role() {
+    local path="${CONFIG_TARGET_DIR}/dot-files/role"
+    local role="${OMV_ROLE:-}"
+    if [[ -z "$role" && -f "$path" ]]; then
+        role="$(<"$path")"
+        role="${role%%$'\n'*}"
+    fi
+    printf '%s\n' "$role"
+}
+
 valid_role() {
     case "${1:-}" in
         workstation | laptop | htpc | server) return 0 ;;

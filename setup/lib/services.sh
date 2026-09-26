@@ -23,6 +23,30 @@ enable_user_service() {
     run systemctl --user enable "$unit"
 }
 
+disable_user_service() {
+    local unit="$1"
+    if ! systemctl --user list-unit-files "$unit" >/dev/null 2>&1; then
+        return 0
+    fi
+    if systemctl --user is-enabled --quiet "$unit" 2>/dev/null; then
+        log "disable --user ${unit}"
+        run systemctl --user disable "$unit"
+    fi
+}
+
+# Copy a user unit from setup/files into ~/.config/systemd/user.
+install_user_unit() {
+    local src="$1"
+    local dest
+    [[ -f "$src" ]] || die "missing ${src}"
+    dest="${DOTFILES_HOME}/.config/systemd/user/$(basename "$src")"
+    ensure_dir "$(dirname "$dest")"
+    if [[ ! -f "$dest" ]] || ! cmp -s "$src" "$dest"; then
+        log "user unit ${dest}"
+        run install -m 0644 "$src" "$dest"
+    fi
+}
+
 disable_service() {
     local unit="$1"
     if ! systemctl list-unit-files "$unit" >/dev/null 2>&1; then

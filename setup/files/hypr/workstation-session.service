@@ -1,0 +1,15 @@
+[Unit]
+Description=Workstation graphical apps for Hyprland
+Documentation=file://%h/dot-files/config/hypr/README.md
+PartOf=graphical-session.target
+After=graphical-session-pre.target hyprland-session.service
+Wants=hyprland-session.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/.config/hypr/scripts/workstation-session.sh start
+Slice=session.slice
+
+[Install]
+WantedBy=graphical-session.target
