@@ -19,10 +19,3 @@ Tracked after the Tango Dark pass. Not scheduled.
   `~/network/Dragon-OneDrive` (`RCLONE_SHARE=Dragon-OneDrive` in
   `setup/files/network/mount-network.sh`). CIFS mountpoints are already
   lowercase.
-
-## session stop
-
-- after the workstation-session.target reboot, one of the xdg units sat
-  through the full 90s stop timeout. Likely `xdg-desktop-portal` or
-  `xdg-document-portal`. Journal which unit, then shorten TimeoutStopSec
-  or find what it was waiting on.

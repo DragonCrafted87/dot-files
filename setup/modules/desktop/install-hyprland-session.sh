@@ -57,6 +57,8 @@ for src in "${SETUP_FILES_DIR}/hypr/"*.service "${SETUP_FILES_DIR}/hypr/"*.targe
     install_user_unit "$src"
 done
 shopt -u nullglob
+install_user_dropin xdg-document-portal.service \
+    "${SETUP_FILES_DIR}/hypr/xdg-document-portal.service.d/timeout-stop.conf"
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
     systemctl --user daemon-reload
 fi
