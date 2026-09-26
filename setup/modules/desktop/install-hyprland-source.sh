@@ -231,8 +231,13 @@ apply_hyprland_source_patches() {
     patch_hyprland_python
     patch_hyprland_glaze
     rewrite_append_range_tree "${SRC_ROOT}/Hyprland"
-    [[ "${HYPRLAND_PATCH_CXX23}" == "1" ]] && patch_hyprland_cxx23
-    [[ "${HYPRLAND_PATCH_STRING_CONCAT}" == "1" ]] && patch_hyprland_string_concat
+    if [[ "${HYPRLAND_PATCH_CXX23}" == "1" ]]; then
+        patch_hyprland_cxx23
+    fi
+    if [[ "${HYPRLAND_PATCH_STRING_CONCAT}" == "1" ]]; then
+        patch_hyprland_string_concat
+    fi
+    return 0
 }
 
 ensure_hyprland_tarball() {
@@ -693,8 +698,10 @@ build_stack() {
             log "skip Hyprland: prefix already has ${HYPRLAND_TAG}"
         else
             ensure_hyprland_tarball
-            local hyprland_cmake_extra=(-DNO_UWSM:STRING=true)
-            [[ "${HYPRLAND_DISABLE_PCH}" == "1" ]] && hyprland_cmake_extra+=(-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON)
+            hyprland_cmake_extra=(-DNO_UWSM:STRING=true)
+            if [[ "${HYPRLAND_DISABLE_PCH}" == "1" ]]; then
+                hyprland_cmake_extra+=(-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON)
+            fi
             build_cmake_src "${SRC_ROOT}/Hyprland" "${hyprland_cmake_extra[@]}"
         fi
     fi
