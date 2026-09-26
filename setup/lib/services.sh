@@ -47,6 +47,20 @@ install_user_unit() {
     fi
 }
 
+# Copy a user drop-in from setup/files into ~/.config/systemd/user/<unit>.d/.
+install_user_dropin() {
+    local unit="$1"
+    local src="$2"
+    local dest
+    [[ -f "$src" ]] || die "missing ${src}"
+    dest="${DOTFILES_HOME}/.config/systemd/user/${unit}.d/$(basename "$src")"
+    ensure_dir "$(dirname "$dest")"
+    if [[ ! -f "$dest" ]] || ! cmp -s "$src" "$dest"; then
+        log "user drop-in ${dest}"
+        run install -m 0644 "$src" "$dest"
+    fi
+}
+
 disable_service() {
     local unit="$1"
     if ! systemctl list-unit-files "$unit" >/dev/null 2>&1; then

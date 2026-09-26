@@ -31,6 +31,10 @@ Brave, Steam (`-silent` tray), Discord (`--start-minimized`),
 HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
 the target that matches `~/.config/dot-files/role`.
 
+`xdg-document-portal.service` gets a user drop-in
+(`TimeoutStopSec=5`, `TimeoutStopFailureMode=kill`) so logout does not
+wait the default 90s on a stuck FUSE unmount of `/run/user/$UID/doc`.
+
 ```bash
 systemctl --user status workstation-session.target
 systemctl --user status qs-startmenu.service
