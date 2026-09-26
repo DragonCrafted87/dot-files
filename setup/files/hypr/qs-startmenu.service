@@ -1,0 +1,13 @@
+[Unit]
+Description=Quickshell startmenu
+PartOf=workstation-session.target
+After=hyprland-session.service
+ConditionPathExists=%h/.config/hypr/scripts/startmenu.sh
+
+[Service]
+Type=simple
+# Foreground qs so systemd can restart it. startmenu.sh must not pass -d.
+ExecStart=%h/.config/hypr/scripts/startmenu.sh
+Restart=always
+RestartSec=2
+Slice=session.slice

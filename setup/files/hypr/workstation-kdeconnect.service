@@ -1,0 +1,12 @@
+[Unit]
+Description=KDE Connect indicator
+PartOf=workstation-session.target
+After=hyprland-session.service
+ConditionPathExists=%h/.config/hypr/scripts/start-kdeconnect.sh
+
+[Service]
+Type=simple
+ExecStart=%h/.config/hypr/scripts/start-kdeconnect.sh
+Restart=on-failure
+RestartSec=2
+Slice=session.slice

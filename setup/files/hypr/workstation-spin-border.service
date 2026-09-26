@@ -1,0 +1,12 @@
+[Unit]
+Description=Hyprland spinning active border
+PartOf=workstation-session.target
+After=hyprland-session.service
+ConditionPathExists=%h/.config/hypr/scripts/spin-border.sh
+
+[Service]
+Type=simple
+ExecStart=%h/.config/hypr/scripts/spin-border.sh
+Restart=always
+RestartSec=2
+Slice=session.slice

@@ -83,6 +83,13 @@ restart_qs_if_needed() {
         log "skip qs restart: no Hyprland session"
         return 0
     fi
+
+    if systemctl --user is-enabled --quiet qs-startmenu.service 2>/dev/null; then
+        log "restart qs startmenu"
+        run systemctl --user restart qs-startmenu.service
+        return 0
+    fi
+
     if [[ ! -x "$starter" ]]; then
         warn "skip qs restart: missing ${starter}"
         return 0

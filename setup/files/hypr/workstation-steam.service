@@ -1,0 +1,13 @@
+[Unit]
+Description=Steam (tray, workstation session)
+PartOf=workstation-session.target
+After=hyprland-session.service
+ConditionPathExists=/usr/bin/steam
+
+[Service]
+Type=simple
+# -silent starts the tray/bootstrap without the library window.
+Environment=STEAM_FRAME_FORCE_CLOSE=1
+ExecStart=/usr/bin/steam -silent
+Slice=session.slice
+TimeoutStopSec=20

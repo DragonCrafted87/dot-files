@@ -1,0 +1,12 @@
+[Unit]
+Description=Litra Glow camera-follow lights
+PartOf=workstation-session.target
+After=hyprland-session.service
+ConditionPathExists=%h/.config/hypr/scripts/litra-camera-lights.py
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.config/hypr/scripts/litra-camera-lights.py watch
+Restart=on-failure
+RestartSec=2
+Slice=session.slice
