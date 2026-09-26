@@ -133,6 +133,8 @@ install_build_deps() {
         "lib64Qt6Core-devel lib64qt6core-devel qt6-qtbase-devel qt6-base-devel"
         "lib64Qt6Gui-devel lib64Qt6Widgets-devel"
         "lib64Qt6Qml-devel qt6-qtdeclarative-devel qt6-qtqml-devel lib64qt6qml-devel"
+        "lib64Qt6Quick-devel qt6-qtquick-devel"
+        "lib64Qt6QuickControls2-devel qt6-qtquickcontrols2-devel"
         "lib64Qt6WaylandClient-devel lib64Qt6Wayland-devel qt6-qtwayland-devel lib64qt6wayland-devel"
         "qt6-qttools-devel lib64Qt6Tools-devel"
         "automake autoconf libtool xorg-x11-util-macros util-macros"
@@ -858,8 +860,8 @@ build_stack() {
     ensure_re2
     ensure_glaze
     if should_build_component Hyprland; then
-        if [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" && -x "${PREFIX}/bin/Hyprland" ]] && prefix_has_pc hyprland "$(tag_version "$HYPRLAND_TAG")"; then
-            log "skip Hyprland: prefix already has ${HYPRLAND_TAG}"
+        if [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" && -x "${PREFIX}/bin/Hyprland" ]]; then
+            log "skip Hyprland: ${PREFIX}/bin/Hyprland already installed"
         else
             ensure_hyprland_tarball
             hyprland_cmake_extra=(-DNO_UWSM:STRING=true)
