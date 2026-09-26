@@ -230,6 +230,7 @@ patch_hyprland_string_concat() {
 apply_hyprland_source_patches() {
     patch_hyprland_python
     patch_hyprland_glaze
+    rewrite_append_range_tree "${SRC_ROOT}/Hyprland"
     [[ "${HYPRLAND_PATCH_CXX23}" == "1" ]] && patch_hyprland_cxx23
     [[ "${HYPRLAND_PATCH_STRING_CONCAT}" == "1" ]] && patch_hyprland_string_concat
 }
@@ -291,11 +292,85 @@ cmake_installable_targets() {
     done
 }
 
+# Rock GCC 14 libstdc++ has no std::vector::append_range (no
+# __cpp_lib_containers_ranges). Cooker GCC is newer; rewrite to insert.
+rewrite_append_range_tree() {
+    local root="$1"
+    [[ -d "$root" ]] || return 0
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would rewrite append_range in ${root}"; return 0; }
+    python3 - "$root" <<'PY'
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+key = ".append_range("
+
+
+def rewrite(text: str) -> tuple[str, int]:
+    out: list[str] = []
+    i = 0
+    n = 0
+    while True:
+        j = text.find(key, i)
+        if j < 0:
+            out.append(text[i:])
+            break
+        k = j
+        while k > 0 and (text[k - 1].isalnum() or text[k - 1] in "._"):
+            k -= 1
+        obj = text[k:j]
+        p = j + len(key)
+        depth = 1
+        start = p
+        while p < len(text) and depth:
+            if text[p] == "(":
+                depth += 1
+            elif text[p] == ")":
+                depth -= 1
+            p += 1
+        arg = text[start : p - 1]
+        out.append(text[i:k])
+        out.append(
+            "{ auto&& _hypr_r = ("
+            + arg
+            + f"); {obj}.insert({obj}.end(), std::ranges::begin(_hypr_r), std::ranges::end(_hypr_r)); }}"
+        )
+        n += 1
+        i = p
+    return "".join(out), n
+
+
+for path in root.rglob("*"):
+    if path.suffix not in {".c", ".cc", ".cpp", ".cxx", ".h", ".hpp"}:
+        continue
+    if "build" in path.parts:
+        continue
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if key not in text:
+        continue
+    new, n = rewrite(text)
+    if n == 0:
+        continue
+    if "#include <ranges>" not in new:
+        new = re.sub(
+            r"((?:^#include[^\n]*\n)+)",
+            r"\1#include <ranges>\n",
+            new,
+            count=1,
+            flags=re.M,
+        )
+    path.write_text(new, encoding="utf-8")
+    print(f"patched {n} append_range in {path}")
+PY
+}
+
 build_cmake_src() {
     local src="$1"; shift || true
     local extra=("$@") jobs targets=() t build_args=()
     [[ -f "${src}/CMakeLists.txt" ]] || die "no CMakeLists.txt in ${src}"
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would cmake-build ${src} -> ${PREFIX}"; return 0; }
+    rewrite_append_range_tree "$src"
     rm -rf "${src}/build"
     fill_cmake_config_flags
     cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" "${extra[@]}"
@@ -315,6 +390,7 @@ build_meson_src() {
     local src="$1"; shift || true
     local extra=("$@")
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would meson-build ${src} -> ${PREFIX}"; return 0; }
+    rewrite_append_range_tree "$src"
     rm -rf "${src}/build"
     meson setup "${src}/build" "$src" --prefix="$PREFIX" --libdir=lib64 --buildtype=release \
         --pkg-config-path="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig" "${extra[@]}"
