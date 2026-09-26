@@ -327,6 +327,64 @@ pkg_ver_ge() {
     [[ "$(printf '%s\n' "$need" "$have" | sort -V | tail -1)" == "$have" ]]
 }
 
+tag_version() {
+    local t="$1"
+    printf '%s\n' "${t#v}"
+}
+
+prefix_has_pc() {
+    local pc="$1" need="${2:-}" have
+    [[ -f "${PREFIX}/lib64/pkgconfig/${pc}.pc" || -f "${PREFIX}/lib/pkgconfig/${pc}.pc" ]] || return 1
+    [[ -z "$need" ]] && return 0
+    have="$(PKG_CONFIG_PATH="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig" pkg-config --modversion "$pc" 2>/dev/null || true)"
+    [[ -n "$have" ]] && pkg_ver_ge "$have" "$need"
+}
+
+should_build_component() {
+    local name="$1"
+    if [[ -n "${HYPRLAND_SOURCE_ONLY:-}" && "${HYPRLAND_SOURCE_ONLY}" != "$name" ]]; then
+        log "skip ${name} (HYPRLAND_SOURCE_ONLY=${HYPRLAND_SOURCE_ONLY})"
+        return 1
+    fi
+    return 0
+}
+
+build_tagged_cmake() {
+    local name="$1" url="$2" dir="$3" tag="$4" pc="$5"
+    shift 5 || true
+    should_build_component "$name" || return 0
+    if [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" ]] && prefix_has_pc "$pc" "$(tag_version "$tag")"; then
+        log "skip ${name}: prefix already has ${pc} $(tag_version "$tag")"
+        return 0
+    fi
+    ensure_tagged_repo "$url" "$dir" "$tag"
+    build_cmake_src "$dir" "$@"
+}
+
+build_tagged_meson() {
+    local name="$1" url="$2" dir="$3" tag="$4" pc="$5"
+    shift 5 || true
+    should_build_component "$name" || return 0
+    if [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" ]] && prefix_has_pc "$pc" "$(tag_version "$tag")"; then
+        log "skip ${name}: prefix already has ${pc} $(tag_version "$tag")"
+        return 0
+    fi
+    ensure_tagged_repo "$url" "$dir" "$tag"
+    build_meson_src "$dir" "$@"
+}
+
+build_prefixed_bin() {
+    local name="$1" url="$2" dir="$3" tag="$4" bin="$5"
+    shift 5 || true
+    should_build_component "$name" || return 0
+    if [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" && -x "${PREFIX}/bin/${bin}" ]]; then
+        log "skip ${name}: ${PREFIX}/bin/${bin} already installed"
+        return 0
+    fi
+    ensure_tagged_repo "$url" "$dir" "$tag"
+    build_cmake_src "$dir" "$@"
+}
+
 ensure_pkg_or_build() {
     local mod="$1" min="$2" have
     if pkg-config --exists "$mod" 2>/dev/null; then
@@ -375,12 +433,22 @@ ensure_libinput() {
 }
 
 ensure_re2() {
+    should_build_component re2 || return 0
+    if [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" ]] && prefix_has_pc re2; then
+        log "skip re2: prefix already has re2"
+        return 0
+    fi
     ensure_tagged_repo https://github.com/google/re2.git "${SRC_ROOT}/re2" "$RE2_TAG"
     build_cmake_src "${SRC_ROOT}/re2" -DRE2_TEST=OFF -DRE2_BENCHMARK=OFF -DBUILD_SHARED_LIBS=ON
 }
 
 ensure_glaze() {
     local src="${SRC_ROOT}/glaze"
+    should_build_component glaze || return 0
+    if [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" && -f "${PREFIX}/include/glaze/glaze.hpp" ]]; then
+        log "skip glaze: prefix already has headers"
+        return 0
+    fi
     ensure_tagged_repo https://github.com/stephenberry/glaze.git "$src" "$GLAZE_TAG"
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would install glaze ${GLAZE_TAG} headers"; return 0; }
     rm -rf "${src}/build"
@@ -472,61 +540,67 @@ build_stack() {
     [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]] && sudo mkdir -p "$PREFIX"
     maybe_build_xcb_errors
     ensure_iniparser_pc
-    ensure_tagged_repo https://github.com/hyprwm/hyprwayland-scanner.git "${SRC_ROOT}/hyprwayland-scanner" "$HYPRWAYLAND_SCANNER_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprwayland-scanner"
-    ensure_tagged_repo https://github.com/hyprwm/hyprutils.git "${SRC_ROOT}/hyprutils" "$HYPRUTILS_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprutils"
-    ensure_tagged_repo https://github.com/hyprwm/hyprlang.git "${SRC_ROOT}/hyprlang" "$HYPRLANG_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprlang"
-    ensure_tagged_repo https://github.com/hyprwm/hyprgraphics.git "${SRC_ROOT}/hyprgraphics" "$HYPRGRAPHICS_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprgraphics"
-    ensure_tagged_repo https://github.com/hyprwm/hyprcursor.git "${SRC_ROOT}/hyprcursor" "$HYPRCURSOR_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprcursor"
-    ensure_tagged_repo https://github.com/hyprwm/hyprland-protocols.git "${SRC_ROOT}/hyprland-protocols" "$HYPRLAND_PROTOCOLS_TAG"
-    build_meson_src "${SRC_ROOT}/hyprland-protocols"
-    ensure_tagged_repo https://github.com/hyprwm/aquamarine.git "${SRC_ROOT}/aquamarine" "$AQUAMARINE_TAG"
-    build_cmake_src "${SRC_ROOT}/aquamarine"
-    ensure_tagged_repo https://github.com/hyprwm/hyprwire.git "${SRC_ROOT}/hyprwire" "$HYPRWIRE_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprwire"
-    ensure_tagged_repo https://github.com/hyprwm/hyprtoolkit.git "${SRC_ROOT}/hyprtoolkit" "$HYPRTOOLKIT_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprtoolkit"
+    build_tagged_cmake hyprwayland-scanner https://github.com/hyprwm/hyprwayland-scanner.git \
+        "${SRC_ROOT}/hyprwayland-scanner" "$HYPRWAYLAND_SCANNER_TAG" hyprwayland-scanner
+    build_tagged_cmake hyprutils https://github.com/hyprwm/hyprutils.git \
+        "${SRC_ROOT}/hyprutils" "$HYPRUTILS_TAG" hyprutils
+    build_tagged_cmake hyprlang https://github.com/hyprwm/hyprlang.git \
+        "${SRC_ROOT}/hyprlang" "$HYPRLANG_TAG" hyprlang
+    build_tagged_cmake hyprgraphics https://github.com/hyprwm/hyprgraphics.git \
+        "${SRC_ROOT}/hyprgraphics" "$HYPRGRAPHICS_TAG" hyprgraphics
+    build_tagged_cmake hyprcursor https://github.com/hyprwm/hyprcursor.git \
+        "${SRC_ROOT}/hyprcursor" "$HYPRCURSOR_TAG" hyprcursor
+    build_tagged_meson hyprland-protocols https://github.com/hyprwm/hyprland-protocols.git \
+        "${SRC_ROOT}/hyprland-protocols" "$HYPRLAND_PROTOCOLS_TAG" hyprland-protocols
+    build_tagged_cmake aquamarine https://github.com/hyprwm/aquamarine.git \
+        "${SRC_ROOT}/aquamarine" "$AQUAMARINE_TAG" aquamarine
+    build_tagged_cmake hyprwire https://github.com/hyprwm/hyprwire.git \
+        "${SRC_ROOT}/hyprwire" "$HYPRWIRE_TAG" hyprwire
+    build_tagged_cmake hyprtoolkit https://github.com/hyprwm/hyprtoolkit.git \
+        "${SRC_ROOT}/hyprtoolkit" "$HYPRTOOLKIT_TAG" hyprtoolkit
     ensure_wayland_protocols
     ensure_libxkbcommon
     ensure_libinput
     ensure_re2
     ensure_glaze
-    ensure_hyprland_tarball
-    local hyprland_cmake_extra=(-DNO_UWSM:STRING=true)
-    [[ "${HYPRLAND_DISABLE_PCH}" == "1" ]] && hyprland_cmake_extra+=(-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON)
-    build_cmake_src "${SRC_ROOT}/Hyprland" "${hyprland_cmake_extra[@]}"
-    ensure_tagged_repo https://github.com/hyprwm/hyprland-qt-support.git "${SRC_ROOT}/hyprland-qt-support" "$HYPRLAND_QT_SUPPORT_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprland-qt-support"
-    ensure_tagged_repo https://github.com/hyprwm/hyprqt6engine.git "${SRC_ROOT}/hyprqt6engine" "$HYPRQT6ENGINE_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprqt6engine"
-    ensure_tagged_repo https://github.com/hyprwm/hyprland-guiutils.git "${SRC_ROOT}/hyprland-guiutils" "$HYPRLAND_GUIUTILS_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprland-guiutils"
-    ensure_tagged_repo https://github.com/hyprwm/hypridle.git "${SRC_ROOT}/hypridle" "$HYPRIDLE_TAG"
-    build_cmake_src "${SRC_ROOT}/hypridle"
-    ensure_tagged_repo https://github.com/hyprwm/hyprlock.git "${SRC_ROOT}/hyprlock" "$HYPRLOCK_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprlock"
-    ensure_tagged_repo https://github.com/hyprwm/hyprpaper.git "${SRC_ROOT}/hyprpaper" "$HYPRPAPER_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprpaper"
-    ensure_tagged_repo https://github.com/hyprwm/hyprpicker.git "${SRC_ROOT}/hyprpicker" "$HYPRPICKER_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprpicker"
-    ensure_tagged_repo https://github.com/hyprwm/hyprpolkitagent.git "${SRC_ROOT}/hyprpolkitagent" "$HYPRPOLKITAGENT_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprpolkitagent"
-    ensure_tagged_repo https://github.com/hyprwm/hyprlauncher.git "${SRC_ROOT}/hyprlauncher" "$HYPRLAUNCHER_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprlauncher"
-    ensure_tagged_repo https://github.com/hyprwm/hyprpwcenter.git "${SRC_ROOT}/hyprpwcenter" "$HYPRPWCENTER_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprpwcenter"
-    ensure_tagged_repo https://github.com/hyprwm/hyprsunset.git "${SRC_ROOT}/hyprsunset" "$HYPRSUNSET_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprsunset"
-    ensure_tagged_repo https://github.com/hyprwm/hyprsysteminfo.git "${SRC_ROOT}/hyprsysteminfo" "$HYPRSYSTEMINFO_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprsysteminfo"
-    ensure_tagged_repo https://github.com/hyprwm/hyprshutdown.git "${SRC_ROOT}/hyprshutdown" "$HYPRSHUTDOWN_TAG"
-    build_cmake_src "${SRC_ROOT}/hyprshutdown"
-    ensure_tagged_repo https://github.com/hyprwm/xdg-desktop-portal-hyprland.git "${SRC_ROOT}/xdg-desktop-portal-hyprland" "$XDPH_TAG"
-    build_cmake_src "${SRC_ROOT}/xdg-desktop-portal-hyprland"
+    if should_build_component Hyprland; then
+        if [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" && -x "${PREFIX}/bin/Hyprland" ]] && prefix_has_pc hyprland "$(tag_version "$HYPRLAND_TAG")"; then
+            log "skip Hyprland: prefix already has ${HYPRLAND_TAG}"
+        else
+            ensure_hyprland_tarball
+            local hyprland_cmake_extra=(-DNO_UWSM:STRING=true)
+            [[ "${HYPRLAND_DISABLE_PCH}" == "1" ]] && hyprland_cmake_extra+=(-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON)
+            build_cmake_src "${SRC_ROOT}/Hyprland" "${hyprland_cmake_extra[@]}"
+        fi
+    fi
+    build_tagged_cmake hyprland-qt-support https://github.com/hyprwm/hyprland-qt-support.git \
+        "${SRC_ROOT}/hyprland-qt-support" "$HYPRLAND_QT_SUPPORT_TAG" hyprland-qt-support
+    build_tagged_cmake hyprqt6engine https://github.com/hyprwm/hyprqt6engine.git \
+        "${SRC_ROOT}/hyprqt6engine" "$HYPRQT6ENGINE_TAG" hyprqt6engine
+    build_prefixed_bin hyprland-guiutils https://github.com/hyprwm/hyprland-guiutils.git \
+        "${SRC_ROOT}/hyprland-guiutils" "$HYPRLAND_GUIUTILS_TAG" hyprland-welcome
+    build_prefixed_bin hypridle https://github.com/hyprwm/hypridle.git \
+        "${SRC_ROOT}/hypridle" "$HYPRIDLE_TAG" hypridle
+    build_prefixed_bin hyprlock https://github.com/hyprwm/hyprlock.git \
+        "${SRC_ROOT}/hyprlock" "$HYPRLOCK_TAG" hyprlock
+    build_prefixed_bin hyprpaper https://github.com/hyprwm/hyprpaper.git \
+        "${SRC_ROOT}/hyprpaper" "$HYPRPAPER_TAG" hyprpaper
+    build_prefixed_bin hyprpicker https://github.com/hyprwm/hyprpicker.git \
+        "${SRC_ROOT}/hyprpicker" "$HYPRPICKER_TAG" hyprpicker
+    build_prefixed_bin hyprpolkitagent https://github.com/hyprwm/hyprpolkitagent.git \
+        "${SRC_ROOT}/hyprpolkitagent" "$HYPRPOLKITAGENT_TAG" hyprpolkitagent
+    build_prefixed_bin hyprlauncher https://github.com/hyprwm/hyprlauncher.git \
+        "${SRC_ROOT}/hyprlauncher" "$HYPRLAUNCHER_TAG" hyprlauncher
+    build_prefixed_bin hyprpwcenter https://github.com/hyprwm/hyprpwcenter.git \
+        "${SRC_ROOT}/hyprpwcenter" "$HYPRPWCENTER_TAG" hyprpwcenter
+    build_prefixed_bin hyprsunset https://github.com/hyprwm/hyprsunset.git \
+        "${SRC_ROOT}/hyprsunset" "$HYPRSUNSET_TAG" hyprsunset
+    build_prefixed_bin hyprsysteminfo https://github.com/hyprwm/hyprsysteminfo.git \
+        "${SRC_ROOT}/hyprsysteminfo" "$HYPRSYSTEMINFO_TAG" hyprsysteminfo
+    build_prefixed_bin hyprshutdown https://github.com/hyprwm/hyprshutdown.git \
+        "${SRC_ROOT}/hyprshutdown" "$HYPRSHUTDOWN_TAG" hyprshutdown
+    build_prefixed_bin xdg-desktop-portal-hyprland https://github.com/hyprwm/xdg-desktop-portal-hyprland.git \
+        "${SRC_ROOT}/xdg-desktop-portal-hyprland" "$XDPH_TAG" xdg-desktop-portal-hyprland
 }
 
 write_stamp() {

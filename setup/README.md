@@ -150,8 +150,10 @@ plus current cmake/Qt6 pieces, using the shared `pick_pkg` from `lib.sh`
 (lib64\* first on 64-bit).
 
 ```bash
-~/dot-files/setup/modules/desktop/install-hyprland-source.sh
-HYPRLAND_SOURCE_FORCE=1 ~/dot-files/setup/modules/desktop/install-hyprland-source.sh
+mkdir -p ~/.cache/hyprland-source
+~/dot-files/setup/modules/desktop/install-hyprland-source.sh 2>&1 | tee ~/.cache/hyprland-source/build.log
+HYPRLAND_SOURCE_ONLY=Hyprland ~/dot-files/setup/modules/desktop/install-hyprland-source.sh 2>&1 | tee -a ~/.cache/hyprland-source/build.log
+HYPRLAND_SOURCE_FORCE=1 ~/dot-files/setup/modules/desktop/install-hyprland-source.sh 2>&1 | tee ~/.cache/hyprland-source/build.log
 ```
 
 Override prefix or a tag (`HYPRLAND_TAG`, `AQUAMARINE_TAG`, …) in the
