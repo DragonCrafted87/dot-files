@@ -72,13 +72,13 @@ A single module can be run on its own:
 Scripts sit under `modules/<area>/` so the tree shows why they exist.
 `roles.conf` still lists the basename.
 
-| Area      | What lives there                                               |
-| --------- | -------------------------------------------------------------- |
-| `common`  | ssh, sudoers, repos, timezone, plasma removal, links, XDG dirs |
-| `desktop` | Hyprland, Brave, Flatpak, CUPS, gaming, MIME, VS Code          |
-| `network` | mounts, bluetooth, NFS server                                  |
-| `compute` | BOINC, k3s, python-dev, MakeMKV, artifact/docker stubs         |
-| `host`    | `configure-laptop` / `htpc` / `server` leftovers               |
+| Area      | What lives there                                                       |
+| --------- | ---------------------------------------------------------------------- |
+| `common`  | ssh, sudoers, repos, timezone, locale, plasma removal, links, XDG dirs |
+| `desktop` | Hyprland, Brave, Flatpak, CUPS, gaming, MIME, VS Code                  |
+| `network` | mounts, bluetooth, NFS server                                          |
+| `compute` | BOINC, k3s, python-dev, MakeMKV, artifact/docker stubs                 |
+| `host`    | `configure-laptop` / `htpc` / `server` leftovers                       |
 
 Do not name folders after roles. Laptop is a workstation overlay.
 
