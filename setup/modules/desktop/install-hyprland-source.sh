@@ -365,15 +365,52 @@ for path in root.rglob("*"):
 PY
 }
 
-# libstdc++ std::format has no formatter for vector<string>; libc++ accepted this log.
+# libstdc++ std::format has no formatter for vector<string>.
 patch_libstdcxx_format() {
-    local f="${1}/src/system/Icons.cpp"
+    local f="${1}/src/core/Logger.hpp"
     [[ -f "$f" ]] || return 0
-    if grep -q 'themeDir\.value()' "$f"; then
-        log "patch ${f} vector format for libstdc++"
-        [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
-        sed -i -E 's/themeDir\.value\(\)/themeDir->front()/' "$f"
-    fi
+    grep -q 'formatter<std::vector<std::string>>' "$f" && return 0
+    log "patch ${f} vector<string> formatter for libstdc++"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    python3 - "$f" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+if "formatter<std::vector<std::string>>" in text:
+    raise SystemExit(0)
+snippet = """
+#include <format>
+#include <string>
+#include <vector>
+
+template <>
+struct std::formatter<std::vector<std::string>> {
+    constexpr auto parse(std::format_parse_context& ctx) { return ctx.begin(); }
+    auto format(const std::vector<std::string>& values, std::format_context& ctx) const {
+        auto out = ctx.out();
+        *out++ = '[';
+        bool first = true;
+        for (const auto& value : values) {
+            if (!first) {
+                *out++ = ',';
+                *out++ = ' ';
+            }
+            first = false;
+            out = std::format_to(out, "{}", value);
+        }
+        *out++ = ']';
+        return out;
+    }
+};
+
+"""
+idx = text.find("namespace Hyprtoolkit")
+if idx < 0:
+    raise SystemExit("Logger.hpp: missing Hyprtoolkit namespace")
+path.write_text(text[:idx] + snippet + text[idx:], encoding="utf-8")
+PY
 }
 
 build_cmake_src() {
