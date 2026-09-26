@@ -164,6 +164,13 @@ use_hyprland_gcc() {
     export CXX=g++
     export CMAKE_C_COMPILER=gcc
     export CMAKE_CXX_COMPILER=g++
+    local concat_shim="${SETUP_FILES_DIR}/hyprland-source/string_view_concat.hpp"
+    if [[ -f "$concat_shim" ]]; then
+        case " ${CXXFLAGS:-} " in
+            *" -include ${concat_shim} "*) ;;
+            *) CXXFLAGS="${CXXFLAGS:+${CXXFLAGS} }-include ${concat_shim}" ;;
+        esac
+    fi
     unset CMAKE_AR CMAKE_RANLIB AR RANLIB NM
     command -v gcc-ar >/dev/null 2>&1 && export AR=gcc-ar
     command -v gcc-ranlib >/dev/null 2>&1 && export RANLIB=gcc-ranlib
