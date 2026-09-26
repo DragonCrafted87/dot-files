@@ -655,4 +655,5 @@
     "workbench.layoutControl.enabled": true,
     "qt-qml.doNotAskForQmllsDownload": true,
     "githubPullRequests.pullBranch": "always",
+    "githubPullRequests.hideViewedFiles": true,
 }
