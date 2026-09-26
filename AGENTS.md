@@ -6,8 +6,8 @@ second clone path.
 
 Read this before exploring the tree. Host-specific Hyprland behavior is
 in `config/hypr/README.md` and `config/hypr/REQUIREMENTS.md`. Role
-install is in `setup/README.md`. Planned-but-not-done layout notes are
-in `docs/structure.md`.
+install is in `setup/README.md`. Remaining layout work is in
+`docs/todo.md`.
 
 ## Workflow
 
@@ -217,8 +217,7 @@ PipeWire is 1.4.x + WirePlumber. Volume CLI is `wpctl`.
 - Point desk default sink at the Jabra.
 - Grab Jabra evdev (`EVIOCGRAB`) so keyboard volume keys stay on the
   soundbar.
-- Treat `docs/structure.md` as current layout; several items there are
-  already done.
+- Treat `docs/todo.md` as leftover work. It is not the current layout.
 - Commit secrets. Transfer with `setup/utility/transfer-secrets.sh`.
 - Overwrite an existing real `~/.config/<name>` directory; the linker
   will skip it.
