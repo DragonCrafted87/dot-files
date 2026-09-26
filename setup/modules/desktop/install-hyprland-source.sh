@@ -278,6 +278,17 @@ path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
 }
 
+# pkg_check_modules(tomlplusplus hyprutils) puts -L/usr/lib64 first, so cmake
+# find_library picks Rock hyprutils 0.6 instead of the prefix 0.14.2.
+patch_hyprland_hyprpm_pkgconfig() {
+    local f="${SRC_ROOT}/Hyprland/hyprpm/CMakeLists.txt"
+    [[ -f "$f" ]] || return 0
+    grep -q 'tomlplusplus hyprutils' "$f" || return 0
+    log "patch ${f} pkg-config order so prefix hyprutils wins"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    sed -i -E 's/tomlplusplus hyprutils>=0\.7\.0/hyprutils>=0.7.0 tomlplusplus/' "$f"
+}
+
 # GCC 14 has no #embed; expand the default lua config into a byte array.
 patch_hyprland_embed() {
     local hpp="${SRC_ROOT}/Hyprland/src/config/lua/DefaultConfig.hpp"
@@ -335,6 +346,7 @@ apply_hyprland_source_patches() {
     patch_hyprland_xcb_ternary
     patch_hyprland_embed
     patch_hyprland_truthy
+    patch_hyprland_hyprpm_pkgconfig
     if [[ "${HYPRLAND_PATCH_CXX23}" == "1" ]]; then
         patch_hyprland_cxx23
     fi
@@ -370,6 +382,7 @@ fill_cmake_config_flags() {
     case " ${CMAKE_EXE_LINKER_FLAGS} " in *" --allow-shlib-undefined "*) ;; *) CMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS:+${CMAKE_EXE_LINKER_FLAGS} }-Wl,--allow-shlib-undefined" ;; esac
     cmake_config_flags=(
         -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PREFIX" -DCMAKE_PREFIX_PATH="$PREFIX"
+        -DCMAKE_LIBRARY_PATH="${PREFIX}/lib64;${PREFIX}/lib"
         -DCMAKE_INSTALL_LIBDIR=lib64 -DCMAKE_INSTALL_RPATH="${PREFIX}/lib64;${PREFIX}/lib"
         -DCMAKE_BUILD_RPATH="${PREFIX}/lib64;${PREFIX}/lib" -DBUILD_TESTING=OFF
         -DCMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC:-gcc}}"
