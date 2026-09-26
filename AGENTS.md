@@ -72,9 +72,9 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
   `~/downloads`, …) and sets `enabled=False` so login does not recreate
   the English CamelCase names. `~/network` is the CIFS/NFS/rclone parent
   from `install-network-mounts`.
-- `configure-locale` writes `LC_COLLATE=C` and `LC_TIME=en_DK.UTF-8` into
-  `/etc/locale.conf` (byte-order sort, ISO timestamps) and leaves the
-  other `LC_*` keys alone. Needs `locales-en` for `en_DK`.
+- `configure-locale` installs `setup/files/locale/locale.conf` to
+  `/etc/locale.conf` (byte-order `LC_COLLATE=C`, ISO `LC_TIME=en_DK`)
+  and the matching KDE Formats file. Needs `locales-en` for `en_DK`.
 - Modules run in a subprocess (`bash module.sh`), so env vars do not
   survive back to `role.sh`. Cross-module flags and other short-lived
   files go in `/tmp` (example:
