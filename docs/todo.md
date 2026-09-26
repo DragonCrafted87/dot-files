@@ -13,7 +13,16 @@ Tracked after the Tango Dark pass. Not scheduled.
 
 - current version of hyprland
 
-## quickshell
+## network
 
-- `qs-startmenu.service` (`Restart=always`) is the startmenu supervisor
-- still see if we can't find whats causing the crash
+- lowercase the rclone OneDrive mount. Local dir is still
+  `~/network/Dragon-OneDrive` (`RCLONE_SHARE=Dragon-OneDrive` in
+  `setup/files/network/mount-network.sh`). CIFS mountpoints are already
+  lowercase.
+
+## session stop
+
+- after the workstation-session.target reboot, one of the xdg units sat
+  through the full 90s stop timeout. Likely `xdg-desktop-portal` or
+  `xdg-document-portal`. Journal which unit, then shorten TimeoutStopSec
+  or find what it was waiting on.
