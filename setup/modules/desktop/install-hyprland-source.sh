@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
-# Build the pinned Hyprland tag plus the hypr* ecosystem into an isolated prefix.
-# Tags live in setup/versions.conf. This prefix is linked against libc++.
+# Build the pinned Hyprland tag plus the hypr* ecosystem into /opt/hyprland.
+# Tags live in setup/versions.conf. Distro Hyprland stays in /usr.
 
 set -euo pipefail
 # shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib.sh"
+. "${REPO_ROOT:-$DOTFILES_ROOT}/setup/lib/lib.sh"
 
 require_user
 
 HYPRLAND_TAG="${HYPRLAND_TAG:?set HYPRLAND_TAG in setup/versions.conf}"
 HYPRLAND_SOURCE_VERSION="${HYPRLAND_SOURCE_VERSION:-${HYPRLAND_TAG#v}}"
-PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland-${HYPRLAND_SOURCE_VERSION}}"
-TEMPLATE_PREFIX="/opt/hyprland-0.56.2"
+PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland}"
 SRC_ROOT="${HYPRLAND_SOURCE_SRC:-${DOTFILES_HOME}/.cache/hyprland-source}"
 STAMP="${PREFIX}/share/hyprland-source/.dotfiles-stamp"
 SESSION_DESKTOP_SRC="${SETUP_FILES_DIR}/hyprland-source/hyprland-source.desktop"
@@ -409,12 +408,6 @@ install_session_files() {
     sudo install -m 0644 "$SESSION_DESKTOP_SRC" "${PREFIX}/share/wayland-sessions/${desktop_name}"
     sudo install -m 0644 "$SESSION_DESKTOP_SRC" "${WAYLAND_SESSION_DIR}/${desktop_name}"
     sudo install -m 0644 "$SESSION_DESKTOP_SRC" "${LY_CUSTOM_DIR}/${desktop_name}"
-    if [[ "$PREFIX" != "$TEMPLATE_PREFIX" ]]; then
-        sudo sed -i -E "s|${TEMPLATE_PREFIX}|${PREFIX}|g" "$wrapper_dest" \
-            "${PREFIX}/share/wayland-sessions/${desktop_name}" "${WAYLAND_SESSION_DIR}/${desktop_name}" "${LY_CUSTOM_DIR}/${desktop_name}"
-    fi
-    sudo sed -i -E "s|source 0\\.56\\.2|source ${HYPRLAND_SOURCE_VERSION}|g; s|v0\\.56\\.2|${HYPRLAND_TAG}|g" \
-        "${PREFIX}/share/wayland-sessions/${desktop_name}" "${WAYLAND_SESSION_DIR}/${desktop_name}" "${LY_CUSTOM_DIR}/${desktop_name}"
 }
 
 set_ly_key() {
@@ -532,7 +525,7 @@ configure_ly_source_session
 write_stamp
 
 if [[ -x "${PREFIX}/bin/Hyprland" ]]; then
-    log "installed ${HYPRLAND_TAG} to ${PREFIX} (Ly session: Hyprland (source ${HYPRLAND_SOURCE_VERSION}))"
+    log "installed ${HYPRLAND_TAG} to ${PREFIX} (Ly session: Hyprland (source))"
 else
     die "build finished but ${PREFIX}/bin/Hyprland is missing"
 fi

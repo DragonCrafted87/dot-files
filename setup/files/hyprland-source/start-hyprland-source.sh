@@ -3,11 +3,11 @@
 # on a normal login PATH; this wrapper is only used by the Ly session.
 set -euo pipefail
 
-PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland-0.56.2}"
+PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland}"
 BIN="${PREFIX}/bin/Hyprland"
 
 if [[ ! -x "$BIN" ]]; then
-    printf 'error: missing %s (run setup/modules/install-hyprland-source.sh)\n' "$BIN" >&2
+    printf 'error: missing %s (run setup/modules/desktop/install-hyprland-source.sh)\n' "$BIN" >&2
     exit 1
 fi
 

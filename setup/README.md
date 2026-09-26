@@ -130,17 +130,19 @@ Copy secrets onto a new box without going through `init-remote.sh`:
 
 `install-hyprland-session` keeps the OpenMandriva Hyprland rpms and the
 stock Ly session. `install-hyprland-source` (workstation / laptop / htpc)
-then builds the pinned Hyprland tag plus the hypr* ecosystem into
-`/opt/hyprland-<version>` so the two stacks do not share libraries or
-binaries. Pins live in `setup/versions.conf` next to the BOINC and
-MakeMKV versions. Current pin is **v0.56.2** → `/opt/hyprland-0.56.2`.
+then builds the pinned Hyprland tag plus the hypr\* ecosystem into
+`/opt/hyprland` so the two stacks do not share libraries or binaries.
+Pins live in `setup/versions.conf` next to the BOINC and MakeMKV
+versions. Current pin is **v0.56.2**; a later bump overwrites the same
+prefix in place.
 
-Ly extra session: **Hyprland (source 0.56.2)**. Desktop file lives in
+Ly extra session: **Hyprland (source)**. Desktop file lives in
 `/etc/ly/custom-sessions/` and `/usr/share/wayland-sessions/` under the
 name `hyprland-source.desktop`, never overwriting the distro
 `hyprland.desktop`. The wrapper
-`/opt/hyprland-0.56.2/bin/start-hyprland-source` prepends the prefix to
-`PATH` / `LD_LIBRARY_PATH` only for that session.
+`/opt/hyprland/bin/start-hyprland-source` prepends the prefix to
+`PATH` / `LD_LIBRARY_PATH` only for that session. Exec does not encode
+the tag, so Ly does not need a desktop-file edit on upgrades.
 
 OpenMandriva has no single published dep list. The module translates the
 Fedora set from [Hyprland discussion #284](https://github.com/hyprwm/Hyprland/discussions/284)
@@ -148,8 +150,8 @@ plus current cmake/Qt6 pieces, using the shared `pick_pkg` from `lib.sh`
 (lib64\* first on 64-bit).
 
 ```bash
-~/dot-files/setup/modules/install-hyprland-source.sh
-HYPRLAND_SOURCE_FORCE=1 ~/dot-files/setup/modules/install-hyprland-source.sh
+~/dot-files/setup/modules/desktop/install-hyprland-source.sh
+HYPRLAND_SOURCE_FORCE=1 ~/dot-files/setup/modules/desktop/install-hyprland-source.sh
 ```
 
 Override prefix or a tag (`HYPRLAND_TAG`, `AQUAMARINE_TAG`, …) in the
