@@ -365,12 +365,24 @@ for path in root.rglob("*"):
 PY
 }
 
+# libstdc++ std::format has no formatter for vector<string>; libc++ accepted this log.
+patch_libstdcxx_format() {
+    local f="${1}/src/system/Icons.cpp"
+    [[ -f "$f" ]] || return 0
+    if grep -q 'themeDir\.value()' "$f"; then
+        log "patch ${f} vector format for libstdc++"
+        [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+        sed -i -E 's/themeDir\.value\(\)/themeDir->front()/' "$f"
+    fi
+}
+
 build_cmake_src() {
     local src="$1"; shift || true
     local extra=("$@") jobs targets=() t build_args=()
     [[ -f "${src}/CMakeLists.txt" ]] || die "no CMakeLists.txt in ${src}"
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would cmake-build ${src} -> ${PREFIX}"; return 0; }
     rewrite_append_range_tree "$src"
+    patch_libstdcxx_format "$src"
     rm -rf "${src}/build"
     fill_cmake_config_flags
     cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" "${extra[@]}"
