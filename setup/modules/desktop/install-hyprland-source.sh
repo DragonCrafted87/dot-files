@@ -401,6 +401,7 @@ cmake_skip_target() {
     case "$1" in
         *test*|*Test*|*tests*|hyprgraphics_image|hyprgraphics_arg|simpleWindow|commitThread|attachments|output) return 0 ;;
         check-*|generate-lua-stubs|*lua-stub*|fuzz*|json_exhaustive*) return 0 ;;
+        *aotstats*|all_aotstats) return 0 ;;
     esac
     return 1
 }
