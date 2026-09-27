@@ -90,7 +90,7 @@ role. `laptop` is `[subrole.laptop]` on top of `workstation`.
 | Role          | Extra modules                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------------- |
 | `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, KDE Connect, BOINC Manager |
-| `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client                                                      |
+| `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client. Couch build-out: `docs/htpc-role.md`                |
 | `server`      | CLI baseline, k3s, BOINC client; no GUI session                                                       |
 
 `enable-subrole laptop` adds `configure-laptop` (power-profiles-daemon).
