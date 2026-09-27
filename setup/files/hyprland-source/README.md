@@ -87,6 +87,13 @@ dual-session.
   `hyprpicker`, `hyprpolkitagent`, `hyprcursor`,
   `hyprland-qtutils`, `xdg-desktop-portal-hyprland`. Keep `ly`,
   `uwsm` only if still used, pipewire, mako, grim/slurp.
+  Drop `pavucontrol-qt` (`hyprpwcenter` is the volume UI).
+- [ ] `config/hypr/scripts/session-control.sh`: drop the fallback that
+  runs when `hyprshutdown` is not on `PATH`.
+- [ ] If hyprsunset accepts `time = sunrise`, delete
+  `hyprsunset-times.py`, `hyprsunset-times.service`,
+  `hyprsunset-times.timer`, and the generated `hyprsunset.conf`. Put
+  latitude and longitude in the config instead.
 - [ ] Fold leftover session glue (ly enable, `hyprland-session.service`,
   drop-in glob) into one module, or keep this module as
   "login stack" without hypr rpms.

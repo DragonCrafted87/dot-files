@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=System Info
+GenericName=System Information
+Comment=System information from the Hyprland project
+TryExec=/opt/hyprland/bin/hyprsysteminfo
+Exec=/opt/hyprland/bin/hyprsysteminfo
+Icon=hwinfo
+Terminal=false
+StartupNotify=true
+Categories=System;Monitor;
+Keywords=hyprsysteminfo;system;info;diagnostics;
+X-DotFiles=1

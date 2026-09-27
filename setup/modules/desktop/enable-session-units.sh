@@ -15,6 +15,17 @@ require_user
 enable_user_service hypridle.service
 enable_user_service hyprpolkitagent.service
 enable_user_service mako.service
+enable_user_service hyprsunset-times.timer
+
+# hyprpolkitagent is the session agent. Disable the desktop ones if a
+# previous login left them enabled.
+for unit in \
+    polkit-gnome-authentication-agent-1.service \
+    org.kde.polkit-kde-authentication-agent-1.service \
+    plasma-polkit-agent.service
+do
+    disable_user_service "$unit"
+done
 
 # Desk vs HTPC GUI apps. graphical-session.target starts the enabled target.
 # Drop the PR 59 oneshot unit names if they are still enabled.

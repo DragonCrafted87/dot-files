@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=PipeWire Control Center
+GenericName=Volume Control
+Comment=PipeWire control center from the Hyprland project
+TryExec=/opt/hyprland/bin/hyprpwcenter
+Exec=/opt/hyprland/bin/hyprpwcenter
+Icon=audio-speakers
+Terminal=false
+StartupNotify=true
+Categories=AudioVideo;Audio;Mixer;Settings;
+Keywords=hyprpwcenter;pipewire;volume;audio;mixer;
+X-DotFiles=1

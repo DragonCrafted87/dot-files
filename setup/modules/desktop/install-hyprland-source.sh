@@ -29,7 +29,6 @@ HYPRLAND_GUIUTILS_TAG="${HYPRLAND_GUIUTILS_TAG:?set HYPRLAND_GUIUTILS_TAG in set
 HYPRLAND_PROTOCOLS_TAG="${HYPRLAND_PROTOCOLS_TAG:?set HYPRLAND_PROTOCOLS_TAG in setup/versions.conf}"
 HYPRLAND_QT_SUPPORT_TAG="${HYPRLAND_QT_SUPPORT_TAG:?set HYPRLAND_QT_SUPPORT_TAG in setup/versions.conf}"
 HYPRLANG_TAG="${HYPRLANG_TAG:?set HYPRLANG_TAG in setup/versions.conf}"
-HYPRLAUNCHER_TAG="${HYPRLAUNCHER_TAG:?set HYPRLAUNCHER_TAG in setup/versions.conf}"
 HYPRLOCK_TAG="${HYPRLOCK_TAG:?set HYPRLOCK_TAG in setup/versions.conf}"
 HYPRPAPER_TAG="${HYPRPAPER_TAG:?set HYPRPAPER_TAG in setup/versions.conf}"
 HYPRPICKER_TAG="${HYPRPICKER_TAG:?set HYPRPICKER_TAG in setup/versions.conf}"
@@ -49,6 +48,8 @@ WAYLAND_PROTOCOLS_TAG="${WAYLAND_PROTOCOLS_TAG:?set WAYLAND_PROTOCOLS_TAG in set
 LIBINPUT_TAG="${LIBINPUT_TAG:?set LIBINPUT_TAG in setup/versions.conf}"
 RE2_TAG="${RE2_TAG:?set RE2_TAG in setup/versions.conf}"
 GLAZE_TAG="${GLAZE_TAG:?set GLAZE_TAG in setup/versions.conf}"
+HYPRCAPTURE_REV="${HYPRCAPTURE_REV:?set HYPRCAPTURE_REV in setup/versions.conf}"
+HYPRCAPTURE_STAMP="${PREFIX}/share/hyprland-source/.hyprcapture-stamp"
 
 stamp_payload() {
     cat <<EOF
@@ -61,7 +62,6 @@ hyprland-guiutils=${HYPRLAND_GUIUTILS_TAG}
 hyprland-protocols=${HYPRLAND_PROTOCOLS_TAG}
 hyprland-qt-support=${HYPRLAND_QT_SUPPORT_TAG}
 hyprlang=${HYPRLANG_TAG}
-hyprlauncher=${HYPRLAUNCHER_TAG}
 hyprlock=${HYPRLOCK_TAG}
 hyprpaper=${HYPRPAPER_TAG}
 hyprpicker=${HYPRPICKER_TAG}
@@ -893,6 +893,131 @@ install_session_files() {
     sudo install -m 0644 "$SESSION_DESKTOP_SRC" "${LY_CUSTOM_DIR}/${desktop_name}"
 }
 
+install_prefix_desktops() {
+    local name bin
+    for name in hyprsysteminfo hyprpwcenter; do
+        bin="${PREFIX}/bin/${name}"
+        if [[ ! -x "$bin" ]]; then
+            log "skip desktop ${name}: ${bin} missing"
+            continue
+        fi
+        install_user_desktop "${SETUP_FILES_DIR}/applications/${name}.desktop"
+    done
+}
+
+# Dropping hyprlauncher from the stamp must not rebuild the rest of the prefix.
+reconcile_dropped_hyprlauncher_stamp() {
+    local current trimmed
+    [[ "${HYPRLAND_SOURCE_FORCE:-0}" == "1" ]] && return 0
+    [[ -f "$STAMP" && -x "${PREFIX}/bin/Hyprland" ]] || return 0
+    current="$(cat "$STAMP")"
+    [[ "$current" == "$(stamp_payload)" ]] && return 0
+    trimmed="$(grep -v '^hyprlauncher=' "$STAMP" || true)"
+    [[ "$trimmed" == "$(stamp_payload)" ]] || return 0
+    log "stamp only dropped hyprlauncher; rewriting without a prefix rebuild"
+    write_stamp
+    if [[ -e "${PREFIX}/bin/hyprlauncher" ]]; then
+        log "remove ${PREFIX}/bin/hyprlauncher"
+        [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] || sudo rm -f "${PREFIX}/bin/hyprlauncher"
+    fi
+}
+
+ensure_hyprcapture_deps() {
+    local pkgs=() picked group
+    local groups=(
+        "nlohmann_json-devel nlohmann-json-devel"
+        "lib64LayerShellQtInterface6-devel lib64LayerShellQtInterface-devel"
+        "lib64ffmpeg-devel ffmpeg-devel"
+        "lib64fftw-devel fftw-devel"
+        "lib64pulseaudio-devel libpulse-devel pulseaudio-libs-devel"
+        "lib64Qt6Svg-devel qt6-qtsvg-devel"
+        "lib64Qt6DBus-devel qt6-qtdbus-devel"
+        "lib64Qt6Network-devel qt6-qtnetwork-devel"
+        "gpu-screen-recorder"
+        "ffmpeg"
+    )
+    for group in "${groups[@]}"; do
+        # shellcheck disable=SC2086
+        if picked="$(pick_pkg $group)"; then pkgs+=("$picked"); else warn "no package matched: $group"; fi
+    done
+    [[ "${#pkgs[@]}" -gt 0 ]] && ensure_packages "${pkgs[@]}"
+}
+
+# OpenMandriva ships plasma6-layer-shell-qt 6.3. HyprCapture calls the 6.6
+# Window methods (setScreen, setDesiredSize, setActivateOnShow). QWindow::setScreen
+# is already set, and ScreenFromQWindow is the 6.3 way to follow that screen.
+patch_hyprcapture_layershell() {
+    local root="$1"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    python3 - "$root" <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+replacements = {
+    "    if (auto* layerWindow = LayerShellQt::Window::get(windowHandle()))\n        layerWindow->setDesiredSize(size());\n": "",
+    "layerWindow->setScreen(screen);": "layerWindow->setScreenConfiguration(LayerShellQt::Window::ScreenFromQWindow);",
+    "layerWindow->setScreen(targetScreen);": "layerWindow->setScreenConfiguration(LayerShellQt::Window::ScreenFromQWindow);",
+    "layerWindow->setActivateOnShow(false);": "",
+    "layerWindow->setActivateOnShow(true);": "",
+    "layerWindow->setDesiredSize(QSize(0, 0));": "",
+    "layerWindow->setDesiredSize(size());": "",
+    "#if LAYERSHELLQTINTERFACE_ENABLE_DEPRECATED_SINCE(6, 6)": "#if 1",
+}
+for path in root.rglob("*.cpp"):
+    text = path.read_text(encoding="utf-8")
+    updated = text
+    for old, new in replacements.items():
+        updated = updated.replace(old, new)
+    if updated != text:
+        path.write_text(updated, encoding="utf-8")
+PY
+}
+
+ensure_hyprcapture() {
+    local dir="${SRC_ROOT}/HyprCapture"
+    local so ui built_so built_ui
+    should_build_component hyprcapture || return 0
+    so="${PREFIX}/lib/libhyprcapture.so"
+    ui="${PREFIX}/bin/hyprcapture-ui"
+    if [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" && -f "$HYPRCAPTURE_STAMP" ]] \
+        && [[ "$(cat "$HYPRCAPTURE_STAMP")" == "$HYPRCAPTURE_REV" ]] \
+        && [[ -f "$so" && -x "$ui" ]]; then
+        log "hyprcapture ${HYPRCAPTURE_REV} already installed"
+        return 0
+    fi
+    if [[ ! -f "${SRC_ROOT}/Hyprland/src/plugins/PluginAPI.hpp" ]]; then
+        ensure_hyprland_tarball
+    fi
+    [[ -f "${SRC_ROOT}/Hyprland/src/plugins/PluginAPI.hpp" ]] \
+        || die "Hyprland sources missing; cannot build HyprCapture"
+    ensure_hyprcapture_deps
+    export_prefix_env
+    ensure_tagged_repo https://github.com/gfhdhytghd/HyprCapture.git "$dir" "$HYPRCAPTURE_REV"
+    # The echo-cancel helper is a separate static library and is not installed.
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would cmake-build hyprcapture"; return 0; }
+    rewrite_append_range_tree "$dir"
+    patch_hyprcapture_layershell "$dir"
+    rm -rf "${dir}/build"
+    fill_cmake_config_flags
+    cmake -S "$dir" -B "${dir}/build" "${cmake_config_flags[@]}" \
+        -DHYPRLAND_SOURCE_DIR="${SRC_ROOT}/Hyprland" \
+        -DHYPRCAPTURE_DEFAULT_HELPER_PATH="${ui}"
+    pin_prefix_hypr_link "${dir}/build"
+    cmake --build "${dir}/build" --config Release -j"$(nproc)" \
+        --target hyprcapture --target hyprcapture-ui
+    built_so="$(find "${dir}/build" -name 'libhyprcapture.so' -type f -print -quit)"
+    built_ui="${dir}/build/hyprcapture-ui"
+    [[ -n "$built_so" && -f "$built_so" ]] || die "HyprCapture build did not produce libhyprcapture.so"
+    [[ -x "$built_ui" ]] || die "HyprCapture build did not produce hyprcapture-ui"
+    sudo install -d "${PREFIX}/lib" "${PREFIX}/bin"
+    sudo install -m 0755 "$built_so" "$so"
+    sudo install -m 0755 "$built_ui" "$ui"
+    sudo mkdir -p "$(dirname "$HYPRCAPTURE_STAMP")"
+    printf '%s\n' "$HYPRCAPTURE_REV" | sudo tee "$HYPRCAPTURE_STAMP" >/dev/null
+    log "installed hyprcapture ${HYPRCAPTURE_REV}"
+}
+
 set_ly_key() {
     local file="$1" key="$2" value="$3"
     [[ -f "$file" ]] || return 1
@@ -973,8 +1098,6 @@ build_stack() {
         "${SRC_ROOT}/hyprpicker" "$HYPRPICKER_TAG" hyprpicker
     build_prefixed_bin hyprpolkitagent https://github.com/hyprwm/hyprpolkitagent.git \
         "${SRC_ROOT}/hyprpolkitagent" "$HYPRPOLKITAGENT_TAG" hyprpolkitagent
-    build_prefixed_bin hyprlauncher https://github.com/hyprwm/hyprlauncher.git \
-        "${SRC_ROOT}/hyprlauncher" "$HYPRLAUNCHER_TAG" hyprlauncher
     build_prefixed_bin hyprpwcenter https://github.com/hyprwm/hyprpwcenter.git \
         "${SRC_ROOT}/hyprpwcenter" "$HYPRPWCENTER_TAG" hyprpwcenter
     build_prefixed_bin hyprsunset https://github.com/hyprwm/hyprsunset.git \
@@ -993,10 +1116,14 @@ write_stamp() {
     stamp_payload | sudo tee "$STAMP" >/dev/null
 }
 
+reconcile_dropped_hyprlauncher_stamp
+
 if [[ -x "${PREFIX}/bin/Hyprland" && -f "$STAMP" ]] && [[ "$(cat "$STAMP")" == "$(stamp_payload)" ]] && [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" ]]; then
     log "Hyprland ${HYPRLAND_SOURCE_VERSION} prefix already current at ${PREFIX}"
     ensure_xkb_data
     install_session_files
+    install_prefix_desktops
+    ensure_hyprcapture
     configure_ly_source_session
     exit 0
 fi
@@ -1011,12 +1138,16 @@ command -v meson >/dev/null 2>&1 || die "meson is not on PATH after package inst
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     log "would build Hyprland ${HYPRLAND_TAG} and ecosystem into ${PREFIX}"
     install_session_files
+    install_prefix_desktops
+    ensure_hyprcapture
     configure_ly_source_session
     exit 0
 fi
 
 build_stack
 install_session_files
+install_prefix_desktops
+ensure_hyprcapture
 configure_ly_source_session
 write_stamp
 

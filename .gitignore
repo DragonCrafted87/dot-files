@@ -1,4 +1,5 @@
 *__pycache__*
+config/hypr/hyprsunset.conf
 omp.yaml.bak
 
 # VS Code writes a Chromium profile next to settings. Ignore the whole
