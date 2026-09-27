@@ -35,7 +35,6 @@ STATE_DIR = (
 )
 STATE_FILE = STATE_DIR / "astro-wallpaper.json"
 HYPRPAPER_CONF = STATE_DIR / "hyprpaper.conf"
-HYPRPAPER_LOG = STATE_DIR / "hyprpaper.log"
 HYPRPAPER_UNIT = "hyprpaper.service"
 KEEP_DAYS = int(os.environ.get("ASTRO_WALLPAPER_KEEP_DAYS", "21"))
 MIN_WIDTH = int(os.environ.get("ASTRO_WALLPAPER_MIN_WIDTH", "1600"))
@@ -322,42 +321,11 @@ def _hyprpaper_running() -> bool:
     return result.returncode == 0
 
 
-def _hyprpaper_unit_fragment() -> str:
-    """Path of the user unit, or empty when this host has not installed it."""
-    result = subprocess.run(
-        [
-            "systemctl",
-            "--user",
-            "show",
-            HYPRPAPER_UNIT,
-            "-p",
-            "FragmentPath",
-            "--value",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        return ""
-    return result.stdout.strip()
-
-
-def stop_hyprpaper() -> None:
-    if _hyprpaper_unit_fragment():
-        subprocess.run(
-            ["systemctl", "--user", "stop", HYPRPAPER_UNIT],
-            check=False,
-        )
-    else:
-        subprocess.run(["pkill", "-x", "hyprpaper"], check=False)
-    for _ in range(20):
-        if not _hyprpaper_running():
-            return
-        time.sleep(0.05)
-
-
-def _start_hyprpaper_unit() -> bool:
+def start_hyprpaper() -> bool:
+    """Restart hyprpaper.service so the daemon runs in its own cgroup."""
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    if not HYPRPAPER_CONF.is_file():
+        HYPRPAPER_CONF.write_text("splash = false\nipc = on\n", encoding="utf-8")
     result = subprocess.run(
         ["systemctl", "--user", "restart", HYPRPAPER_UNIT],
         check=False,
@@ -380,41 +348,6 @@ def _start_hyprpaper_unit() -> bool:
         file=sys.stderr,
     )
     return False
-
-
-def _start_hyprpaper_popen() -> bool:
-    # Hosts that have not re-run configure-astro-wallpaper still spawn
-    # hyprpaper directly. A Type=oneshot caller will reap that child.
-    with HYPRPAPER_LOG.open("ab") as log:
-        log.write(b"\n--- start ---\n")
-        subprocess.Popen(  # noqa: S603 pylint: disable=consider-using-with
-            ["hyprpaper", "-c", str(HYPRPAPER_CONF)],
-            stdout=log,
-            stderr=log,
-            start_new_session=True,
-        )
-    for _ in range(30):
-        if _hyprpaper_running():
-            time.sleep(0.2)
-            return _hyprpaper_running()
-        time.sleep(0.1)
-    print(
-        f"astro-wallpaper: hyprpaper failed to start; see {HYPRPAPER_LOG}",
-        file=sys.stderr,
-    )
-    return False
-
-
-def start_hyprpaper() -> bool:
-    if shutil.which("hyprpaper") is None and not _hyprpaper_unit_fragment():
-        print("astro-wallpaper: hyprpaper is not installed", file=sys.stderr)
-        return False
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    if not HYPRPAPER_CONF.is_file():
-        HYPRPAPER_CONF.write_text("splash = false\nipc = on\n", encoding="utf-8")
-    if _hyprpaper_unit_fragment():
-        return _start_hyprpaper_unit()
-    return _start_hyprpaper_popen()
 
 
 def apply_images(images: list[Path], monitors: list[str]) -> dict[str, str]:
@@ -443,13 +376,7 @@ def apply_images(images: list[Path], monitors: list[str]) -> dict[str, str]:
     current = HYPRPAPER_CONF.read_text(encoding="utf-8")
     if current == previous and _hyprpaper_running():
         return mapping
-    # Restart applies the conf. The user unit replaces the process in
-    # its own cgroup. pkill would race Restart=on-failure.
-    if _hyprpaper_unit_fragment():
-        start_hyprpaper()
-    else:
-        stop_hyprpaper()
-        start_hyprpaper()
+    start_hyprpaper()
     return mapping
 
 
@@ -492,8 +419,13 @@ def cmd_status() -> int:
     print(f"conf:  {HYPRPAPER_CONF}")
     print(f"hyprpaper: {'running' if _hyprpaper_running() else 'not running'}")
     print(f"hyprpaper bin: {shutil.which('hyprpaper') or 'missing'}")
-    fragment = _hyprpaper_unit_fragment()
-    print(f"hyprpaper unit: {fragment or 'not installed'}")
+    state = subprocess.run(
+        ["systemctl", "--user", "is-active", HYPRPAPER_UNIT],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    print(f"hyprpaper unit: {(state.stdout or state.stderr).strip() or 'unknown'}")
     if STATE_FILE.is_file():
         print(STATE_FILE.read_text(encoding="utf-8").rstrip())
     else:

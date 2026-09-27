@@ -102,6 +102,7 @@ scripts.
 - Audio per profile: `conf.d/audio.d/<host>-<profile>.conf`.
 - `display-profile.sh` applies `monitor=` lines via `hyprctl keyword`.
 - `display-switch.sh` owns the saved profile and calls `display-audio.sh`.
+- `config/hypr/lua/` is the source of truth for binds. `conf.d/` is the 0.48 tree.
 - Last profile: `~/.local/state/hypr/display-profile` (not in git).
 - `exec-once` restore runs once at login. `hyprctl reload` does not
   re-apply the profile.
@@ -116,7 +117,7 @@ scripts.
 - Profiles: `desk` (triple head + S/PDIF soundbar),
   `theater` (HDMI ELMO + GPU HDMI 7.1),
   `workshare` (HDMI AOC + soundbar).
-- `SUPER+SHIFT+D` desk. `SUPER+SHIFT+S` single (theater vs workshare from
+- `SUPER+ALT+D` desk. `SUPER+ALT+S` single (theater vs workshare from
   HDMI EDID) and starts `display-switch.sh watch`.
 - Default audio sink on desk/workshare is the onboard S/PDIF soundbar
   `alsa_output.pci-0000_18_00.6.iec958-stereo`, **not** the Jabra.
@@ -147,7 +148,7 @@ nodes that were missing at daemon start. Role module: `configure-ratbag`.
 enabled monitor via `hyprpaper.service` (`Restart=on-failure`, started
 through `hypr-session-exec.sh`). The daily timer exits when refresh
 finishes and tears down processes it started, so it must restart that
-unit and must not spawn hyprpaper itself. `SUPER+SHIFT+W` forces a new set.
+unit and must not spawn hyprpaper itself. `SUPER+ALT+W` forces a new set.
 
 ### Litra Glow + Insta360 Link
 
