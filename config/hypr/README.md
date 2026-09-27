@@ -34,10 +34,26 @@ runs `stop` so session units go away with the compositor. Linger still
 starts `default.target` at boot; that path must not claim a graphical
 session.
 
+`uwsm` is installed and unused. The source build passes `-DNO_UWSM=true`.
+Its env preloader and `uwsm app` slices are more session manager than
+this login needs. What we keep from that idea: graphical units stop
+with the compositor, and linger services do not. `hyprland-session.service`
+`PropagatesStopTo=` `graphical-session.target`. Role apps `PartOf=`
+`workstation-session.target`, which `PartOf=` the graphical target.
+`hypridle`, `hyprpolkitagent`, `mako`, and `hyprsunset` get the same
+`PartOf=` from a user drop-in (the distro units already say it; the
+drop-in keeps logout behavior if a package update drops the line).
+`network-mounts.service` stays off that chain. Programs started from
+binds (kitty, dolphin) stay children of Hyprland.
+
 `hypridle`, `hyprpolkitagent`, `xdg-desktop-portal-hyprland`, and
 `hyprsunset` use `scripts/hypr-session-exec.sh` so they follow the
 running compositor: `/opt/hyprland` for **Hyprland (source)**, `/usr`
-for the distro session.
+for the distro session. `hyprsunset-times.py` rewrites
+`hyprsunset.conf` from the built-in coordinates, or from `SUN_LAT` /
+`SUN_LON` when the host file sets both. A weekly
+user timer runs it, and session start runs it when that file is older
+than seven days. Hyprsunset 0.4.0 only stores clock times.
 
 Desk GUI apps are not Hyprland `exec-once` lines. They are child units of
 `workstation-session.target` (WantedBy `graphical-session.target`): kitty,

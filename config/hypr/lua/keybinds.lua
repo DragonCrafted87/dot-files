@@ -3,7 +3,6 @@
 local mainMod = "SUPER"
 local terminal = "kitty"
 local fileManager = "dolphin"
-local menu = "wofi --show drun"
 local scripts = os.getenv("HOME") .. "/.config/hypr/scripts"
 
 hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("qs -c startmenu ipc call startmenu toggle"))
@@ -12,7 +11,6 @@ hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + F4", hl.dsp.exec_cmd(scripts .. "/session-control.sh logout"))
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))
 hl.bind(mainMod .. " + L", hl.dsp.exec_cmd("loginctl lock-session"))
@@ -70,3 +68,15 @@ hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true 
 hl.bind(mainMod .. " + ALT + D", hl.dsp.exec_cmd(scripts .. "/display-switch.sh desk"))
 hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd(scripts .. "/display-switch.sh single"))
 hl.bind(mainMod .. " + ALT + W", hl.dsp.exec_cmd(scripts .. "/astro-wallpaper.sh refresh"))
+
+-- Uppercase letters in a Lua bind string already mean Shift.
+hl.bind(mainMod .. " + SHIFT + s", function()
+    if hl.plugin.hyprcapture ~= nil then
+        hl.plugin.hyprcapture.open()
+    end
+end)
+hl.bind(mainMod .. " + SHIFT + r", function()
+    if hl.plugin.hyprcapture ~= nil then
+        hl.plugin.hyprcapture.record_toggle()
+    end
+end)

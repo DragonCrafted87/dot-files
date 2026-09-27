@@ -111,6 +111,10 @@ cmd_start() {
     import_env
     ensure_unit
     ensure_dropins
+    # Weekly timer owns the rewrite. This covers a machine that was off.
+    if [[ -f "${HOME}/.config/hypr/scripts/hyprsunset-times.py" ]]; then
+        python3 "${HOME}/.config/hypr/scripts/hyprsunset-times.py" refresh || true
+    fi
     if systemctl --user is-active --quiet "$UNIT"; then
         # Linger can leave the bind up after a crash without exec-shutdown.
         # Restart so WantedBy=graphical-session.target units run again.

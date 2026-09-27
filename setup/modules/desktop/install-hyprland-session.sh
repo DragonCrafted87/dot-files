@@ -55,7 +55,7 @@ enable_service ly.service
 # Role GUI apps are workstation-session.target / htpc-session.target.
 src=""
 shopt -s nullglob
-for src in "${SETUP_FILES_DIR}/hypr/"*.service "${SETUP_FILES_DIR}/hypr/"*.target; do
+for src in "${SETUP_FILES_DIR}/hypr/"*.service "${SETUP_FILES_DIR}/hypr/"*.target "${SETUP_FILES_DIR}/hypr/"*.timer; do
     install_user_unit "$src"
 done
 shopt -u nullglob

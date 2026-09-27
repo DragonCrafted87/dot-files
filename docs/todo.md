@@ -9,3 +9,7 @@ Not scheduled.
 ## htpc
 
 - paused; remaining work is in [htpc-role.md](htpc-role.md)
+
+## quickshell
+
+- move to real applications once the swap to the source hyprland build is done
