@@ -210,7 +210,7 @@ ensure_tagged_repo() {
         git clone --recurse-submodules "$url" "$dir"
     fi
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
-    git -C "$dir" checkout --detach "$ref" || git -C "$dir" checkout --detach "origin/${ref}"
+    git -C "$dir" checkout -f --detach "$ref" || git -C "$dir" checkout -f --detach "origin/${ref}"
     git -C "$dir" submodule update --init --recursive
 }
 
