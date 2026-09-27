@@ -101,6 +101,21 @@ dual-session.
   `hypr-session-exec.sh`.
 - [ ] This file.
 
+### Config (Lua only)
+
+The 0.48 `.conf` tree and 0.56 `hyprland.lua` tree are side by side until
+this cutover. After distro Hyprland is gone:
+
+- [ ] Delete `config/hypr/hyprland.conf` and `config/hypr/conf.d/*.conf`
+  that Hyprland 0.48 parsed (`env.conf`, `monitors.conf`,
+  `programs-autostart.conf`, `look-and-feel.conf`, `input.conf`,
+  `keybinds.conf`, `window-rules.conf`).
+- [ ] Keep `conf.d/monitors.d/`, `conf.d/hosts.d/`, and `conf.d/audio.d/`
+  until those layouts are expressed in Lua (or stay as script-owned
+  `KEY=value` / `monitor=` files that `display-profile.sh` reads).
+- [ ] Convert `hypridle.conf` / `hyprlock.conf` only if those tools grow
+  a Lua provider. They still use hyprlang on 0.56.
+
 ### Check after the cutover
 
 - [ ] `command -v Hyprland hyprctl hypridle hyprlock hyprpaper` →

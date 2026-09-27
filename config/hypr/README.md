@@ -8,8 +8,13 @@ layouts live in `conf.d/monitors.d/` and are the source of truth.
 `display-profile.sh` applies `hyprctl keyword monitor` from those files.
 `display-switch.sh` owns the saved profile and calls `display-audio.sh`.
 
-Startup runs `display-switch.sh restore` once (`exec-once`). Reloads do
-not re-run restore.
+Distro Hyprland 0.48.1 reads `hyprland.conf` and `conf.d/*.conf`. Source
+0.56.2 reads `hyprland.lua` and `lua/*.lua` instead (it never opens the
+`.conf` tree when the lua entry exists). Scripts, `hypridle.conf`, and
+`hyprlock.conf` are shared.
+
+Startup runs `display-switch.sh restore` once (`exec-once` /
+`hyprland.start`). Reloads do not re-run restore.
 
 ## Graphical session (systemd)
 
