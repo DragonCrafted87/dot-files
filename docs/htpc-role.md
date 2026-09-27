@@ -49,10 +49,6 @@ MC1 path as runewyrm theater.
 - `htpc-session.target` exists as an empty placeholder.
 - `enable-session-units.sh` enables the target for
   `~/.config/dot-files/role`.
-- Logout 90s hang: `xdg-document-portal` drop-in `TimeoutStopSec=5`
-  ([PR 60](https://github.com/DragonCrafted87/dot-files/pull/60)).
-- rclone OneDrive local dir is `~/network/dragon-onedrive`
-  ([PR 62](https://github.com/DragonCrafted87/dot-files/pull/62)).
 
 ## Architecture
 
