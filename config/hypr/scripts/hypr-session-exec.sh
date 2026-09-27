@@ -33,6 +33,7 @@ if [[ "$exe" == "${PREFIX}/bin/Hyprland" ]]; then
     export PATH="${PREFIX}/bin:${PATH:-/usr/bin}"
     export LD_LIBRARY_PATH="${PREFIX}/lib64:${PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
     export XDG_DATA_DIRS="${PREFIX}/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+    export XKB_CONFIG_ROOT="${XKB_CONFIG_ROOT:-/usr/share/X11/xkb}"
     if [[ -x "${PREFIX}/bin/${cmd}" ]]; then
         exec "${PREFIX}/bin/${cmd}" "$@"
     fi

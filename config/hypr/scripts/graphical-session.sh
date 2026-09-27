@@ -20,9 +20,7 @@ SESSION_VARS=(
     XDG_CONFIG_HOME
     XDG_STATE_HOME
     XDG_CACHE_HOME
-    XDG_DATA_DIRS
     PATH
-    LD_LIBRARY_PATH
     HYPRLAND_SOURCE_PREFIX
     QT_QPA_PLATFORM
     QT_QPA_PLATFORMTHEME
@@ -53,6 +51,8 @@ import_env() {
         log "no session variables set to import"
         return 0
     fi
+    # Prefix libxkbcommon must not leak into kitty/qs/Brave across linger.
+    systemctl --user unset-environment LD_LIBRARY_PATH XDG_DATA_DIRS || true
     dbus-update-activation-environment --systemd "${SET_VARS[@]}"
     systemctl --user import-environment "${SET_VARS[@]}"
 }

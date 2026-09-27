@@ -19,9 +19,10 @@ never reaches it and `WantedBy=graphical-session.target` units stay dead
 (hypridle, hyprpolkitagent, mako, network-mounts).
 
 `scripts/graphical-session.sh start` (exec-once) imports compositor env
-(including `PATH`, `LD_LIBRARY_PATH`, `XDG_DATA_DIRS`, and
-`HYPRLAND_INSTANCE_SIGNATURE`) into the user systemd and starts
-`hyprland-session.service`, which `BindsTo=` the target. `exec-shutdown`
+(including `PATH` and `HYPRLAND_INSTANCE_SIGNATURE`) into the user
+systemd and starts `hyprland-session.service`, which `BindsTo=` the
+target. It does not import `LD_LIBRARY_PATH`; prefix libxkbcommon would
+break kitty/qs. `exec-shutdown`
 runs `stop` so session units go away with the compositor. Linger still
 starts `default.target` at boot; that path must not claim a graphical
 session.

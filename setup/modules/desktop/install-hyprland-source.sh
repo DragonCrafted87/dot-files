@@ -792,6 +792,21 @@ ensure_libxkbcommon() {
     build_meson_src "${SRC_ROOT}/libxkbcommon" -Denable-docs=false -Denable-wayland=false -Denable-x11=true -Denable-xkbregistry=true
 }
 
+# Prefix libxkbcommon is built with --prefix=/opt/hyprland. xkeyboard-config
+# files stay in /usr/share/X11/xkb; without this link Hyprland aborts in
+# CKeybindManager::updateXKBTranslationState.
+ensure_xkb_data() {
+    local dest="${PREFIX}/share/X11/xkb" src="/usr/share/X11/xkb"
+    [[ -d "$src" ]] || die "missing ${src}"
+    if [[ -L "$dest" || -d "$dest" ]]; then
+        return 0
+    fi
+    log "link ${src} -> ${dest}"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    sudo mkdir -p "$(dirname "$dest")"
+    sudo ln -sfn "$src" "$dest"
+}
+
 ensure_libinput() {
     if ! ensure_pkg_or_build libinput 1.29; then return 0; fi
     ensure_tagged_repo https://gitlab.freedesktop.org/libinput/libinput.git "${SRC_ROOT}/libinput" "$LIBINPUT_TAG"
@@ -926,6 +941,7 @@ build_stack() {
         "${SRC_ROOT}/hyprtoolkit" "$HYPRTOOLKIT_TAG" hyprtoolkit
     ensure_wayland_protocols
     ensure_libxkbcommon
+    ensure_xkb_data
     ensure_libinput
     ensure_re2
     ensure_glaze
@@ -979,6 +995,7 @@ write_stamp() {
 
 if [[ -x "${PREFIX}/bin/Hyprland" && -f "$STAMP" ]] && [[ "$(cat "$STAMP")" == "$(stamp_payload)" ]] && [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" ]]; then
     log "Hyprland ${HYPRLAND_SOURCE_VERSION} prefix already current at ${PREFIX}"
+    ensure_xkb_data
     install_session_files
     configure_ly_source_session
     exit 0
