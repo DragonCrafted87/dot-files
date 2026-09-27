@@ -3,7 +3,8 @@
 """Write hyprsunset.conf from today's local sunrise and sunset.
 
 hyprsunset v0.4.0 only accepts clock times. This generator fills those
-clocks from SUN_LAT and SUN_LON in conf.d/hosts.d/<host>.conf.
+clocks from the built-in coordinates. A host file can override both
+with SUN_LAT and SUN_LON in conf.d/hosts.d/<host>.conf.
 
 When upstream hyprsunset accepts time = sunrise, delete this script,
 hyprsunset-times.service, and hyprsunset-times.timer, and put latitude
@@ -22,6 +23,9 @@ from pathlib import Path
 NIGHT_TEMPERATURE = 4500
 STALE_AFTER = timedelta(days=7)
 ZENITH = 90.833
+# Desk location. Laptops can set SUN_LAT and SUN_LON on their host file later.
+DEFAULT_LATITUDE = 38.0892644
+DEFAULT_LONGITUDE = -92.4954407
 
 
 def sun_clocks(latitude, longitude, day, tzinfo):
@@ -135,13 +139,15 @@ def enable_and_maybe_restart(changed):
         )
 
 
-def apply_times():
+def resolve_coords():
     latitude, longitude = read_coords(host_conf_path())
     if latitude is None or longitude is None:
-        print(
-            "hyprsunset-times: SUN_LAT and SUN_LON are unset; leaving hyprsunset.conf alone"
-        )
-        return 0
+        return DEFAULT_LATITUDE, DEFAULT_LONGITUDE
+    return latitude, longitude
+
+
+def apply_times():
+    latitude, longitude = resolve_coords()
     now = datetime.now().astimezone()
     clocks = sun_clocks(latitude, longitude, now.date(), now.tzinfo)
     if clocks is None:

@@ -50,7 +50,8 @@ binds (kitty, dolphin) stay children of Hyprland.
 `hyprsunset` use `scripts/hypr-session-exec.sh` so they follow the
 running compositor: `/opt/hyprland` for **Hyprland (source)**, `/usr`
 for the distro session. `hyprsunset-times.py` rewrites
-`hyprsunset.conf` from `SUN_LAT` / `SUN_LON` on the host file. A weekly
+`hyprsunset.conf` from the built-in coordinates, or from `SUN_LAT` /
+`SUN_LON` when the host file sets both. A weekly
 user timer runs it, and session start runs it when that file is older
 than seven days. Hyprsunset 0.4.0 only stores clock times.
 
