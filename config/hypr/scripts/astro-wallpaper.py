@@ -282,18 +282,35 @@ def prune_cache() -> None:
             path.unlink(missing_ok=True)
 
 
+def _hyprpaper_uses_blocks() -> bool:
+    """Prefix 0.8.4 uses wallpaper { } blocks. Rock's hyprpaper rejects them."""
+    path = shutil.which("hyprpaper") or ""
+    return path.startswith("/opt/hyprland/")
+
+
 def write_hyprpaper_conf(mapping: dict[str, str]) -> None:
-    """Classic hyprpaper keywords. OM's build rejects wallpaper { } blocks."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     lines = ["splash = false", "ipc = on"]
-    seen: set[str] = set()
-    for image in mapping.values():
-        if image in seen:
-            continue
-        lines.append(f"preload = {image}")
-        seen.add(image)
-    for monitor, image in mapping.items():
-        lines.append(f"wallpaper = {monitor},{image}")
+    if _hyprpaper_uses_blocks():
+        for monitor, image in mapping.items():
+            lines.extend(
+                [
+                    "wallpaper {",
+                    f"    monitor = {monitor}",
+                    f"    path = {image}",
+                    "    fit_mode = cover",
+                    "}",
+                ]
+            )
+    else:
+        seen: set[str] = set()
+        for image in mapping.values():
+            if image in seen:
+                continue
+            lines.append(f"preload = {image}")
+            seen.add(image)
+        for monitor, image in mapping.items():
+            lines.append(f"wallpaper = {monitor},{image}")
     HYPRPAPER_CONF.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

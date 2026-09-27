@@ -90,7 +90,8 @@ MUST still start or stop watch according to `SINGLE_PROFILES`.
 
 MUST:
 
-- Apply only `monitor=` lines from `monitors.d`.
+- Apply only `monitor=` lines from `monitors.d` via `hyprctl keyword`
+  monitor (0.48) or `hyprctl eval hl.monitor({...})` (0.56 lua).
 - Implement `idle-off` / `idle-on` / `restore-ws` for hypridle.
 - Read the saved profile name to choose which conf idle reapplies.
 - Serialize apply/idle with `apply.lock`.

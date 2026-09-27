@@ -64,10 +64,61 @@ normalize_monitor_spec() {
     printf '%s\n' "$1" | sed 's/@\([0-9.][0-9.]*\)Hz,/@\1,/'
 }
 
+# Lua configs reject hyprctl keyword (exit 0, prints "Use eval").
+HYPRCTL_LUA=""
+
+hyprctl_is_lua() {
+    local out
+    if [[ -n "$HYPRCTL_LUA" ]]; then
+        [[ "$HYPRCTL_LUA" == "1" ]]
+        return
+    fi
+    out="$(hyprctl keyword misc:disable_xdg_env_checks true 2>&1 || true)"
+    if [[ "$out" == *"Use eval"* ]]; then
+        HYPRCTL_LUA=1
+    else
+        HYPRCTL_LUA=0
+    fi
+    [[ "$HYPRCTL_LUA" == "1" ]]
+}
+
 keyword_monitor() {
-    local spec
+    local spec name rest mode pos scale
     spec="$(normalize_monitor_spec "$1")"
-    hyprctl keyword monitor "$spec" >/dev/null 2>&1 || true
+    if ! hyprctl_is_lua; then
+        hyprctl keyword monitor "$spec" >/dev/null 2>&1 || true
+        return 0
+    fi
+    name="${spec%%,*}"
+    rest="${spec#"${name}"}"
+    rest="${rest#,}"
+    if [[ "$rest" == "disable" || "$rest" == "disabled" ]]; then
+        hyprctl eval "hl.monitor({ output = \"${name}\", disabled = true })" >/dev/null 2>&1 || true
+        return 0
+    fi
+    mode="${rest%%,*}"
+    rest="${rest#"${mode}"}"
+    rest="${rest#,}"
+    pos="${rest%%,*}"
+    rest="${rest#"${pos}"}"
+    rest="${rest#,}"
+    scale="${rest%%,*}"
+    hyprctl eval "hl.monitor({ output = \"${name}\", mode = \"${mode}\", position = \"${pos}\", scale = \"${scale}\" })" >/dev/null 2>&1 || true
+}
+
+keyword_option() {
+    local key="$1" val="$2" cat opt
+    if ! hyprctl_is_lua; then
+        hyprctl keyword "$key" "$val" >/dev/null 2>&1 || true
+        return 0
+    fi
+    cat="${key%%:*}"
+    opt="${key#*:}"
+    case "$val" in
+        1 | true | on) val=true ;;
+        0 | false | off) val=false ;;
+    esac
+    hyprctl eval "hl.config({ ${cat} = { ${opt} = ${val} } })" >/dev/null 2>&1 || true
 }
 
 dpms() {
@@ -331,9 +382,9 @@ raise SystemExit(1)
 
 refresh_cursor() {
     local mon="${1:-}" pos
-    hyprctl keyword cursor:no_hardware_cursors 1 >/dev/null 2>&1 || true
+    keyword_option cursor:no_hardware_cursors 1
     sleep 0.05
-    hyprctl keyword cursor:no_hardware_cursors 0 >/dev/null 2>&1 || true
+    keyword_option cursor:no_hardware_cursors 0
     if [[ -n "$mon" ]] && pos="$(monitor_center "$mon" || true)" && [[ -n "$pos" ]]; then
         # shellcheck disable=SC2086
         hyprctl dispatch movecursor $pos >/dev/null 2>&1 || true
