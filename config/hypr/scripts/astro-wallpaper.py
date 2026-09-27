@@ -35,7 +35,7 @@ STATE_DIR = (
 )
 STATE_FILE = STATE_DIR / "astro-wallpaper.json"
 HYPRPAPER_CONF = STATE_DIR / "hyprpaper.conf"
-HYPRPAPER_LOG = STATE_DIR / "hyprpaper.log"
+HYPRPAPER_UNIT = "hyprpaper.service"
 KEEP_DAYS = int(os.environ.get("ASTRO_WALLPAPER_KEEP_DAYS", "21"))
 MIN_WIDTH = int(os.environ.get("ASTRO_WALLPAPER_MIN_WIDTH", "1600"))
 CATEGORIES = [
@@ -321,36 +321,30 @@ def _hyprpaper_running() -> bool:
     return result.returncode == 0
 
 
-def stop_hyprpaper() -> None:
-    subprocess.run(["pkill", "-x", "hyprpaper"], check=False)
-    for _ in range(20):
-        if not _hyprpaper_running():
-            return
-        time.sleep(0.05)
-
-
 def start_hyprpaper() -> bool:
-    if shutil.which("hyprpaper") is None:
-        print("astro-wallpaper: hyprpaper is not installed", file=sys.stderr)
-        return False
+    """Restart hyprpaper.service so the daemon runs in its own cgroup."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     if not HYPRPAPER_CONF.is_file():
         HYPRPAPER_CONF.write_text("splash = false\nipc = on\n", encoding="utf-8")
-    with HYPRPAPER_LOG.open("ab") as log:
-        log.write(b"\n--- start ---\n")
-        subprocess.Popen(  # noqa: S603 pylint: disable=consider-using-with
-            ["hyprpaper", "-c", str(HYPRPAPER_CONF)],
-            stdout=log,
-            stderr=log,
-            start_new_session=True,
+    result = subprocess.run(
+        ["systemctl", "--user", "restart", HYPRPAPER_UNIT],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        print(
+            f"astro-wallpaper: systemctl restart {HYPRPAPER_UNIT} failed: {detail}",
+            file=sys.stderr,
         )
+        return False
     for _ in range(30):
         if _hyprpaper_running():
-            time.sleep(0.2)
-            return _hyprpaper_running()
+            return True
         time.sleep(0.1)
     print(
-        f"astro-wallpaper: hyprpaper failed to start; see {HYPRPAPER_LOG}",
+        f"astro-wallpaper: {HYPRPAPER_UNIT} did not stay up",
         file=sys.stderr,
     )
     return False
@@ -362,6 +356,9 @@ def apply_images(images: list[Path], monitors: list[str]) -> dict[str, str]:
     mapping: dict[str, str] = {}
     for index, monitor in enumerate(monitors):
         mapping[monitor] = str(images[index % len(images)])
+    previous = ""
+    if HYPRPAPER_CONF.is_file():
+        previous = HYPRPAPER_CONF.read_text(encoding="utf-8")
     write_hyprpaper_conf(mapping)
     STATE_FILE.write_text(
         json.dumps(
@@ -374,9 +371,11 @@ def apply_images(images: list[Path], monitors: list[str]) -> dict[str, str]:
         + "\n",
         encoding="utf-8",
     )
-    # Config already has preload + wallpaper. Restarting applies it.
-    # hyprctl against the socket races the new process and is noise.
-    stop_hyprpaper()
+    # Same conf and a live daemon: leave it. Idle wake calls apply after
+    # the 06:30 refresh may have omitted a disabled output.
+    current = HYPRPAPER_CONF.read_text(encoding="utf-8")
+    if current == previous and _hyprpaper_running():
+        return mapping
     start_hyprpaper()
     return mapping
 
@@ -420,6 +419,13 @@ def cmd_status() -> int:
     print(f"conf:  {HYPRPAPER_CONF}")
     print(f"hyprpaper: {'running' if _hyprpaper_running() else 'not running'}")
     print(f"hyprpaper bin: {shutil.which('hyprpaper') or 'missing'}")
+    state = subprocess.run(
+        ["systemctl", "--user", "is-active", HYPRPAPER_UNIT],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    print(f"hyprpaper unit: {(state.stdout or state.stderr).strip() or 'unknown'}")
     if STATE_FILE.is_file():
         print(STATE_FILE.read_text(encoding="utf-8").rstrip())
     else:

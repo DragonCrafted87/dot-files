@@ -18,7 +18,7 @@ fi
 unit_dir="${DOTFILES_HOME}/.config/systemd/user"
 ensure_dir "$unit_dir"
 
-for unit in astro-wallpaper.service astro-wallpaper.timer; do
+for unit in hyprpaper.service astro-wallpaper.service astro-wallpaper.timer; do
     src="${SETUP_FILES_DIR}/wallpaper/${unit}"
     dest="${unit_dir}/${unit}"
     if [[ ! -f "$src" ]]; then
@@ -34,4 +34,13 @@ for unit in astro-wallpaper.service astro-wallpaper.timer; do
 done
 
 run systemctl --user daemon-reload || true
+enable_user_service hyprpaper.service
 enable_user_service astro-wallpaper.timer
+
+# Bring the daemon back on a machine that is already in a graphical session.
+# The oneshot refresh unit must not be the process that owns hyprpaper.
+paper_conf="${XDG_STATE_HOME:-${DOTFILES_HOME}/.local/state}/hypr/hyprpaper.conf"
+if systemctl --user is-active --quiet graphical-session.target \
+    && [[ -f "$paper_conf" ]]; then
+    run systemctl --user restart hyprpaper.service
+fi

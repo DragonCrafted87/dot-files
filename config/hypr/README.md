@@ -81,12 +81,12 @@ against `hyprctl monitors` description/make/model on `SWITCH_PORT`.
 | `theater`   | `runewyrm-theater.conf`   | DP-2 and DP-3 disabled; HDMI ELMO MC1 1920x1080@60 | GPU HDMI 7.1, stereo fallback |
 | `workshare` | `runewyrm-workshare.conf` | DP-2 and DP-3 disabled; HDMI AOC 2560x1440@143.91  | same soundbar as desk         |
 
-Theater and workshare share `HDMI-A-1`. `SUPER+SHIFT+S` runs `single`,
+Theater and workshare share `HDMI-A-1`. `SUPER+ALT+S` runs `single`,
 which reads the panel currently on that port, picks theater (ELMO) or
 workshare (AOC), and daemonizes `display-switch.sh watch`. That watcher
 blocks on `inotifywait` for `/sys/class/drm/card0-HDMI-A-1/{status,edid}`
 and re-selects the profile when the HDMI switch changes the panel.
-`SUPER+SHIFT+D` (desk) kills the watcher. It is not an `exec-once` loop.
+`SUPER+ALT+D` (desk) kills the watcher. It is not an `exec-once` loop.
 
 Desk still uses its own bind because that is the triple-head layout, not
 "whatever is on HDMI."
@@ -114,7 +114,7 @@ the git-linked tree).
 ~/.config/hypr/scripts/display-switch.sh status
 ```
 
-Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+S` single (auto theater /
+Keybinds: `SUPER+ALT+D` desk, `SUPER+ALT+S` single (auto theater /
 workshare from the HDMI-switch EDID).
 
 `SUPER+[0-9]` runs `scripts/switch-workspace.py`. If that workspace is
@@ -170,7 +170,10 @@ planets, comets, and clusters, then gives each enabled monitor its own
 image through `hyprpaper`. Login runs `apply` (reuse today's cache).
 A user timer at 06:30 refreshes the set. `display-switch.sh` waits for
 the new layout, then re-applies so theater / workshare / desk each get
-wallpapers. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
+wallpapers. `hyprpaper.service` runs the daemon (`Restart=on-failure`)
+through `hypr-session-exec.sh`. The timer is a oneshot and only restarts
+that unit. Waking from idle runs `apply` again so a monitor that was
+disabled at 06:30 gets a still. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
 `.jpg`) are dropped; hyprpaper exits if it is asked to preload one.
 
 ```bash
@@ -180,7 +183,7 @@ wallpapers. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
 astro-wallpaper-refresh
 ```
 
-`SUPER+SHIFT+W` forces a new set. Cache lives in
+`SUPER+ALT+W` forces a new set. Cache lives in
 `~/.cache/hypr/astro-wallpapers/`. Generated hyprpaper config is
 `~/.local/state/hypr/hyprpaper.conf`. Optional `NASA_API_KEY` improves
 APOD quota; Wikimedia Commons is the default pool. Role module:
@@ -201,7 +204,7 @@ Title-specific env lives in `steam-games/<SteamAppId>.conf`. See
 `steam-games/README.md`. After `update-dot-files` the script is already
 at `~/.config/hypr/scripts/` because this whole tree is linked.
 
-Swap to theater first (`SUPER+SHIFT+S` with the ELMO on the switch), then
+Swap to theater first (`SUPER+ALT+S` with the ELMO on the switch), then
 launch. The wrap script will see HDMI-only and use the live TV mode.
 
 ## Idle
