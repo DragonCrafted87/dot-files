@@ -126,6 +126,46 @@ Copy secrets onto a new box without going through `init-remote.sh`:
 ~/dot-files/setup/utility/transfer-secrets.sh dragon@newbox.lan
 ```
 
+## Hyprland from source
+
+`install-hyprland-session` keeps the OpenMandriva Hyprland rpms and the
+stock Ly session. `install-hyprland-source` (workstation / laptop / htpc)
+then builds the pinned Hyprland tag plus the hypr\* ecosystem into
+`/opt/hyprland` so the two stacks do not share libraries or binaries.
+Pins live in `setup/versions.conf` next to the BOINC and MakeMKV
+versions. Current pin is **v0.56.2**; a later bump overwrites the same
+prefix in place.
+
+Ly extra session: **Hyprland (source)**. Desktop file lives in
+`/etc/ly/custom-sessions/` and `/usr/share/wayland-sessions/` under the
+name `hyprland-source.desktop`, never overwriting the distro
+`hyprland.desktop`. The wrapper
+`/opt/hyprland/bin/start-hyprland-source` prepends the prefix to
+`PATH` / `LD_LIBRARY_PATH` only for that session. Exec does not encode
+the tag, so Ly does not need a desktop-file edit on upgrades.
+`hypridle`, `hyprpolkitagent`, the Hyprland portal, and `hyprsunset`
+run through `hypr-session-exec.sh` so they follow the compositor that
+is actually running.
+
+OpenMandriva has no single published dep list. The module translates the
+Fedora set from [Hyprland discussion #284](https://github.com/hyprwm/Hyprland/discussions/284)
+plus current cmake/Qt6 pieces, using the shared `pick_pkg` from `lib.sh`
+(lib64\* first on 64-bit).
+
+```bash
+mkdir -p ~/.cache/hyprland-source
+~/dot-files/setup/modules/desktop/install-hyprland-source.sh 2>&1 | tee ~/.cache/hyprland-source/build.log
+HYPRLAND_SOURCE_ONLY=Hyprland ~/dot-files/setup/modules/desktop/install-hyprland-source.sh 2>&1 | tee -a ~/.cache/hyprland-source/build.log
+HYPRLAND_SOURCE_FORCE=1 ~/dot-files/setup/modules/desktop/install-hyprland-source.sh 2>&1 | tee ~/.cache/hyprland-source/build.log
+```
+
+Override prefix or a tag (`HYPRLAND_TAG`, `AQUAMARINE_TAG`, …) in the
+environment; an exported value wins over `versions.conf`. Sources cache
+under `~/.cache/hyprland-source`. This module forces GCC 14 + libstdc++
+
+- mold (OpenMandriva cooker recipe; Clang 19 crashes Hyprland at
+  launch). Other source builds still use `compiler.bashrc` clang.
+
 ## KDE Connect / GrapheneOS SMS
 
 `install-kdeconnect` is on workstation (and therefore laptop). It
@@ -208,7 +248,8 @@ not a hard-coded `znver1`.
 ```
 
 Repo copies of the helpers keep the `.sh` suffix under
-`setup/files/boinc/`. PATH names do not.
+`setup/files/boinc/`.
+PATH names do not.
 
 `loginctl enable-linger` keeps the user unit
 running after logout so servers and the HTPC still crunch without a

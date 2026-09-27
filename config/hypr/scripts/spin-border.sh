@@ -2,7 +2,26 @@
 # Drive the active-window gradient around the frame.
 # Needed on Hyprland 0.47–0.48 where animation = borderangle, ..., loop
 # runs one revolution and then disconnects (issues #9251 / #9313).
-#
+# Hyprland 0.56+ uses lua borderangle loop instead; skip this script there.
+set -euo pipefail
+
+PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland}"
+
+should_run() {
+    local pid exe
+    pid="$(pgrep -u "$(id -u)" -x Hyprland | head -n 1 || true)"
+    [[ -n "$pid" ]] || return 0
+    exe="$(readlink -f "/proc/${pid}/exe" 2>/dev/null || true)"
+    [[ "$exe" != "${PREFIX}/bin/Hyprland" ]]
+}
+
+if [[ "${1:-}" == "--should-run" ]]; then
+    should_run
+    exit $?
+fi
+
+should_run || exit 0
+
 # Seconds per full rotation. Match the look you wanted (~8s).
 SECONDS_PER_TURN="${SECONDS_PER_TURN:-6}"
 

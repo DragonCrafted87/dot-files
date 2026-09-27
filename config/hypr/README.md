@@ -8,8 +8,15 @@ layouts live in `conf.d/monitors.d/` and are the source of truth.
 `display-profile.sh` applies `hyprctl keyword monitor` from those files.
 `display-switch.sh` owns the saved profile and calls `display-audio.sh`.
 
-Startup runs `display-switch.sh restore` once (`exec-once`). Reloads do
-not re-run restore.
+Distro Hyprland 0.48.1 reads `hyprland.conf` and `conf.d/*.conf`. Source
+0.56.2 reads `hyprland.lua` and `lua/*.lua` instead (it never opens the
+`.conf` tree when the lua entry exists). Scripts, `hypridle.conf`, and
+`hyprlock.conf` are shared.
+
+Startup runs `display-switch.sh restore` once (`exec-once` /
+`hyprland.start`). Reloads re-read `~/.local/state/hypr/monitors.runtime.conf`
+from `lua/monitors.lua` (0.56) or `conf.d/monitors.conf` (0.48) so outputs
+keep their last layout.
 
 ## Graphical session (systemd)
 
@@ -19,15 +26,24 @@ never reaches it and `WantedBy=graphical-session.target` units stay dead
 (hypridle, hyprpolkitagent, mako, network-mounts).
 
 `scripts/graphical-session.sh start` (exec-once) imports compositor env
-into the user systemd and starts `hyprland-session.service`, which
-`BindsTo=` the target. `exec-shutdown` runs `stop` so session units go
-away with the compositor. Linger still starts `default.target` at boot;
-that path must not claim a graphical session.
+(including `PATH` and `HYPRLAND_INSTANCE_SIGNATURE`) into the user
+systemd and starts `hyprland-session.service`, which `BindsTo=` the
+target. It does not import `LD_LIBRARY_PATH`; prefix libxkbcommon would
+break kitty/qs. `exec-shutdown`
+runs `stop` so session units go away with the compositor. Linger still
+starts `default.target` at boot; that path must not claim a graphical
+session.
+
+`hypridle`, `hyprpolkitagent`, `xdg-desktop-portal-hyprland`, and
+`hyprsunset` use `scripts/hypr-session-exec.sh` so they follow the
+running compositor: `/opt/hyprland` for **Hyprland (source)**, `/usr`
+for the distro session.
 
 Desk GUI apps are not Hyprland `exec-once` lines. They are child units of
 `workstation-session.target` (WantedBy `graphical-session.target`): kitty,
 Brave, Steam (`-silent` tray), Discord (`--start-minimized`),
-`qs-startmenu` (`Restart=always`), spin-border, Litra, KDE Connect.
+`qs-startmenu` (`Restart=always`), spin-border (0.48 only; 0.56 uses
+`borderangle` loop), Litra, KDE Connect.
 HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
 the target that matches `~/.config/dot-files/role`.
 

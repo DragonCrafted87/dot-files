@@ -19,6 +19,33 @@ def hyprctl_json(*args):
     return json.loads(hyprctl(*args, "-j"))
 
 
+class _Hypr:
+    lua: bool | None = None
+
+
+def hyprctl_is_lua() -> bool:
+    if _Hypr.lua is None:
+        result = subprocess.run(
+            ["hyprctl", "keyword", "misc:disable_xdg_env_checks", "true"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        _Hypr.lua = "Use eval" in f"{result.stdout}{result.stderr}"
+    return bool(_Hypr.lua)
+
+
+def lua_quote(value: str) -> str:
+    return json.dumps(str(value))
+
+
+def dispatch(lua_expr: str, *legacy: str) -> None:
+    if hyprctl_is_lua():
+        subprocess.check_call(["hyprctl", "dispatch", lua_expr])
+        return
+    subprocess.check_call(["hyprctl", "dispatch", *legacy])
+
+
 def same_workspace(active, workspace):
     if not isinstance(active, dict):
         return False
@@ -76,15 +103,23 @@ def main(argv):
         monitors = []
     monitors = [monitor for monitor in monitors if isinstance(monitor, dict)]
     if workspace_is_visible(monitors, workspace):
-        subprocess.check_call(["hyprctl", "dispatch", "workspace", workspace])
+        dispatch(
+            f"hl.dsp.focus({{ workspace = {lua_quote(workspace)} }})",
+            "workspace",
+            workspace,
+        )
         return 0
     target = monitor_under_cursor(monitors)
-    subprocess.check_call(
-        [
-            "hyprctl",
-            "--batch",
-            f"dispatch moveworkspacetomonitor {workspace} {target}; dispatch workspace {workspace}",
-        ]
+    dispatch(
+        f"hl.dsp.workspace.move({{ workspace = {lua_quote(workspace)}, monitor = {lua_quote(target)} }})",
+        "moveworkspacetomonitor",
+        workspace,
+        target,
+    )
+    dispatch(
+        f"hl.dsp.focus({{ workspace = {lua_quote(workspace)} }})",
+        "workspace",
+        workspace,
     )
     return 0
 

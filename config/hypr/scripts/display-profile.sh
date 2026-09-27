@@ -64,19 +64,126 @@ normalize_monitor_spec() {
     printf '%s\n' "$1" | sed 's/@\([0-9.][0-9.]*\)Hz,/@\1,/'
 }
 
+# Lua configs reject hyprctl keyword (exit 0, prints "Use eval").
+HYPRCTL_LUA=""
+
+hyprctl_is_lua() {
+    local out
+    if [[ -n "$HYPRCTL_LUA" ]]; then
+        [[ "$HYPRCTL_LUA" == "1" ]]
+        return
+    fi
+    out="$(hyprctl keyword misc:disable_xdg_env_checks true 2>&1 || true)"
+    if [[ "$out" == *"Use eval"* ]]; then
+        HYPRCTL_LUA=1
+    else
+        HYPRCTL_LUA=0
+    fi
+    [[ "$HYPRCTL_LUA" == "1" ]]
+}
+
+lua_monitor_stmt() {
+    local spec name rest mode pos scale
+    spec="$(normalize_monitor_spec "$1")"
+    name="${spec%%,*}"
+    rest="${spec#"${name}"}"
+    rest="${rest#,}"
+    if [[ "$rest" == "disable" || "$rest" == "disabled" ]]; then
+        printf 'hl.monitor({ output = %s, disabled = true })' "$(lua_str "$name")"
+        return 0
+    fi
+    mode="${rest%%,*}"
+    rest="${rest#"${mode}"}"
+    rest="${rest#,}"
+    pos="${rest%%,*}"
+    rest="${rest#"${pos}"}"
+    rest="${rest#,}"
+    scale="${rest%%,*}"
+    printf 'hl.monitor({ output = %s, disabled = false, mode = %s, position = %s, scale = %s })' \
+        "$(lua_str "$name")" "$(lua_str "$mode")" "$(lua_str "$pos")" "$(lua_str "$scale")"
+}
+
 keyword_monitor() {
     local spec
     spec="$(normalize_monitor_spec "$1")"
-    hyprctl keyword monitor "$spec" >/dev/null 2>&1 || true
+    if ! hyprctl_is_lua; then
+        hyprctl keyword monitor "$spec" >/dev/null 2>&1 || true
+        return 0
+    fi
+    hyprctl eval "$(lua_monitor_stmt "$spec")" >/dev/null 2>&1 || true
+}
+
+# One eval so 0.56 does not warn about overlap while HDMI is still at 0x0.
+# Enabled outputs are applied right-to-left so the single-head panel moves
+# off 0x0 before DP-2 lands there.
+apply_lua_monitors() {
+    local file="$1" spec pos x stmt joined=""
+    local -a enable_lines=() disable_stmts=() stmts=()
+    while IFS= read -r spec; do
+        [[ -n "$spec" ]] || continue
+        spec="$(normalize_monitor_spec "$spec")"
+        if monitor_is_disabled "$spec"; then
+            disable_stmts+=("$(lua_monitor_stmt "$spec")")
+            continue
+        fi
+        pos="$(printf '%s\n' "${spec#*,}" | cut -d, -f2)"
+        x="${pos%%x*}"
+        [[ "$x" =~ ^-?[0-9]+$ ]] || x=0
+        enable_lines+=("$x $spec")
+    done < <(monitor_lines "$file")
+    if ((${#enable_lines[@]} > 0)); then
+        while IFS= read -r spec; do
+            [[ -n "$spec" ]] || continue
+            spec="${spec#* }"
+            stmts+=("$(lua_monitor_stmt "$spec")")
+        done < <(printf '%s\n' "${enable_lines[@]}" | sort -nr -k1,1)
+    fi
+    stmts+=("${disable_stmts[@]}")
+    ((${#stmts[@]} > 0)) || return 0
+    for stmt in "${stmts[@]}"; do
+        joined+="${stmt}; "
+    done
+    hyprctl eval "$joined" >/dev/null 2>&1 || true
+}
+
+lua_str() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    printf '"%s"' "$s"
+}
+
+hypr_dispatch() {
+    if hyprctl_is_lua; then
+        hyprctl dispatch "$1" >/dev/null 2>&1 || true
+        return 0
+    fi
+    shift
+    hyprctl dispatch "$@" >/dev/null 2>&1 || true
+}
+
+keyword_option() {
+    local key="$1" val="$2" cat opt
+    if ! hyprctl_is_lua; then
+        hyprctl keyword "$key" "$val" >/dev/null 2>&1 || true
+        return 0
+    fi
+    cat="${key%%:*}"
+    opt="${key#*:}"
+    case "$val" in
+        1 | true | on) val=true ;;
+        0 | false | off) val=false ;;
+    esac
+    hyprctl eval "hl.config({ ${cat} = { ${opt} = ${val} } })" >/dev/null 2>&1 || true
 }
 
 dpms() {
     local action="$1"
     local mon="${2:-}"
     if [[ -n "$mon" ]]; then
-        hyprctl dispatch dpms "$action" "$mon" >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.dpms({ action = $(lua_str "$action"), monitor = $(lua_str "$mon") })" dpms "$action" "$mon"
     else
-        hyprctl dispatch dpms "$action" >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.dpms({ action = $(lua_str "$action") })" dpms "$action"
     fi
 }
 
@@ -135,8 +242,8 @@ monitor_name() {
 }
 
 monitor_is_disabled() {
-    local spec="$1"
-    [[ "${spec#*,}" == disable ]]
+    local rest="${1#*,}"
+    [[ "$rest" == "disable" || "$rest" == "disabled" ]]
 }
 
 profile_conf() {
@@ -203,10 +310,14 @@ apply_monitor_conf() {
     local file="$1" spec
     [[ -f "$file" ]] || { echo "missing monitor conf: $file" >&2; return 1; }
     write_runtime_monitors "$file"
-    while IFS= read -r spec; do
-        [[ -n "$spec" ]] || continue
-        keyword_monitor "$spec"
-    done < <(monitor_lines "$file")
+    if hyprctl_is_lua; then
+        apply_lua_monitors "$file"
+    else
+        while IFS= read -r spec; do
+            [[ -n "$spec" ]] || continue
+            keyword_monitor "$spec"
+        done < <(monitor_lines "$file")
+    fi
     wait_conf_layout "$file" || true
 }
 
@@ -331,14 +442,14 @@ raise SystemExit(1)
 
 refresh_cursor() {
     local mon="${1:-}" pos
-    hyprctl keyword cursor:no_hardware_cursors 1 >/dev/null 2>&1 || true
+    keyword_option cursor:no_hardware_cursors 1
     sleep 0.05
-    hyprctl keyword cursor:no_hardware_cursors 0 >/dev/null 2>&1 || true
+    keyword_option cursor:no_hardware_cursors 0
     if [[ -n "$mon" ]] && pos="$(monitor_center "$mon" || true)" && [[ -n "$pos" ]]; then
-        # shellcheck disable=SC2086
-        hyprctl dispatch movecursor $pos >/dev/null 2>&1 || true
+        read -r cx cy <<<"$pos"
+        hypr_dispatch "hl.dsp.cursor.move({ x = ${cx}, y = ${cy} })" movecursor "$cx" "$cy"
     else
-        hyprctl dispatch movecursor 1 1 >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.cursor.move({ x = 1, y = 1 })" movecursor 1 1
     fi
 }
 
@@ -394,7 +505,7 @@ restore_saved_workspaces_now() {
         ws="${ws%:*}"
         [[ -n "$ws" && -n "$mon" ]] || continue
         wait_for_monitor "$mon" || return 1
-        hyprctl dispatch moveworkspacetomonitor "$ws" "$mon" >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.workspace.move({ workspace = $(lua_str "$ws"), monitor = $(lua_str "$mon") })" moveworkspacetomonitor "$ws" "$mon"
     done <"$SAVED_WS_FILE"
     while IFS= read -r line; do
         [[ "$line" == active=* ]] || continue
@@ -402,8 +513,8 @@ restore_saved_workspaces_now() {
         ws="${mon##*:}"
         mon="${mon%:*}"
         [[ -n "$ws" && -n "$mon" ]] || continue
-        hyprctl dispatch focusmonitor "$mon" >/dev/null 2>&1 || true
-        hyprctl dispatch workspace "$ws" >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.focus({ monitor = $(lua_str "$mon") })" focusmonitor "$mon"
+        hypr_dispatch "hl.dsp.focus({ workspace = $(lua_str "$ws") })" workspace "$ws"
     done <"$SAVED_WS_FILE"
     if workspaces_restored; then
         rm -f "$SAVED_WS_FILE"
