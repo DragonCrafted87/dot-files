@@ -22,7 +22,7 @@ role="$(saved_role)"
 disable_user_service workstation-session.service
 disable_user_service htpc-session.service
 case "$role" in
-    workstation | laptop)
+    workstation)
         enable_user_service workstation-session.target
         disable_user_service htpc-session.target
         ;;
