@@ -40,7 +40,8 @@ for the distro session.
 Desk GUI apps are not Hyprland `exec-once` lines. They are child units of
 `workstation-session.target` (WantedBy `graphical-session.target`): kitty,
 Brave, Steam (`-silent` tray), Discord (`--start-minimized`),
-`qs-startmenu` (`Restart=always`), spin-border, Litra, KDE Connect.
+`qs-startmenu` (`Restart=always`), spin-border (0.48 only; 0.56 uses
+`borderangle` loop), Litra, KDE Connect.
 HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
 the target that matches `~/.config/dot-files/role`.
 

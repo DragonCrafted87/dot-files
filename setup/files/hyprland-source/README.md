@@ -115,6 +115,9 @@ this cutover. After distro Hyprland is gone:
   `KEY=value` / `monitor=` files that `display-profile.sh` reads).
 - [ ] Convert `hypridle.conf` / `hyprlock.conf` only if those tools grow
   a Lua provider. They still use hyprlang on 0.56.
+- [ ] Delete `scripts/spin-border.sh` and
+  `setup/files/hypr/workstation-spin-border.service`. Source 0.56
+  uses `borderangle` `loop` in `lua/look-and-feel.lua`.
 
 ### Check after the cutover
 
