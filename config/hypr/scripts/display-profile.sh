@@ -82,18 +82,14 @@ hyprctl_is_lua() {
     [[ "$HYPRCTL_LUA" == "1" ]]
 }
 
-keyword_monitor() {
+lua_monitor_stmt() {
     local spec name rest mode pos scale
     spec="$(normalize_monitor_spec "$1")"
-    if ! hyprctl_is_lua; then
-        hyprctl keyword monitor "$spec" >/dev/null 2>&1 || true
-        return 0
-    fi
     name="${spec%%,*}"
     rest="${spec#"${name}"}"
     rest="${rest#,}"
     if [[ "$rest" == "disable" || "$rest" == "disabled" ]]; then
-        hyprctl eval "hl.monitor({ output = \"${name}\", disabled = true })" >/dev/null 2>&1 || true
+        printf 'hl.monitor({ output = %s, disabled = true })' "$(lua_str "$name")"
         return 0
     fi
     mode="${rest%%,*}"
@@ -103,8 +99,51 @@ keyword_monitor() {
     rest="${rest#"${pos}"}"
     rest="${rest#,}"
     scale="${rest%%,*}"
-    # Lua hl.monitor without disabled=false leaves a previously disabled output off.
-    hyprctl eval "hl.monitor({ output = \"${name}\", disabled = false, mode = \"${mode}\", position = \"${pos}\", scale = \"${scale}\" })" >/dev/null 2>&1 || true
+    printf 'hl.monitor({ output = %s, disabled = false, mode = %s, position = %s, scale = %s })' \
+        "$(lua_str "$name")" "$(lua_str "$mode")" "$(lua_str "$pos")" "$(lua_str "$scale")"
+}
+
+keyword_monitor() {
+    local spec
+    spec="$(normalize_monitor_spec "$1")"
+    if ! hyprctl_is_lua; then
+        hyprctl keyword monitor "$spec" >/dev/null 2>&1 || true
+        return 0
+    fi
+    hyprctl eval "$(lua_monitor_stmt "$spec")" >/dev/null 2>&1 || true
+}
+
+# One eval so 0.56 does not warn about overlap while HDMI is still at 0x0.
+# Enabled outputs are applied right-to-left so the single-head panel moves
+# off 0x0 before DP-2 lands there.
+apply_lua_monitors() {
+    local file="$1" spec pos x stmt joined=""
+    local -a enable_lines=() disable_stmts=() stmts=()
+    while IFS= read -r spec; do
+        [[ -n "$spec" ]] || continue
+        spec="$(normalize_monitor_spec "$spec")"
+        if monitor_is_disabled "$spec"; then
+            disable_stmts+=("$(lua_monitor_stmt "$spec")")
+            continue
+        fi
+        pos="$(printf '%s\n' "${spec#*,}" | cut -d, -f2)"
+        x="${pos%%x*}"
+        [[ "$x" =~ ^-?[0-9]+$ ]] || x=0
+        enable_lines+=("$x $spec")
+    done < <(monitor_lines "$file")
+    if ((${#enable_lines[@]} > 0)); then
+        while IFS= read -r spec; do
+            [[ -n "$spec" ]] || continue
+            spec="${spec#* }"
+            stmts+=("$(lua_monitor_stmt "$spec")")
+        done < <(printf '%s\n' "${enable_lines[@]}" | sort -nr -k1,1)
+    fi
+    stmts+=("${disable_stmts[@]}")
+    ((${#stmts[@]} > 0)) || return 0
+    for stmt in "${stmts[@]}"; do
+        joined+="${stmt}; "
+    done
+    hyprctl eval "$joined" >/dev/null 2>&1 || true
 }
 
 lua_str() {
@@ -203,8 +242,8 @@ monitor_name() {
 }
 
 monitor_is_disabled() {
-    local spec="$1"
-    [[ "${spec#*,}" == disable ]]
+    local rest="${1#*,}"
+    [[ "$rest" == "disable" || "$rest" == "disabled" ]]
 }
 
 profile_conf() {
@@ -271,10 +310,14 @@ apply_monitor_conf() {
     local file="$1" spec
     [[ -f "$file" ]] || { echo "missing monitor conf: $file" >&2; return 1; }
     write_runtime_monitors "$file"
-    while IFS= read -r spec; do
-        [[ -n "$spec" ]] || continue
-        keyword_monitor "$spec"
-    done < <(monitor_lines "$file")
+    if hyprctl_is_lua; then
+        apply_lua_monitors "$file"
+    else
+        while IFS= read -r spec; do
+            [[ -n "$spec" ]] || continue
+            keyword_monitor "$spec"
+        done < <(monitor_lines "$file")
+    fi
     wait_conf_layout "$file" || true
 }
 
