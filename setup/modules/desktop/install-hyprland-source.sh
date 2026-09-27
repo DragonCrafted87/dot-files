@@ -136,6 +136,7 @@ install_build_deps() {
         "lib64Qt6Quick-devel qt6-qtquick-devel"
         "lib64Qt6QuickControls2-devel qt6-qtquickcontrols2-devel"
         "lib64qalculate-devel qalculate-devel libqalculate-devel"
+        "lib64pci-devel pciutils-devel libpci-devel"
         "lib64Qt6WaylandClient-devel lib64Qt6Wayland-devel qt6-qtwayland-devel lib64qt6wayland-devel"
         "qt6-qttools-devel lib64Qt6Tools-devel"
         "automake autoconf libtool xorg-x11-util-macros util-macros"
