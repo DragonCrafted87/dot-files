@@ -103,7 +103,24 @@ keyword_monitor() {
     rest="${rest#"${pos}"}"
     rest="${rest#,}"
     scale="${rest%%,*}"
-    hyprctl eval "hl.monitor({ output = \"${name}\", mode = \"${mode}\", position = \"${pos}\", scale = \"${scale}\" })" >/dev/null 2>&1 || true
+    # Lua hl.monitor without disabled=false leaves a previously disabled output off.
+    hyprctl eval "hl.monitor({ output = \"${name}\", disabled = false, mode = \"${mode}\", position = \"${pos}\", scale = \"${scale}\" })" >/dev/null 2>&1 || true
+}
+
+lua_str() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    printf '"%s"' "$s"
+}
+
+hypr_dispatch() {
+    if hyprctl_is_lua; then
+        hyprctl dispatch "$1" >/dev/null 2>&1 || true
+        return 0
+    fi
+    shift
+    hyprctl dispatch "$@" >/dev/null 2>&1 || true
 }
 
 keyword_option() {
@@ -125,9 +142,9 @@ dpms() {
     local action="$1"
     local mon="${2:-}"
     if [[ -n "$mon" ]]; then
-        hyprctl dispatch dpms "$action" "$mon" >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.dpms({ action = $(lua_str "$action"), monitor = $(lua_str "$mon") })" dpms "$action" "$mon"
     else
-        hyprctl dispatch dpms "$action" >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.dpms({ action = $(lua_str "$action") })" dpms "$action"
     fi
 }
 
@@ -386,10 +403,10 @@ refresh_cursor() {
     sleep 0.05
     keyword_option cursor:no_hardware_cursors 0
     if [[ -n "$mon" ]] && pos="$(monitor_center "$mon" || true)" && [[ -n "$pos" ]]; then
-        # shellcheck disable=SC2086
-        hyprctl dispatch movecursor $pos >/dev/null 2>&1 || true
+        read -r cx cy <<<"$pos"
+        hypr_dispatch "hl.dsp.cursor.move({ x = ${cx}, y = ${cy} })" movecursor "$cx" "$cy"
     else
-        hyprctl dispatch movecursor 1 1 >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.cursor.move({ x = 1, y = 1 })" movecursor 1 1
     fi
 }
 
@@ -445,7 +462,7 @@ restore_saved_workspaces_now() {
         ws="${ws%:*}"
         [[ -n "$ws" && -n "$mon" ]] || continue
         wait_for_monitor "$mon" || return 1
-        hyprctl dispatch moveworkspacetomonitor "$ws" "$mon" >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.workspace.move({ workspace = $(lua_str "$ws"), monitor = $(lua_str "$mon") })" moveworkspacetomonitor "$ws" "$mon"
     done <"$SAVED_WS_FILE"
     while IFS= read -r line; do
         [[ "$line" == active=* ]] || continue
@@ -453,8 +470,8 @@ restore_saved_workspaces_now() {
         ws="${mon##*:}"
         mon="${mon%:*}"
         [[ -n "$ws" && -n "$mon" ]] || continue
-        hyprctl dispatch focusmonitor "$mon" >/dev/null 2>&1 || true
-        hyprctl dispatch workspace "$ws" >/dev/null 2>&1 || true
+        hypr_dispatch "hl.dsp.focus({ monitor = $(lua_str "$mon") })" focusmonitor "$mon"
+        hypr_dispatch "hl.dsp.focus({ workspace = $(lua_str "$ws") })" workspace "$ws"
     done <"$SAVED_WS_FILE"
     if workspaces_restored; then
         rm -f "$SAVED_WS_FILE"
