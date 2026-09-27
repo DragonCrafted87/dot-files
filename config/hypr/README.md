@@ -170,7 +170,10 @@ planets, comets, and clusters, then gives each enabled monitor its own
 image through `hyprpaper`. Login runs `apply` (reuse today's cache).
 A user timer at 06:30 refreshes the set. `display-switch.sh` waits for
 the new layout, then re-applies so theater / workshare / desk each get
-wallpapers. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
+wallpapers. `hyprpaper.service` runs the daemon (`Restart=on-failure`)
+through `hypr-session-exec.sh`. The timer is a oneshot and only restarts
+that unit. Waking from idle runs `apply` again so a monitor that was
+disabled at 06:30 gets a still. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
 `.jpg`) are dropped; hyprpaper exits if it is asked to preload one.
 
 ```bash

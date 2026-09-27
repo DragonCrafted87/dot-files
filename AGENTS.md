@@ -144,7 +144,10 @@ nodes that were missing at daemon start. Role module: `configure-ratbag`.
 
 `astro-wallpaper.sh apply` at login. Daily timer at 06:30 runs `refresh`.
 `display-switch.sh` re-applies after a layout change. One still per
-enabled monitor via hyprpaper. `SUPER+SHIFT+W` forces a new set.
+enabled monitor via `hyprpaper.service` (`Restart=on-failure`, started
+through `hypr-session-exec.sh`). The daily timer exits when refresh
+finishes and tears down processes it started, so it must restart that
+unit and must not spawn hyprpaper itself. `SUPER+SHIFT+W` forces a new set.
 
 ### Litra Glow + Insta360 Link
 
