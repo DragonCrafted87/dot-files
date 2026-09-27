@@ -34,7 +34,7 @@ hl.window_rule({
     pin = true,
     no_anim = true,
     no_blur = true,
-    no_border = true,
+    border_size = 0,
     no_shadow = true,
     rounding = 0,
     suppress_event = "maximize fullscreen",
