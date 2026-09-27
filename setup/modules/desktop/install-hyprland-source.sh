@@ -293,6 +293,41 @@ patch_hyprland_hyprpm_pkgconfig() {
     sed -i -E 's/tomlplusplus hyprutils>=0\.7\.0/hyprutils>=0.7.0 tomlplusplus/' "$f"
 }
 
+# GCC 14 has no #embed; expand quoted #embed "path" into byte lists.
+rewrite_embed_tree() {
+    local root="$1"
+    [[ -d "$root" ]] || return 0
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would expand #embed in ${root}"; return 0; }
+    python3 - "$root" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+root = Path(sys.argv[1])
+embed = re.compile(r"^#embed\s+\"([^\"]+)\"\s*$", re.M)
+
+for path in root.rglob("*"):
+    if path.suffix not in {".c", ".cc", ".cpp", ".cxx", ".h", ".hpp"}:
+        continue
+    if "build" in path.parts:
+        continue
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if "#embed" not in text:
+        continue
+
+    def repl(match: re.Match[str]) -> str:
+        target = (path.parent / match.group(1)).resolve()
+        if not target.is_file():
+            raise SystemExit(f"#embed missing file {target} from {path}")
+        return ", ".join(str(b) for b in target.read_bytes())
+
+    new, n = embed.subn(repl, text)
+    if n:
+        path.write_text(new, encoding="utf-8")
+        print(f"expanded {n} #embed in {path}")
+PY
+}
+
 # GCC 14 has no #embed; expand the default lua config into a byte array.
 patch_hyprland_embed() {
     local hpp="${SRC_ROOT}/Hyprland/src/config/lua/DefaultConfig.hpp"
@@ -609,6 +644,7 @@ build_cmake_src() {
     [[ -f "${src}/CMakeLists.txt" ]] || die "no CMakeLists.txt in ${src}"
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would cmake-build ${src} -> ${PREFIX}"; return 0; }
     rewrite_append_range_tree "$src"
+    rewrite_embed_tree "$src"
     patch_libstdcxx_format "$src"
     rm -rf "${src}/build"
     fill_cmake_config_flags
