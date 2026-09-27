@@ -293,6 +293,19 @@ patch_hyprland_hyprpm_pkgconfig() {
     sed -i -E 's/tomlplusplus hyprutils>=0\.7\.0/hyprutils>=0.7.0 tomlplusplus/' "$f"
 }
 
+# OpenMandriva pci.h has no extern "C", so C++ TUs mangle pci_alloc.
+patch_pci_extern_c() {
+    local root="$1" f
+    [[ -d "$root" ]] || return 0
+    while IFS= read -r f; do
+        grep -q '#include <pci/pci.h>' "$f" || continue
+        grep -q 'extern "C"' "$f" && continue
+        log "wrap pci.h in extern C in ${f}"
+        [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && continue
+        sed -i 's|#include <pci/pci.h>|extern "C" {\n#include <pci/pci.h>\n}|' "$f"
+    done < <(find "$root" \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) ! -path '*/build/*')
+}
+
 # GCC 14 has no #embed; expand quoted #embed "path" into byte lists.
 rewrite_embed_tree() {
     local root="$1"
@@ -646,6 +659,7 @@ build_cmake_src() {
     rewrite_append_range_tree "$src"
     rewrite_embed_tree "$src"
     patch_libstdcxx_format "$src"
+    patch_pci_extern_c "$src"
     rm -rf "${src}/build"
     fill_cmake_config_flags
     cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" "${extra[@]}"
