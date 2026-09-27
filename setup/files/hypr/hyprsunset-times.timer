@@ -1,8 +1,8 @@
 [Unit]
-Description=Weekly hyprsunset sunrise and sunset times
+Description=Daily hyprsunset sunrise and sunset times
 
 [Timer]
-OnCalendar=weekly
+OnCalendar=daily
 Persistent=true
 RandomizedDelaySec=30m
 

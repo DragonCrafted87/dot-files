@@ -6,6 +6,11 @@
         "editor.insertSpaces": true,
         "editor.tabSize": 2
     },
+    "[markdown]": {
+        "editor.fontSize": 18,
+        "editor.wordWrap": "wordWrapColumn",
+        "editor.wordWrapColumn": 110
+    },
     "[yaml]": {
         "editor.autoIndent": "keep",
         "editor.defaultFormatter": "redhat.vscode-yaml",
@@ -13,6 +18,17 @@
         "editor.insertSpaces": true,
         "editor.tabSize": 2
     },
+    "markdown.preview.breaks": false,
+    "markdown.preview.fontSize": 22,
+    "markdown.preview.lineHeight": 1.8,
+    "markdown.preview.markEditorSelection": false,
+    "markdown.preview.scrollEditorWithPreview": false,
+    "markdown.preview.scrollPreviewWithEditor": false,
+    "markdown.preview.typographer": true,
+    "markdown.styles": [
+        "markdown.css"
+    ],
+    "markdown.validate.enabled": true,
     "yaml.format.enable": true,
     "yaml.format.printWidth": 120,
     "yaml.format.proseWrap": "preserve",

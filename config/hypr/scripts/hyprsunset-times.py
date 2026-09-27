@@ -21,7 +21,7 @@ from datetime import timezone
 from pathlib import Path
 
 NIGHT_TEMPERATURE = 4500
-STALE_AFTER = timedelta(days=7)
+STALE_AFTER = timedelta(days=1)
 ZENITH = 90.833
 # Desk location. Laptops can set SUN_LAT and SUN_LON on their host file later.
 DEFAULT_LATITUDE = 38.0892644

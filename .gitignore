@@ -14,3 +14,4 @@ config/Code/User/globalStorage/
 config/Code/User/workspaceStorage/
 config/Code/User/snippets
 config/Code/User/settings.json.bak.**
+config/vlc/vlc-qt-interface.conf
