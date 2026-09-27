@@ -14,7 +14,9 @@ Distro Hyprland 0.48.1 reads `hyprland.conf` and `conf.d/*.conf`. Source
 `hyprlock.conf` are shared.
 
 Startup runs `display-switch.sh restore` once (`exec-once` /
-`hyprland.start`). Reloads do not re-run restore.
+`hyprland.start`). Reloads re-read `~/.local/state/hypr/monitors.runtime.conf`
+from `lua/monitors.lua` (0.56) or `conf.d/monitors.conf` (0.48) so outputs
+keep their last layout.
 
 ## Graphical session (systemd)
 
