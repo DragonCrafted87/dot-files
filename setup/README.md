@@ -143,6 +143,9 @@ name `hyprland-source.desktop`, never overwriting the distro
 `/opt/hyprland/bin/start-hyprland-source` prepends the prefix to
 `PATH` / `LD_LIBRARY_PATH` only for that session. Exec does not encode
 the tag, so Ly does not need a desktop-file edit on upgrades.
+`hypridle`, `hyprpolkitagent`, the Hyprland portal, and `hyprsunset`
+run through `hypr-session-exec.sh` so they follow the compositor that
+is actually running.
 
 OpenMandriva has no single published dep list. The module translates the
 Fedora set from [Hyprland discussion #284](https://github.com/hyprwm/Hyprland/discussions/284)

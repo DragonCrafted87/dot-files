@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Launch the prefix-isolated Hyprland build. Distro binaries stay first
 # on a normal login PATH; this wrapper is only used by the Ly session.
+# graphical-session.sh imports PATH/LD_LIBRARY_PATH so user units follow.
 set -euo pipefail
 
 PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland}"

@@ -20,6 +20,10 @@ SESSION_VARS=(
     XDG_CONFIG_HOME
     XDG_STATE_HOME
     XDG_CACHE_HOME
+    XDG_DATA_DIRS
+    PATH
+    LD_LIBRARY_PATH
+    HYPRLAND_SOURCE_PREFIX
     QT_QPA_PLATFORM
     QT_QPA_PLATFORMTHEME
     GDK_BACKEND
@@ -82,9 +86,31 @@ ensure_unit() {
     return 1
 }
 
+ensure_dropins() {
+    local root src dest unit reload=0
+    root="$(repo_root)"
+    [[ -n "$root" ]] || return 0
+    shopt -s nullglob
+    for src in "${root}/setup/files/hypr/"*.service.d/*.conf; do
+        unit="$(basename "$(dirname "$src")")"
+        unit="${unit%.d}"
+        dest="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/${unit}.d/$(basename "$src")"
+        mkdir -p "$(dirname "$dest")"
+        if [[ ! -f "$dest" ]] || ! cmp -s "$src" "$dest"; then
+            install -m 0644 "$src" "$dest"
+            reload=1
+        fi
+    done
+    shopt -u nullglob
+    if [[ "$reload" == "1" ]]; then
+        systemctl --user daemon-reload
+    fi
+}
+
 cmd_start() {
     import_env
     ensure_unit
+    ensure_dropins
     if systemctl --user is-active --quiet "$UNIT"; then
         # Linger can leave the bind up after a crash without exec-shutdown.
         # Restart so WantedBy=graphical-session.target units run again.

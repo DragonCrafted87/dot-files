@@ -19,10 +19,17 @@ never reaches it and `WantedBy=graphical-session.target` units stay dead
 (hypridle, hyprpolkitagent, mako, network-mounts).
 
 `scripts/graphical-session.sh start` (exec-once) imports compositor env
-into the user systemd and starts `hyprland-session.service`, which
-`BindsTo=` the target. `exec-shutdown` runs `stop` so session units go
-away with the compositor. Linger still starts `default.target` at boot;
-that path must not claim a graphical session.
+(including `PATH`, `LD_LIBRARY_PATH`, `XDG_DATA_DIRS`, and
+`HYPRLAND_INSTANCE_SIGNATURE`) into the user systemd and starts
+`hyprland-session.service`, which `BindsTo=` the target. `exec-shutdown`
+runs `stop` so session units go away with the compositor. Linger still
+starts `default.target` at boot; that path must not claim a graphical
+session.
+
+`hypridle`, `hyprpolkitagent`, `xdg-desktop-portal-hyprland`, and
+`hyprsunset` use `scripts/hypr-session-exec.sh` so they follow the
+running compositor: `/opt/hyprland` for **Hyprland (source)**, `/usr`
+for the distro session.
 
 Desk GUI apps are not Hyprland `exec-once` lines. They are child units of
 `workstation-session.target` (WantedBy `graphical-session.target`): kitty,
