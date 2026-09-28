@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily astronomy wallpaper refresh
+
+[Timer]
+OnCalendar=*-*-* 06:30:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

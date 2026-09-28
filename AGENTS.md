@@ -6,8 +6,7 @@ second clone path.
 
 Read this before exploring the tree. Host-specific Hyprland behavior is
 in `config/hypr/README.md` and `config/hypr/REQUIREMENTS.md`. Role
-install is in `setup/README.md`. Planned-but-not-done layout notes are
-in `docs/structure.md`.
+install is in `setup/README.md`.
 
 ## Workflow
 
@@ -50,16 +49,41 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
 
 ## Setup modules
 
-- Lists in `setup/roles.conf`. `[common]` always runs. `laptop` is
-  `@workstation` plus laptop-only modules.
-- Roles: `workstation`, `laptop`, `htpc`, `server`.
-- Modules are `setup/modules/<name>.sh` and source `setup/lib.sh`.
+- Lists in `setup/roles.conf`. `[common]` always runs. `laptop` is a
+  subrole of `workstation` (`[subrole.laptop]`).
+- Roles: `workstation`, `htpc`, `server`. HTPC couch session plan:
+  `docs/htpc-role.md` (paused).
+- Modules source `${REPO_ROOT:-$DOTFILES_ROOT}/setup/lib/lib.sh`.
+- `setup/lib/lib.sh` is the only import. It loads the pieces under `setup/lib/`.
+- `roles.conf` stores the basename. `run_module` looks the file up.
 - Prefer adding a module + a `roles.conf` line over growing an unrelated
   script. Color/theme work for an app belongs in that app's install
   module (office → `install-office-printing`, games →
   `install-gaming-packages`, KDE chrome → `configure-mime-defaults`).
+- Source-build pins live in `setup/versions.conf`. `lib.sh` loads them
+  unless the same key is already in the environment.
+- `install-hyprland-session` keeps the OpenMandriva Hyprland packages and
+  enables `ly.service`.
+- `install-hyprland-source` builds the pinned Hyprland tag and the hyprland
+  ecosystem into `/opt/hyprland`. It must not overwrite `/usr` binaries
+  or `/usr/share/wayland-sessions/hyprland.desktop`. Ly extra session is
+  `hyprland-source.desktop` (**Hyprland (source)**).
 - `configure-litra-glow` installs hidraw udev for Logitech Litra Glow
   (`046d:c900`) and adds the user to `video`.
+- `configure-ratbag` installs `ratbagd` (and the Piper GUI), udev rules
+  for G603/G604 Lightspeed HID++, a hidraw rescan oneshot so ratbagd
+  sees the mice after hid-logitech-hidpp binds, and a user oneshot that
+  forces ratbag profile 0 after Windows G HUB overwrites onboard storage.
+- `configure-astro-wallpaper` installs `hyprpaper` and a daily user
+  timer. `scripts/astro-wallpaper.py` pulls astronomy stills and sets one
+  image per enabled monitor.
+- `configure-xdg-user-dirs` pins lowercase XDG dirs (`~/desktop`,
+  `~/downloads`, …) and sets `enabled=False` so login does not recreate
+  the English CamelCase names. `~/network` is the CIFS/NFS/rclone parent
+  from `install-network-mounts`.
+- `configure-locale` installs `setup/files/locale/locale.conf` to
+  `/etc/locale.conf` (byte-order `LC_COLLATE=C`, ISO `LC_TIME=en_DK`)
+  and the matching KDE Formats file. Needs `locales-en` for `en_DK`.
 - Modules run in a subprocess (`bash module.sh`), so env vars do not
   survive back to `role.sh`. Cross-module flags and other short-lived
   files go in `/tmp` (example:
@@ -78,16 +102,22 @@ scripts.
 - Audio per profile: `conf.d/audio.d/<host>-<profile>.conf`.
 - `display-profile.sh` applies `monitor=` lines via `hyprctl keyword`.
 - `display-switch.sh` owns the saved profile and calls `display-audio.sh`.
+- `config/hypr/lua/` is the source of truth for binds. `conf.d/` is the 0.48 tree.
 - Last profile: `~/.local/state/hypr/display-profile` (not in git).
 - `exec-once` restore runs once at login. `hyprctl reload` does not
   re-apply the profile.
+- Graphical desk apps start from `workstation-session.target` (one user
+  unit per app) on `graphical-session.target`, not from
+  `programs-autostart.conf`. `qs-startmenu.service` uses `Restart=always`.
+  Steam starts with `-silent`, Discord with `--start-minimized`. HTPC
+  extras use `htpc-session.target`.
 
 ### runewyrm (desk workstation)
 
 - Profiles: `desk` (triple head + S/PDIF soundbar),
   `theater` (HDMI ELMO + GPU HDMI 7.1),
   `workshare` (HDMI AOC + soundbar).
-- `SUPER+SHIFT+D` desk. `SUPER+SHIFT+S` single (theater vs workshare from
+- `SUPER+ALT+D` desk. `SUPER+ALT+S` single (theater vs workshare from
   HDMI EDID) and starts `display-switch.sh watch`.
 - Default audio sink on desk/workshare is the onboard S/PDIF soundbar
   `alsa_output.pci-0000_18_00.6.iec958-stereo`, **not** the Jabra.
@@ -103,11 +133,29 @@ The filename is hyphenated. Keep `# pylint: disable=invalid-name` at the
 top. Call it with `python3`; do not rely on a shebang plus executable
 bit (pre-commit `check-executables-have-shebangs`).
 
+### Logitech G603 / G604
+
+Windows G HUB on the work computer overwrites onboard profiles. A udev
+rule starts `reset-ratbag-profile.service`, which sets ratbag profile 0
+through `ratbagctl`. hid-logitech-hidpp bind also starts
+`ratbagd-hidraw-rescan.service` so ratbagd retries Lightspeed child
+nodes that were missing at daemon start. Role module: `configure-ratbag`.
+
+### Astronomy wallpapers
+
+`astro-wallpaper.sh apply` at login. Daily timer at 06:30 runs `refresh`.
+`display-switch.sh` re-applies after a layout change. One still per
+enabled monitor via `hyprpaper.service` (`Restart=on-failure`, started
+through `hypr-session-exec.sh`). The daily timer exits when refresh
+finishes and tears down processes it started, so it must restart that
+unit and must not spawn hyprpaper itself. `SUPER+ALT+W` forces a new set.
+
 ### Litra Glow + Insta360 Link
 
-`scripts/litra-camera-lights.py watch` is `exec-once`. It turns every
-USB Litra Glow on while the Insta360 Link (`2e1a:*`) has an open V4L2
-node, with a 1.5s debounce so browser probes do not flash the lamps.
+`scripts/litra-camera-lights.py watch` starts from
+`workstation-litra.service`. It turns every USB Litra Glow on while
+the Insta360 Link (`2e1a:*`) has an open V4L2 node, with a 1.5s debounce
+so browser probes do not flash the lamps.
 
 ### Jabra Speak 710
 
@@ -174,6 +222,7 @@ pre-commit run --all-files
 | Jabra Speak 710         | USB FS `5-2.1`, calls                               |
 | Insta360 Link           | USB HS `5-2.2`, V4L2 `/dev/video0`, MJPG            |
 | Litra Glow pair         | USB `5-2.3` and `5-2.4`, `046d:c900`                |
+| Logitech G604 (pair)    | Lightspeed `046d:c539` / device `046d:4085`         |
 | Valve Index / 3D camera | other controller (`16:00.0`), ignore for desk calls |
 
 PipeWire is 1.4.x + WirePlumber. Volume CLI is `wpctl`.
@@ -183,8 +232,9 @@ PipeWire is 1.4.x + WirePlumber. Volume CLI is `wpctl`.
 - Point desk default sink at the Jabra.
 - Grab Jabra evdev (`EVIOCGRAB`) so keyboard volume keys stay on the
   soundbar.
-- Treat `docs/structure.md` as current layout; several items there are
-  already done.
+- Treat `docs/todo.md` as current state. It is future work.
 - Commit secrets. Transfer with `setup/utility/transfer-secrets.sh`.
 - Overwrite an existing real `~/.config/<name>` directory; the linker
   will skip it.
+- Install the source Hyprland stack into `/usr` or `/usr/local` in a way
+  that shadows the OpenMandriva packages.

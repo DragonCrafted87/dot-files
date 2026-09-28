@@ -41,5 +41,5 @@ Do not pair the same pad over Bluetooth and the dongle at the same time.
 ## Skip xpadneo
 
 ```bash
-XBOX_INSTALL_XPADNEO=0 ~/dot-files/setup/modules/configure-xbox-controller.sh
+XBOX_INSTALL_XPADNEO=0 ~/dot-files/setup/modules/desktop/configure-xbox-controller.sh
 ```

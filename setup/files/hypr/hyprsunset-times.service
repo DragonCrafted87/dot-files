@@ -1,0 +1,7 @@
+[Unit]
+Description=Write hyprsunset.conf from local sunrise and sunset
+Documentation=file://%h/dot-files/config/hypr/scripts/hyprsunset-times.py
+
+[Service]
+Type=oneshot
+ExecStart=python3 %h/.config/hypr/scripts/hyprsunset-times.py apply

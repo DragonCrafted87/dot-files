@@ -4,7 +4,7 @@ Personal Linux (OpenMandriva Rock) and Windows developer setup. One git
 clone under `~/dot-files` is the source of truth. Role scripts install
 packages and link configs. Re-running a role is the intended upgrade path.
 
-Layout ideas that are **not done yet** live in `docs/structure.md`.
+Layout ideas that are **not done yet** live in `docs/todo.md`.
 
 ## Layout
 
@@ -29,20 +29,23 @@ Fresh box that already has a user and sshd, from a working computer:
 ~/dot-files/setup/role.sh workstation
 ```
 
-Roles: `workstation`, `laptop` (workstation plus laptop extras), `htpc`,
-`server`. Lists live in `setup/roles.conf`.
+Roles: `workstation`, `htpc`, `server`. Optional subroles (`laptop`,
+`gaming`, `artifact-repo`, `nfs-server`) are saved on the box and
+re-applied by `update-role`. Lists live in `setup/roles.conf`.
 
 Later, on the machine itself:
 
 ```bash
 update-dot-files          # git pull this repo, re-source bashrc
-update-role               # re-run the saved role
+update-role               # re-run the saved role plus saved subroles
 update-role workstation   # set/save a role once if none is recorded
+enable-subrole laptop     # apply once; later update-role keeps it
 ```
 
 Saved state:
 
 - `~/.config/dot-files/role` — last Linux role
+- `~/.config/dot-files/subroles` — enabled subroles, one name per line
 - `~/.config/dot-files/root` — path to this clone (`DOTFILES_ROOT`)
 
 ## Windows machine

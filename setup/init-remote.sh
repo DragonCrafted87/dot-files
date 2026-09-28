@@ -3,7 +3,7 @@
 # generates a key on the new box, registers that key with the local gh
 # session, clones the repo, then runs the role.
 #
-#   ./setup/init-remote.sh dragon@newbox.lan laptop
+#   ./setup/init-remote.sh dragon@newbox.lan workstation
 
 set -euo pipefail
 
@@ -14,12 +14,12 @@ role="${2:-}"
 repo_url="${DOTFILES_REPO_URL:-git@github.com:DragonCrafted87/dot-files.git}"
 
 if [[ -z "$target" || -z "$role" ]]; then
-    printf 'usage: %s user@host workstation|laptop|htpc|server\n' "$0" >&2
+    printf 'usage: %s user@host workstation|htpc|server\n' "$0" >&2
     exit 1
 fi
 
 case "$role" in
-    workstation | laptop | htpc | server) ;;
+    workstation | htpc | server) ;;
     *)
         printf 'error: unknown role %s\n' "$role" >&2
         exit 1

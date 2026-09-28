@@ -8,8 +8,75 @@ layouts live in `conf.d/monitors.d/` and are the source of truth.
 `display-profile.sh` applies `hyprctl keyword monitor` from those files.
 `display-switch.sh` owns the saved profile and calls `display-audio.sh`.
 
-Startup runs `display-switch.sh restore` once (`exec-once`). Reloads do
-not re-run restore.
+Distro Hyprland 0.48.1 reads `hyprland.conf` and `conf.d/*.conf`. Source
+0.56.2 reads `hyprland.lua` and `lua/*.lua` instead (it never opens the
+`.conf` tree when the lua entry exists). Scripts, `hypridle.conf`, and
+`hyprlock.conf` are shared.
+
+Startup runs `display-switch.sh restore` once (`exec-once` /
+`hyprland.start`). Reloads re-read `~/.local/state/hypr/monitors.runtime.conf`
+from `lua/monitors.lua` (0.56) or `conf.d/monitors.conf` (0.48) so outputs
+keep their last layout.
+
+## Graphical session (systemd)
+
+ly launches `Hyprland.desktop` (`Exec=Hyprland`), not the UWSM session.
+`graphical-session.target` has `RefuseManualStart=yes`, so a raw compositor
+never reaches it and `WantedBy=graphical-session.target` units stay dead
+(hypridle, hyprpolkitagent, mako, network-mounts).
+
+`scripts/graphical-session.sh start` (exec-once) imports compositor env
+(including `PATH` and `HYPRLAND_INSTANCE_SIGNATURE`) into the user
+systemd and starts `hyprland-session.service`, which `BindsTo=` the
+target. It does not import `LD_LIBRARY_PATH`; prefix libxkbcommon would
+break kitty/qs. `exec-shutdown`
+runs `stop` so session units go away with the compositor. Linger still
+starts `default.target` at boot; that path must not claim a graphical
+session.
+
+`uwsm` is installed and unused. The source build passes `-DNO_UWSM=true`.
+Its env preloader and `uwsm app` slices are more session manager than
+this login needs. What we keep from that idea: graphical units stop
+with the compositor, and linger services do not. `hyprland-session.service`
+`PropagatesStopTo=` `graphical-session.target`. Role apps `PartOf=`
+`workstation-session.target`, which `PartOf=` the graphical target.
+`hypridle`, `hyprpolkitagent`, `mako`, and `hyprsunset` get the same
+`PartOf=` from a user drop-in (the distro units already say it; the
+drop-in keeps logout behavior if a package update drops the line).
+`network-mounts.service` stays off that chain. Programs started from
+binds (kitty, dolphin) stay children of Hyprland.
+
+`hypridle`, `hyprpolkitagent`, `xdg-desktop-portal-hyprland`, and
+`hyprsunset` use `scripts/hypr-session-exec.sh` so they follow the
+running compositor: `/opt/hyprland` for **Hyprland (source)**, `/usr`
+for the distro session. `hyprsunset-times.py` rewrites
+`hyprsunset.conf` from the built-in coordinates, or from `SUN_LAT` /
+`SUN_LON` when the host file sets both. A weekly
+user timer runs it, and session start runs it when that file is older
+than seven days. Hyprsunset 0.4.0 only stores clock times.
+
+Desk GUI apps are not Hyprland `exec-once` lines. They are child units of
+`workstation-session.target` (WantedBy `graphical-session.target`): kitty,
+Brave, Steam (`-silent` tray), Discord (`--start-minimized`),
+`qs-startmenu` (`Restart=always`), spin-border (0.48 only; 0.56 uses
+`borderangle` loop), Litra, KDE Connect.
+HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
+the target that matches `~/.config/dot-files/role`.
+
+`xdg-document-portal.service` gets a user drop-in
+(`TimeoutStopSec=5`, `TimeoutStopFailureMode=kill`) so logout does not
+wait the default 90s on a stuck FUSE unmount of `/run/user/$UID/doc`.
+
+```bash
+systemctl --user status workstation-session.target
+systemctl --user status qs-startmenu.service
+```
+
+```bash
+~/.config/hypr/scripts/graphical-session.sh start
+~/.config/hypr/scripts/graphical-session.sh status
+~/.config/hypr/scripts/graphical-session.sh stop
+```
 
 File names:
 
@@ -30,12 +97,12 @@ against `hyprctl monitors` description/make/model on `SWITCH_PORT`.
 | `theater`   | `runewyrm-theater.conf`   | DP-2 and DP-3 disabled; HDMI ELMO MC1 1920x1080@60 | GPU HDMI 7.1, stereo fallback |
 | `workshare` | `runewyrm-workshare.conf` | DP-2 and DP-3 disabled; HDMI AOC 2560x1440@143.91  | same soundbar as desk         |
 
-Theater and workshare share `HDMI-A-1`. `SUPER+SHIFT+S` runs `single`,
+Theater and workshare share `HDMI-A-1`. `SUPER+ALT+S` runs `single`,
 which reads the panel currently on that port, picks theater (ELMO) or
 workshare (AOC), and daemonizes `display-switch.sh watch`. That watcher
 blocks on `inotifywait` for `/sys/class/drm/card0-HDMI-A-1/{status,edid}`
 and re-selects the profile when the HDMI switch changes the panel.
-`SUPER+SHIFT+D` (desk) kills the watcher. It is not an `exec-once` loop.
+`SUPER+ALT+D` (desk) kills the watcher. It is not an `exec-once` loop.
 
 Desk still uses its own bind because that is the triple-head layout, not
 "whatever is on HDMI."
@@ -63,7 +130,7 @@ the git-linked tree).
 ~/.config/hypr/scripts/display-switch.sh status
 ```
 
-Keybinds: `SUPER+SHIFT+D` desk, `SUPER+SHIFT+S` single (auto theater /
+Keybinds: `SUPER+ALT+D` desk, `SUPER+ALT+S` single (auto theater /
 workshare from the HDMI-switch EDID).
 
 `SUPER+[0-9]` runs `scripts/switch-workspace.py`. If that workspace is
@@ -75,7 +142,7 @@ moves to the monitor under the cursor.
 `scripts/litra-camera-lights.py` watches the Insta360 Link (`2e1a:*`)
 and turns every USB Litra Glow (`046d:c900`) on while that camera has an
 open V4L2 node. It waits 1.5s so a browser camera probe does not flash
-the lamps. Hyprland starts the watcher with `exec-once`.
+the lamps. `workstation-litra.service` starts the watcher.
 
 ```bash
 python3 ~/.config/hypr/scripts/litra-camera-lights.py status
@@ -83,8 +150,60 @@ python3 ~/.config/hypr/scripts/litra-camera-lights.py on
 python3 ~/.config/hypr/scripts/litra-camera-lights.py off
 ```
 
-hidraw access needs `setup/modules/configure-litra-glow.sh` (udev rule
-plus the `video` group).
+hidraw access needs `setup/modules/desktop/configure-litra-glow.sh` (udev
+rule plus the `video` group).
+
+## Logitech G603 / G604
+
+Windows G HUB on the work PC overwrites onboard ratbag profiles. A udev
+rule starts the user oneshot `reset-ratbag-profile.service`, which runs
+`scripts/reset-ratbag-profile.sh apply` and sets profile 0 through
+`ratbagctl`. The same unit is enabled for `default.target` so login also
+resets a mouse that was already plugged in.
+
+Lightspeed child HID++ nodes (`046d:4085` G604, `046d:406c` G603) appear
+after the `046d:c539` receiver. ratbagd ignores the receiver and only
+enumerates initialized hidraw, so a GUI client can open against an empty
+daemon. `hid-logitech-hidpp` bind starts `ratbagd-hidraw-rescan.service`,
+which waits two seconds and replays hidraw ADD events. ratbagd also
+gains an `ExecStartPost` udevadm trigger. Role module: `configure-ratbag`.
+
+```bash
+~/.config/hypr/scripts/reset-ratbag-profile.sh apply
+~/.config/hypr/scripts/reset-ratbag-profile.sh status
+reset-ratbag-profile
+ratbag-status
+```
+
+IDs: Lightspeed receiver `046d:c539`, G603 `046d:406c` / Bluetooth
+`046d:b01c`, G604 `046d:4085` / Bluetooth `046d:b024`. Override the match
+or profile with `RATBAG_DEVICE_MATCH` and `RATBAG_PROFILE`.
+
+## Astronomy wallpapers
+
+`scripts/astro-wallpaper.py` downloads stills of nebulae, galaxies,
+planets, comets, and clusters, then gives each enabled monitor its own
+image through `hyprpaper`. Login runs `apply` (reuse today's cache).
+A user timer at 06:30 refreshes the set. `display-switch.sh` waits for
+the new layout, then re-applies so theater / workshare / desk each get
+wallpapers. `hyprpaper.service` runs the daemon (`Restart=on-failure`)
+through `hypr-session-exec.sh`. The timer is a oneshot and only restarts
+that unit. Waking from idle runs `apply` again so a monitor that was
+disabled at 06:30 gets a still. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
+`.jpg`) are dropped; hyprpaper exits if it is asked to preload one.
+
+```bash
+~/.config/hypr/scripts/astro-wallpaper.sh apply
+~/.config/hypr/scripts/astro-wallpaper.sh refresh
+~/.config/hypr/scripts/astro-wallpaper.sh status
+astro-wallpaper-refresh
+```
+
+`SUPER+ALT+W` forces a new set. Cache lives in
+`~/.cache/hypr/astro-wallpapers/`. Generated hyprpaper config is
+`~/.local/state/hypr/hyprpaper.conf`. Optional `NASA_API_KEY` improves
+APOD quota; Wikimedia Commons is the default pool. Role module:
+`configure-astro-wallpaper`.
 
 ## Steam / Proton
 
@@ -101,7 +220,7 @@ Title-specific env lives in `steam-games/<SteamAppId>.conf`. See
 `steam-games/README.md`. After `update-dot-files` the script is already
 at `~/.config/hypr/scripts/` because this whole tree is linked.
 
-Swap to theater first (`SUPER+SHIFT+S` with the ELMO on the switch), then
+Swap to theater first (`SUPER+ALT+S` with the ELMO on the switch), then
 launch. The wrap script will see HDMI-only and use the live TV mode.
 
 ## Idle
@@ -116,12 +235,14 @@ BOINC idle/GPU policy lives in `setup/files/boinc/prefs/<role>.xml`
 those files.
 
 When `hosts.d/<host>.conf` sets `IDLE_MONITOR`, idle-off records
-workspaces on that output, `dpms off` that output **and** `DESK_PORTS`
-when those outputs are not `disable` in the active conf, then disables
-the idle monitor so the TV drops the link. idle-on `dpms on` the desk
-ports only when the active conf leaves them enabled, re-enables the idle
-monitor using the line from that conf, and restores those workspaces.
-theater and workshare leave the desk DPs disabled.
+workspaces on that output and `dpms off` that output **and** `DESK_PORTS`
+when those outputs are not `disable` in the active conf. It then disables
+the idle monitor only if another output stays enabled (desk), so the TV
+drops the link without leaving the compositor with zero `wl_output`s.
+theater and workshare keep HDMI and only DPMS it: disabling the last
+output crashes Brave, Quickshell, and the desktop portals. idle-on
+`dpms on` the remaining ports, re-enables the idle monitor when it was
+disabled, and restores those workspaces.
 
 Hosts without `IDLE_MONITOR` just `dpms off` / `dpms on`.
 

@@ -1,31 +1,15 @@
-# Palette leftovers
+# Todo
 
-Tracked after the Tango Dark pass. Not scheduled.
+Not scheduled.
 
-## Cursors
+## hyprland-source
 
-- Hypr / GTK / KDE already name `breeze_cursors`.
-- Still want a Tango-shaped pointer set if one exists that is HiDPI-clean
-  and packaged, or a small custom theme under `~/.icons`.
-- Decide whether Hyprcursor (`.hlc`) is worth shipping vs XCursor only.
+- once confirmed stable remove distro hyprland following the outline in ./setup/files/hyprland-source/README.md
 
-## Wallpapers
+## htpc
 
-- Hyprland logo splash is already disabled.
-- No managed wallpaper yet (`hyprpaper` / one still under
-  `~/Pictures`).
-- Want a Tango-adjacent dark still (black + blue `#3465A4` / purple
-  `#75507B`) that covers desk + theater + laptop without per-host files
-  if possible.
+- paused; remaining work is in [htpc-role.md](htpc-role.md)
 
-## local builds
+## quickshell
 
-- current version of hyprland
-
-## BOINC
-
-- After every machine has the native `/usr/local` client, drop leftover
-  Flatpak references: `edu.berkeley.BOINC`, the
-  `~/.var/app/edu.berkeley.BOINC` migration in `install-boinc.sh`, and
-  any docs that still mention the Flathub app. Keep the uninstall step
-  until that sweep so a late box still gets cleaned up.
+- move to real applications once the swap to the source hyprland build is done
