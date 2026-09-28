@@ -115,4 +115,13 @@ if grep -q '^delete-plan$' "${dir}.actions"; then
     exit 1
 fi
 
+template="${repo}/setup/files/systemd/dot-files-reset.service.in"
+rendered="$(sed "s|@RESET_CONTINUE@|${continue_sh}|" "$template")"
+printf '%s\n' "$rendered" | grep -q 'Type=oneshot'
+printf '%s\n' "$rendered" | grep -q 'Before=ly.service'
+printf '%s\n' "$rendered" | grep -q 'Conflicts=ly.service'
+printf '%s\n' "$rendered" | grep -q 'TimeoutStartSec=infinity'
+printf '%s\n' "$rendered" | grep -q "ExecStart=${continue_sh}"
+printf '%s\n' "$rendered" | grep -q 'ConditionPathExists=/var/lib/dot-files/reset-plan/phase'
+
 printf 'reset-continue ok\n'

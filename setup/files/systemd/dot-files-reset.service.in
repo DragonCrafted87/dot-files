@@ -1,0 +1,17 @@
+[Unit]
+Description=Continue dot-files role reset
+After=network-online.target
+Wants=network-online.target
+Before=ly.service
+Conflicts=ly.service
+ConditionPathExists=/var/lib/dot-files/reset-plan/phase
+
+[Service]
+Type=oneshot
+ExecStart=@RESET_CONTINUE@
+TimeoutStartSec=infinity
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
