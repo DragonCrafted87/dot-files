@@ -20,7 +20,7 @@ new_plan() {
 }
 
 run_phase() {
-    local dir="$1" remove_rc="${2:-0}" install_rc="${3:-0}"
+    local dir="$1" remove_rc="${2:-0}" install_rc="${3:-0}" early_fail="${4:-0}"
     local actions="${dir}.actions"
     : >"$actions"
     set +e
@@ -29,6 +29,7 @@ run_phase() {
         RESET_ACTION_LOG="$actions" \
         RESET_TEST_REMOVE_RC="$remove_rc" \
         RESET_TEST_INSTALL_RC="$install_rc" \
+        RESET_TEST_EARLY_FAIL="$early_fail" \
         bash "$continue_sh" >"${dir}.out" 2>"${dir}.err"
     local rc=$?
     set -e
@@ -102,5 +103,16 @@ assert_grep '^disable-unit$' "${dir}.actions"
 assert_grep '^unmask-ly$' "${dir}.actions"
 assert_grep '^delete-plan$' "${dir}.actions"
 assert_grep '^reboot$' "${dir}.actions"
+
+# early install failure is not swallowed as success
+dir="$(new_plan install 0)"
+run_phase "$dir" 0 0 1 >/dev/null
+[[ "$(tr -d '[:space:]' <"${dir}/phase")" == install ]]
+[[ "$(tr -d '[:space:]' <"${dir}/attempts")" == 1 ]]
+assert_grep '^reboot$' "${dir}.actions"
+if grep -q '^delete-plan$' "${dir}.actions"; then
+    printf 'early install failure deleted the plan\n' >&2
+    exit 1
+fi
 
 printf 'reset-continue ok\n'

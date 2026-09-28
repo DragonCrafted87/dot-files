@@ -86,17 +86,24 @@ run_install() {
     record write-role
     record run-role
     if [[ "$DRY" == 1 ]]; then
+        # false must be a simple command. set -e ignores a failure inside
+        # if/&&/||, which would hide this test switch.
+        if [[ "${RESET_TEST_EARLY_FAIL:-0}" != 1 ]]; then
+            return "${RESET_TEST_INSTALL_RC:-0}"
+        fi
+        false
         return "${RESET_TEST_INSTALL_RC:-0}"
     fi
-    local repo role user home
+    local repo role user home group
     repo="$(read_trim "${PLAN_DIR}/repo")"
     role="$(read_trim "${PLAN_DIR}/role")"
     user="$(read_trim "${PLAN_DIR}/user")"
     home="$(getent passwd "$user" | cut -d: -f6)"
     [[ -n "$home" && -d "$home" ]] || return 1
-    install -d -o "$user" -g "$user" "${home}/.config/dot-files"
-    install -m 0644 -o "$user" -g "$user" "${PLAN_DIR}/role" "${home}/.config/dot-files/role"
-    install -m 0644 -o "$user" -g "$user" "${PLAN_DIR}/subroles" "${home}/.config/dot-files/subroles"
+    group="$(id -g "$user")"
+    install -d -o "$user" -g "$group" "${home}/.config/dot-files"
+    install -m 0644 -o "$user" -g "$group" "${PLAN_DIR}/role" "${home}/.config/dot-files/role"
+    install -m 0644 -o "$user" -g "$group" "${PLAN_DIR}/subroles" "${home}/.config/dot-files/subroles"
     sudo -u "$user" -H env HOME="$home" USER="$user" \
         bash "${repo}/setup/role.sh" "$role"
 }
@@ -127,8 +134,24 @@ run_attempt() {
         return 0
     fi
     case "$phase" in
-        remove) run_remove || rc=$? ;;
-        install) run_install || rc=$? ;;
+        remove)
+            set +e
+            (
+                set -e
+                run_remove
+            )
+            rc=$?
+            set -e
+            ;;
+        install)
+            set +e
+            (
+                set -e
+                run_install
+            )
+            rc=$?
+            set -e
+            ;;
         *)
             stop_forever "$phase" "$attempts"
             return 0
