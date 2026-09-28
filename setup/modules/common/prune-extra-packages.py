@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SETUP_DIR = Path(__file__).resolve().parent.parent
+SETUP_DIR = Path(__file__).resolve().parent.parent.parent
 FILES = SETUP_DIR / "files"
 PACKAGES = FILES / "packages"
 
@@ -93,6 +93,9 @@ def installed_flatpaks() -> list[str]:
 
 
 def require_reset_session() -> None:
+    if os.environ.get("RESET_FROM_BOOT") == "1":
+        log("reset session: boot job")
+        return
     if os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_TTY"):
         log("reset session: ssh")
         return
