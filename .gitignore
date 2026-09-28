@@ -13,3 +13,4 @@ config/Code/User/globalStorage/
 config/Code/User/workspaceStorage/
 config/Code/User/snippets
 config/Code/User/settings.json.bak.**
+bashrc.d/radformation.bashrc

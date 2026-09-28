@@ -1,3 +1,6 @@
 # Extra packages for a work developer box.
 # Common packages are always included; add work-only IDs here.
 Microsoft.VisualStudioCode
+Logitech.GHUB
+7zip.7zip
+Brave.Brave
