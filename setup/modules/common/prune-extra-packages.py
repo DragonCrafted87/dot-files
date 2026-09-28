@@ -189,7 +189,7 @@ def main() -> int:
             log("dnf remove")
             raise SystemExit(subprocess.call(cmd))
         else:
-            warn("not removing; re-run with --reset --force from a VT or SSH")
+            warn("this run did not remove packages")
 
     fps = installed_flatpaks()
     if fps:
