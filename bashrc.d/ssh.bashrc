@@ -23,41 +23,35 @@ case "$HOSTNAME" in
         }
         ;;
     *)
-        # Start SSH Agent
-        #----------------------------
-
         SSH_ENV="$HOME/.ssh/environment"
 
         function run_ssh_env {
             # shellcheck disable=SC1090
-            . "${SSH_ENV}" > /dev/null
+            [ -f "${SSH_ENV}" ] && . "${SSH_ENV}" > /dev/null
         }
 
-        function start_ssh_agent {
-            echo "Initializing new SSH agent..."
-            ssh-agent | sed 's/^echo/#echo/' > "${SSH_ENV}"
-            echo "succeeded"
-            chmod 600 "${SSH_ENV}"
-
-            run_ssh_env;
-
-            # Add only private key files, excluding .pub and known non-key files
+        function add_ssh_keys {
             for key in "$HOME"/.ssh/id_*; do
-                # Skip if file is a .pub, directory, or known non-key file
                 if [[ -f "$key" && ! "$key" =~ \.pub$ && ! "$key" =~ (config|known_hosts|environment|authorized_keys)$ ]]; then
                     ssh-add "$key"
                 fi
             done
         }
 
-        if [ -f "${SSH_ENV}" ]; then
-            run_ssh_env;
-            # shellcheck disable=SC2009
-            ps -ef | grep "${SSH_AGENT_PID}" | grep ssh-agent$ > /dev/null || {
-                start_ssh_agent;
-            }
-        else
-            start_ssh_agent;
-        fi
+        function start_ssh_agent {
+            echo "Initializing new SSH agent..."
+            ssh-agent | sed 's/^echo/#echo/' > "${SSH_ENV}"
+            chmod 600 "${SSH_ENV}"
+            run_ssh_env
+            add_ssh_keys
+        }
+
+        run_ssh_env
+        ssh-add -l > /dev/null 2>&1
+        case $? in
+            0) ;;                 # agent alive, keys loaded
+            1) add_ssh_keys ;;    # agent alive, no keys
+            *) start_ssh_agent ;; # can't reach an agent
+        esac
         ;;
 esac
