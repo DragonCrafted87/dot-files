@@ -56,6 +56,19 @@ install_build_deps() {
     ensure_packages "${pkgs[@]}"
 }
 
+# Shared libraries boincmgr links. The devel package pulls these in at
+# build time, then reset removes that devel package and the libraries
+# with it. A matching version stamp skips the compile, so every role
+# run has to install the runtime packages itself.
+install_runtime_deps() {
+    ensure_packages \
+        lib64wx_baseu3.2_0 \
+        lib64wx_baseu_net3.2_0 \
+        lib64wx_gtk3u_core3.2_0 \
+        lib64wx_gtk3u_html3.2_0 \
+        lib64wx_gtk3u_webview3.2_0
+}
+
 boinc_already_built() {
     [[ -x "${BOINC_PREFIX}/bin/boinc" ]] || return 1
     [[ -x "${BOINC_PREFIX}/bin/boincmgr" ]] || return 1
