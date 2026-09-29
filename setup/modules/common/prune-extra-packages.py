@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SETUP_DIR = Path(__file__).resolve().parent.parent
+SETUP_DIR = Path(__file__).resolve().parent.parent.parent
 FILES = SETUP_DIR / "files"
 PACKAGES = FILES / "packages"
 
@@ -93,6 +93,9 @@ def installed_flatpaks() -> list[str]:
 
 
 def require_reset_session() -> None:
+    if os.environ.get("RESET_FROM_BOOT") == "1":
+        log("reset session: boot job")
+        return
     if os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_TTY"):
         log("reset session: ssh")
         return
@@ -184,9 +187,11 @@ def main() -> int:
         elif force:
             cmd = ["sudo", "dnf", "remove", "-y", *to_remove]
             log("dnf remove")
-            raise SystemExit(subprocess.call(cmd))
+            rc = subprocess.call(cmd)
+            if rc != 0:
+                raise SystemExit(rc)
         else:
-            warn("not removing; re-run with --reset --force from a VT or SSH")
+            warn("this run did not remove packages")
 
     fps = installed_flatpaks()
     if fps:
@@ -196,7 +201,9 @@ def main() -> int:
         if dry:
             print("dry-run: flatpak uninstall -y --all")
         elif force:
-            subprocess.call(["sudo", "flatpak", "uninstall", "-y", "--all"])
+            raise SystemExit(
+                subprocess.call(["sudo", "flatpak", "uninstall", "-y", "--all"])
+            )
     return 0
 
 
