@@ -47,19 +47,25 @@ After the clone, SSH in and run the role:
 
 ## Reset without reinstalling
 
-Keeps `/home` and the role's declared packages. Drops other
-user-installed rpms and extra Flatpaks (Plasma leftovers included).
+`--reset` shows the removal preview, asks for approval, then asks about
+the role and subroles. The last yes reboots. Later boots remove
+packages, run the normal role update, and reboot once more. Workstation
+and HTPC stop at Ly. Server stops at the text console.
+
+Quitting the pager or answering no schedules nothing. `--force` is not
+a reset flag. A failed phase reboots once and retries. A second failure
+stays on the console until `--reset-abort`.
 
 ```bash
-./setup/role.sh --reset workstation
-./setup/role.sh --reset --force workstation
-./setup/role.sh --dry-run --reset workstation
+./setup/role.sh --reset
+./setup/role.sh --reset --role htpc
+./setup/role.sh --dry-run --reset
+./setup/role.sh --reset-abort
 ```
 
-The first run only prints the extras and may run from a graphical
-session. `--force` actually removes them and must run from a real VT
-or SSH. Add names to `files/packages/never-remove.list` if something you
-want is listed.
+`/home` stays. The remove boot drops other user-installed rpms and extra
+Flatpaks. Add names to `files/packages/never-remove.list` if something
+you want is listed.
 
 A single module can be run on its own:
 
