@@ -199,7 +199,9 @@ def main() -> int:
         if dry:
             print("dry-run: flatpak uninstall -y --all")
         elif force:
-            subprocess.call(["sudo", "flatpak", "uninstall", "-y", "--all"])
+            raise SystemExit(
+                subprocess.call(["sudo", "flatpak", "uninstall", "-y", "--all"])
+            )
     return 0
 
 

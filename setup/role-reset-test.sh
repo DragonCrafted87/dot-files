@@ -161,6 +161,10 @@ if ! grep -q 'no reset is in progress' "$missing_out"; then
     cat "$missing_out" >&2
     fail "--reset-abort with no plan did not say no reset is in progress"
 fi
+if grep -q 'systemctl stop' "$missing_out"; then
+    cat "$missing_out" >&2
+    fail "--reset-abort with no plan printed systemctl stop"
+fi
 if [[ -e "$missing_plan" ]]; then
     fail "--reset-abort created a missing plan"
 fi
@@ -182,6 +186,16 @@ if [[ "$abort_rc" -ne 0 ]]; then
 fi
 if [[ -e "$abort_plan" ]]; then
     fail "--reset-abort left ${abort_plan}"
+fi
+if ! grep -q 'systemctl stop dot-files-reset.service' "$abort_out"; then
+    cat "$abort_out" >&2
+    fail "--reset-abort did not print systemctl stop"
+fi
+stop_at="$(grep -n 'systemctl stop dot-files-reset.service' "$abort_out" | head -n1 | cut -d: -f1)"
+disable_at="$(grep -n 'systemctl disable dot-files-reset.service' "$abort_out" | head -n1 | cut -d: -f1)"
+if [[ -z "$stop_at" || -z "$disable_at" || "$stop_at" -ge "$disable_at" ]]; then
+    cat "$abort_out" >&2
+    fail "--reset-abort did not print systemctl stop before disable"
 fi
 if ! grep -q 'systemctl disable dot-files-reset.service' "$abort_out"; then
     cat "$abort_out" >&2
@@ -212,6 +226,10 @@ if [[ "$decline_rc" -ne 0 ]]; then
 fi
 if [[ -e "${decline_plan}/phase" ]]; then
     fail "declined start wrote ${decline_plan}/phase"
+fi
+if grep -q 'systemctl stop' "$decline_out"; then
+    cat "$decline_out" >&2
+    fail "declined start printed systemctl stop"
 fi
 if ! grep -q '^workstation$' "${CONFIG_TARGET_DIR}/dot-files/role"; then
     fail "--reset rewrote the saved role"

@@ -85,6 +85,17 @@ run_remove() {
 run_install() {
     record write-role
     record run-role
+    local repo role user home group uid runtime waited
+    repo="$(read_trim "${PLAN_DIR}/repo")"
+    role="$(read_trim "${PLAN_DIR}/role")"
+    user="$(read_trim "${PLAN_DIR}/user")"
+    home="$(getent passwd "$user" | cut -d: -f6)"
+    uid="$(id -u "$user")"
+    [[ -n "$home" && -n "$uid" ]] || return 1
+    runtime="/run/user/${uid}"
+    # Recorded in dry-run too. Linger at role-install time is too late:
+    # the user bus has to exist before role.sh's systemctl --user calls.
+    record "start-user-session XDG_RUNTIME_DIR=${runtime} DOTFILES_HOME=${home}"
     if [[ "$DRY" == 1 ]]; then
         # false must be a simple command. set -e ignores a failure inside
         # if/&&/||, which would hide this test switch.
@@ -94,17 +105,29 @@ run_install() {
         false
         return "${RESET_TEST_INSTALL_RC:-0}"
     fi
-    local repo role user home group
-    repo="$(read_trim "${PLAN_DIR}/repo")"
-    role="$(read_trim "${PLAN_DIR}/role")"
-    user="$(read_trim "${PLAN_DIR}/user")"
-    home="$(getent passwd "$user" | cut -d: -f6)"
-    [[ -n "$home" && -d "$home" ]] || return 1
+    [[ -d "$home" ]] || return 1
     group="$(id -g "$user")"
     install -d -o "$user" -g "$group" "${home}/.config/dot-files"
     install -m 0644 -o "$user" -g "$group" "${PLAN_DIR}/role" "${home}/.config/dot-files/role"
     install -m 0644 -o "$user" -g "$group" "${PLAN_DIR}/subroles" "${home}/.config/dot-files/subroles"
-    sudo -u "$user" -H env HOME="$home" USER="$user" \
+    loginctl enable-linger "$user"
+    systemctl start "user@${uid}.service"
+    waited=0
+    while [[ ! -S "${runtime}/bus" ]]; do
+        if [[ "$waited" -ge 30 ]]; then
+            return 1
+        fi
+        sleep 1
+        waited=$((waited + 1))
+    done
+    sudo -u "$user" -H env \
+        HOME="$home" \
+        USER="$user" \
+        LOGNAME="$user" \
+        XDG_RUNTIME_DIR="$runtime" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=${runtime}/bus" \
+        DOTFILES_USER="$user" \
+        DOTFILES_HOME="$home" \
         bash "${repo}/setup/role.sh" "$role"
 }
 

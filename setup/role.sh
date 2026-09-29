@@ -221,9 +221,13 @@ reset_abort() {
         exit 0
     fi
     if [[ "${RESET_SKIP_SYSTEMCTL:-0}" == 1 ]]; then
+        printf '%s\n' "systemctl stop dot-files-reset.service"
         printf '%s\n' "systemctl disable dot-files-reset.service"
         printf '%s\n' "systemctl unmask ly.service"
     else
+        # stop is not optional. A running oneshot still reboots after
+        # disable. Failure leaves the plan in place and does not unmask.
+        sudo systemctl stop dot-files-reset.service
         sudo systemctl disable dot-files-reset.service || true
         sudo systemctl unmask ly.service || true
     fi

@@ -99,6 +99,15 @@ run_phase "$dir" 0 0 >/dev/null
 [[ ! -d "$dir" ]]
 assert_grep '^write-role$' "${dir}.actions"
 assert_grep '^run-role$' "${dir}.actions"
+dragon_uid="$(id -u dragon)"
+dragon_home="$(getent passwd dragon | cut -d: -f6)"
+[[ -n "$dragon_uid" && -n "$dragon_home" ]] || {
+    printf 'could not resolve user dragon\n' >&2
+    exit 1
+}
+assert_grep \
+    "^start-user-session XDG_RUNTIME_DIR=/run/user/${dragon_uid} DOTFILES_HOME=${dragon_home}$" \
+    "${dir}.actions"
 assert_grep '^disable-unit$' "${dir}.actions"
 assert_grep '^unmask-ly$' "${dir}.actions"
 assert_grep '^delete-plan$' "${dir}.actions"
