@@ -113,3 +113,68 @@ EOF
 run_flatpak_case 1 1
 run_flatpak_case 0 0
 printf 'prune flatpak status ok\n'
+
+# A successful dnf remove must still reach flatpak uninstall.
+both_dir="${bindir}/dnf-then-flatpak"
+sudo_log="${both_dir}/sudo.log"
+mkdir -p "$both_dir"
+: >"$sudo_log"
+cat >"${both_dir}/sudo" <<'EOF'
+#!/bin/sh
+# Test stub. Never exec /usr/bin/sudo.
+printf '%s\n' "$*" >>"${SUDO_LOG:?}"
+case "$1" in
+    dnf)
+        exit 0
+        ;;
+    flatpak)
+        shift
+        flatpak "$@"
+        exit $?
+        ;;
+esac
+printf 'unexpected sudo command: %s\n' "$*" >&2
+exit 97
+EOF
+cat >"${both_dir}/flatpak" <<'EOF'
+#!/bin/sh
+case "$1" in
+    list)
+        printf '%s\n' 'org.example.Demo'
+        exit 0
+        ;;
+    uninstall)
+        exit 0
+        ;;
+esac
+exit 0
+EOF
+cat >"${both_dir}/rpm" <<'EOF'
+#!/bin/sh
+printf 'bash\nextra-demo-pkg\n'
+exit 0
+EOF
+chmod 755 "${both_dir}/sudo" "${both_dir}/flatpak" "${both_dir}/rpm"
+set +e
+SUDO_LOG="$sudo_log" RESET_CONFIRM=yes RESET_FROM_BOOT=1 \
+    PATH="${both_dir}:${PATH}" \
+    python3 "$py" >"${both_dir}/out" 2>"${both_dir}/err"
+both_rc=$?
+set -e
+if [[ "$both_rc" -ne 0 ]]; then
+    printf 'dnf success plus flatpak: expected exit 0, got %s\n' "$both_rc" >&2
+    cat "${both_dir}/out" >&2
+    cat "${both_dir}/err" >&2
+    exit 1
+fi
+if ! grep -q 'dnf remove' "$sudo_log"; then
+    printf 'dnf remove did not run\n' >&2
+    cat "$sudo_log" >&2
+    exit 1
+fi
+if ! grep -q 'flatpak uninstall' "$sudo_log"; then
+    printf 'flatpak uninstall did not run after a successful dnf remove\n' >&2
+    cat "$sudo_log" >&2
+    exit 1
+fi
+printf 'prune dnf then flatpak ok\n'

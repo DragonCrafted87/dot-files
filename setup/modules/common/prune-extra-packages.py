@@ -187,7 +187,9 @@ def main() -> int:
         elif force:
             cmd = ["sudo", "dnf", "remove", "-y", *to_remove]
             log("dnf remove")
-            raise SystemExit(subprocess.call(cmd))
+            rc = subprocess.call(cmd)
+            if rc != 0:
+                raise SystemExit(rc)
         else:
             warn("this run did not remove packages")
 
