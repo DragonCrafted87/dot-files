@@ -17,9 +17,13 @@ wrappers; `ffmpeg.py --help` and the comments above each function in
 `bashrc.d/ffmpeg.bashrc` have examples.
 
 Jellyfin sorting uses a `jellyfin.job` text file next to the rip. Init
-lists sources; you fill titles / ids; `ffmpeg-jellyfin-sort` prints the
-moves and asks before moving. Override the library root with
-`JELLYFIN_MEDIA_ROOT` (default `/home/dragon/network/storage/Media`).
+lists sources. The library tag is `Title (YEAR) {tvdb-…|tmdb-…|imdb-tt…}`,
+either as `title:` or as `title:` / `year:` / `id:`. That tag is the
+folder and the front of each episode or feature filename. A TV line
+with an empty source (`| Episode Title`) keeps the episode number and
+skips the file. `ffmpeg-jellyfin-sort` prints the moves and asks before
+moving. Override the library root with `JELLYFIN_MEDIA_ROOT` (default
+`/home/dragon/network/storage/Media`).
 
 These expect a working Python user environment from the workstation
 `install-python-dev` module (`poetry`, `requests`, and friends).

@@ -2,8 +2,11 @@
 # Thin wrappers around scripts/ffmpeg.py. Implementations live in
 # scripts/ffmpeg_tools/. Each function prints usage if called wrong.
 
+# -E -s ignores PYTHON* and the user site, and still puts scripts/ on
+# sys.path so the sibling ffmpeg_tools package imports. python -I drops
+# that directory (isolated mode).
 _ffmpeg_py() {
-    python -I "${DOTFILES_ROOT:-$HOME/dot-files}/scripts/ffmpeg.py" "$@"
+    python -E -s "${DOTFILES_ROOT:-$HOME/dot-files}/scripts/ffmpeg.py" "$@"
 }
 
 _ffmpeg_usage() {

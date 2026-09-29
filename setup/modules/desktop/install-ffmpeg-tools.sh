@@ -7,7 +7,9 @@ set -euo pipefail
 
 require_user
 
-ensure_packages ffmpeg dvdauthor genisoimage
+# ffmpeg is built with libx264 as a dlopen. Without lib64x264 the h264
+# encoder segfaults instead of reporting the missing library.
+ensure_packages ffmpeg lib64x264 dvdauthor genisoimage
 
 if ! command -v mkisofs >/dev/null 2>&1 && command -v genisoimage >/dev/null 2>&1; then
     dest="/usr/local/bin/mkisofs"
