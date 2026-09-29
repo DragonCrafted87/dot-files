@@ -193,7 +193,7 @@ write_plan() {
 }
 
 install_reset_unit() {
-    local continue_sh="${REPO_ROOT}/setup/reset-continue.sh"
+    local continue_sh="${REPO_ROOT}/setup/files/systemd/reset-continue.sh"
     local template="${REPO_ROOT}/setup/files/systemd/dot-files-reset.service.in"
     local raw rendered tmp dest="/etc/systemd/system/dot-files-reset.service"
     [[ -f "$continue_sh" ]] || die "missing ${continue_sh}"

@@ -152,7 +152,7 @@ No rpm list and no Flatpak list are stored.
 One system oneshot, installed when the reset is scheduled, not by a
 role module. The unit file in the repo is a template. The scheduler
 writes `/etc/systemd/system/dot-files-reset.service` with the absolute
-path to `setup/reset-continue.sh`.
+path to `setup/files/systemd/reset-continue.sh`.
 
 The service:
 
@@ -262,9 +262,9 @@ the old role files if the install phase already wrote them.
 | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `setup/role.sh`                                  | Replace the reset flags, prompts, schedule, and abort                                                                                     |
 | `setup/modules/common/prune-extra-packages.py`   | Point `SETUP_DIR` at `setup/`. List-only stays the default. Removal still requires the existing confirm switch. Honor `RESET_FROM_BOOT=1` |
-| `setup/reset-continue.sh`                        | New root phase script                                                                                                                     |
+| `setup/files/systemd/reset-continue.sh`          | New root phase script                                                                                                                     |
 | `setup/files/systemd/dot-files-reset.service.in` | Unit template                                                                                                                             |
-| `setup/reset-continue-test.sh`                   | State-machine test. Not a role module and not installed                                                                                   |
+| `tests/reset-continue-test.sh`                   | State-machine test. Not a role module and not installed                                                                                   |
 | `setup/README.md`                                | Replace "Reset without reinstalling"                                                                                                      |
 
 `bashrc.d/setup.bashrc` stays unchanged. `update-role --reset` already
@@ -282,7 +282,7 @@ machine.
   `setup/files/packages/iso-installed.txt` and exits without running
   `dnf` or `flatpak uninstall`. Running that preview on the workstation
   is allowed.
-- `setup/reset-continue-test.sh` uses a temporary phase directory and
+- `tests/reset-continue-test.sh` uses a temporary phase directory and
   `RESET_CONTINUE_DRY_RUN=1`. That switch records reboot, disable,
   unmask, and prune/role actions instead of performing them. It asserts:
   - success moves `remove` to `install` with `attempts=0` and requests

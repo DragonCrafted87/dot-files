@@ -6,7 +6,7 @@
 
 **Goal:** Replace `setup/role.sh --reset` with a reviewed, then unattended, remove-reboot-install-reboot flow that stops after two failed tries of a phase.
 
-**Architecture:** `role.sh --reset` previews removals, asks the role questions, and writes `/var/lib/dot-files/reset-plan/`. A root oneshot, `dot-files-reset.service`, runs `setup/reset-continue.sh` before Ly on the next boots. That script recomputes the removal list, then runs a normal `role.sh` for the chosen role. Dry-run environment variables make the state machine testable without rebooting.
+**Architecture:** `role.sh --reset` previews removals, asks the role questions, and writes `/var/lib/dot-files/reset-plan/`. A root oneshot, `dot-files-reset.service`, runs `setup/files/systemd/reset-continue.sh` before Ly on the next boots. That script recomputes the removal list, then runs a normal `role.sh` for the chosen role. Dry-run environment variables make the state machine testable without rebooting.
 
 **Tech Stack:** bash, python3, systemd system units, dnf, flatpak, less.
 
@@ -46,8 +46,8 @@ ______________________________________________________________________
 **Files:**
 
 - Modify: `setup/modules/common/prune-extra-packages.py`
-- Create: `setup/prune-list-test.sh`
-- Test: `setup/prune-list-test.sh`
+- Create: `tests/prune-list-test.sh`
+- Test: `tests/prune-list-test.sh`
 
 **Interfaces:**
 
@@ -57,7 +57,7 @@ ______________________________________________________________________
 
 - [ ] **Step 1: Write the failing test**
 
-Create `setup/prune-list-test.sh`:
+Create `tests/prune-list-test.sh`:
 
 ```bash
 #!/usr/bin/env bash
@@ -101,7 +101,7 @@ printf 'prune list-only ok\n'
 
 - [ ] **Step 2: Run the test and confirm it fails**
 
-Run: `bash setup/prune-list-test.sh`
+Run: `bash tests/prune-list-test.sh`
 
 Expected: FAIL because the script dies looking for `setup/modules/files/packages/iso-installed.txt`.
 
@@ -125,14 +125,14 @@ Leave the `RESET_CONFIRM=yes` requirement in place. Do not remove packages when 
 
 - [ ] **Step 4: Re-run the test**
 
-Run: `bash setup/prune-list-test.sh`
+Run: `bash tests/prune-list-test.sh`
 
 Expected: `prune list-only ok`
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add setup/modules/common/prune-extra-packages.py setup/prune-list-test.sh
+git add setup/modules/common/prune-extra-packages.py tests/prune-list-test.sh
 git commit -m "$(cat <<'EOF'
 Fix the role-reset package list path.
 
@@ -146,9 +146,9 @@ EOF
 
 **Files:**
 
-- Create: `setup/reset-continue.sh`
-- Create: `setup/reset-continue-test.sh`
-- Test: `setup/reset-continue-test.sh`
+- Create: `setup/files/systemd/reset-continue.sh`
+- Create: `tests/reset-continue-test.sh`
+- Test: `tests/reset-continue-test.sh`
 
 **Interfaces:**
 
@@ -158,14 +158,14 @@ EOF
 
 - [ ] **Step 1: Write the failing test**
 
-Create `setup/reset-continue-test.sh` with this body:
+Create `tests/reset-continue-test.sh` with this body:
 
 ```bash
 #!/usr/bin/env bash
 # State machine for the unattended role reset. No reboot, no dnf.
 set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-continue_sh="${repo}/setup/reset-continue.sh"
+continue_sh="${repo}/setup/files/systemd/reset-continue.sh"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
@@ -271,13 +271,13 @@ printf 'reset-continue ok\n'
 
 - [ ] **Step 2: Run the test and confirm it fails**
 
-Run: `bash setup/reset-continue-test.sh`
+Run: `bash tests/reset-continue-test.sh`
 
-Expected: FAIL because `setup/reset-continue.sh` does not exist.
+Expected: FAIL because `setup/files/systemd/reset-continue.sh` does not exist.
 
 - [ ] **Step 3: Implement the continue script**
 
-Create `setup/reset-continue.sh`, `chmod 755` it, and use this body:
+Create `setup/files/systemd/reset-continue.sh`, `chmod 755` it, and use this body:
 
 ```bash
 #!/usr/bin/env bash
@@ -441,14 +441,14 @@ run_attempt
 
 - [ ] **Step 4: Re-run the test**
 
-Run: `bash setup/reset-continue-test.sh`
+Run: `bash tests/reset-continue-test.sh`
 
 Expected: `reset-continue ok`
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add setup/reset-continue.sh setup/reset-continue-test.sh
+git add setup/files/systemd/reset-continue.sh tests/reset-continue-test.sh
 git commit -m "$(cat <<'EOF'
 Add the role-reset boot phase script.
 
@@ -463,18 +463,18 @@ EOF
 **Files:**
 
 - Create: `setup/files/systemd/dot-files-reset.service.in`
-- Modify: `setup/reset-continue-test.sh`
-- Test: `setup/reset-continue-test.sh`
+- Modify: `tests/reset-continue-test.sh`
+- Test: `tests/reset-continue-test.sh`
 
 **Interfaces:**
 
 - Consumes: nothing at runtime until Task 4 renders it
 
-- Produces: template token `@RESET_CONTINUE@` replaced with the absolute path of `setup/reset-continue.sh`
+- Produces: template token `@RESET_CONTINUE@` replaced with the absolute path of `setup/files/systemd/reset-continue.sh`
 
 - [ ] **Step 1: Extend the test**
 
-Append this before the final `printf` in `setup/reset-continue-test.sh`:
+Append this before the final `printf` in `tests/reset-continue-test.sh`:
 
 ```bash
 template="${repo}/setup/files/systemd/dot-files-reset.service.in"
@@ -489,7 +489,7 @@ printf '%s\n' "$rendered" | grep -q 'ConditionPathExists=/var/lib/dot-files/rese
 
 - [ ] **Step 2: Run the test and confirm it fails**
 
-Run: `bash setup/reset-continue-test.sh`
+Run: `bash tests/reset-continue-test.sh`
 
 Expected: FAIL because the template does not exist.
 
@@ -519,14 +519,14 @@ WantedBy=multi-user.target
 
 - [ ] **Step 4: Re-run the test**
 
-Run: `bash setup/reset-continue-test.sh`
+Run: `bash tests/reset-continue-test.sh`
 
 Expected: `reset-continue ok`
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add setup/files/systemd/dot-files-reset.service.in setup/reset-continue-test.sh
+git add setup/files/systemd/dot-files-reset.service.in tests/reset-continue-test.sh
 git commit -m "$(cat <<'EOF'
 Add the role-reset systemd unit template.
 
@@ -541,8 +541,8 @@ EOF
 **Files:**
 
 - Modify: `setup/role.sh`
-- Create: `setup/role-reset-test.sh`
-- Test: `setup/role-reset-test.sh`
+- Create: `tests/role-reset-test.sh`
+- Test: `tests/role-reset-test.sh`
 
 **Interfaces:**
 
@@ -552,7 +552,7 @@ EOF
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `setup/role-reset-test.sh`. It exports `DOTFILES_HOME` and `CONFIG_TARGET_DIR` to a temp home containing `dot-files/role` = `workstation` and `subroles` = `laptop`. Then:
+Create `tests/role-reset-test.sh`. It exports `DOTFILES_HOME` and `CONFIG_TARGET_DIR` to a temp home containing `dot-files/role` = `workstation` and `subroles` = `laptop`. Then:
 
 - `bash role.sh --reset --force` exits non-zero and the combined output contains `walk-away`. It must not be followed by a package removal.
 
@@ -572,7 +572,7 @@ Create `setup/role-reset-test.sh`. It exports `DOTFILES_HOME` and `CONFIG_TARGET
 
 - [ ] **Step 2: Run the test and confirm it fails**
 
-Run: `bash setup/role-reset-test.sh`
+Run: `bash tests/role-reset-test.sh`
 
 Expected: FAIL because `--force` is still accepted.
 
@@ -604,14 +604,14 @@ Do not modify `~/.config/dot-files/role` in `--reset`. Remove the old block that
 
 - [ ] **Step 4: Re-run the tests**
 
-Run: `bash setup/prune-list-test.sh && bash setup/reset-continue-test.sh && bash setup/role-reset-test.sh`
+Run: `bash tests/prune-list-test.sh && bash tests/reset-continue-test.sh && bash tests/role-reset-test.sh`
 
 Expected: each script prints its ok line. The machine does not reboot.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add setup/role.sh setup/role-reset-test.sh
+git add setup/role.sh tests/role-reset-test.sh
 git commit -m "$(cat <<'EOF'
 Replace role reset with the walk-away prompts.
 
@@ -626,7 +626,7 @@ EOF
 **Files:**
 
 - Modify: `setup/README.md` (section "Reset without reinstalling")
-- Test: `bash setup/role-reset-test.sh`
+- Test: `bash tests/role-reset-test.sh`
 
 **Interfaces:**
 
@@ -654,7 +654,7 @@ Replace "Reset without reinstalling" so it states:
 
 - [ ] **Step 2: Re-run the guard test**
 
-Run: `bash setup/role-reset-test.sh`
+Run: `bash tests/role-reset-test.sh`
 
 Expected: `role-reset guards ok`
 
@@ -673,6 +673,6 @@ EOF
 
 - [ ] **Step 4: Run the staged hooks**
 
-Run: `pre-commit run --files setup/role.sh setup/reset-continue.sh setup/prune-list-test.sh setup/reset-continue-test.sh setup/role-reset-test.sh setup/modules/common/prune-extra-packages.py setup/README.md setup/files/systemd/dot-files-reset.service.in docs/superpowers/specs/2026-09-27-role-reset-design.md docs/superpowers/plans/2026-09-27-role-reset.md`
+Run: `pre-commit run --files setup/role.sh setup/files/systemd/reset-continue.sh tests/prune-list-test.sh tests/reset-continue-test.sh tests/role-reset-test.sh setup/modules/common/prune-extra-packages.py setup/README.md setup/files/systemd/dot-files-reset.service.in docs/superpowers/specs/2026-09-27-role-reset-design.md docs/superpowers/plans/2026-09-27-role-reset.md`
 
 Expected: the hooks pass. Do not reboot the machine.

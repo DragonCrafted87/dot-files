@@ -2,7 +2,7 @@
 # State machine for the unattended role reset. No reboot, no dnf.
 set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-continue_sh="${repo}/setup/reset-continue.sh"
+continue_sh="${repo}/setup/files/systemd/reset-continue.sh"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
