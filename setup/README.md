@@ -236,7 +236,11 @@ Every role builds the client and manager from tagged source
 `client_release/8.2/8.2.13`. Override with `BOINC_VERSION`. OpenMandriva
 has no working BOINC rpms. The compile is skipped when
 `/usr/local/share/boinc/.dotfiles-version` already matches the pinned
-version.
+version. The manager still needs the wxGTK 3.2 runtime libraries
+(`lib64wx_baseu3.2_0`, `lib64wx_baseu_net3.2_0`,
+`lib64wx_gtk3u_core3.2_0`, `lib64wx_gtk3u_html3.2_0`,
+`lib64wx_gtk3u_webview3.2_0`). Reset removes the devel package that
+pulled those in, so every role run installs them again.
 
 Source builds pick up `bashrc.d/compiler.bashrc` (`clang`, `lld`,
 `-march=native`). On AMD family 23+ that is the matching `znver*` ISA,

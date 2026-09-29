@@ -18,6 +18,7 @@ if systemctl list-unit-files boinc-client.service >/dev/null 2>&1; then
     disable_service boinc-client.service || true
 fi
 
+install_runtime_deps
 if boinc_already_built; then
     log "BOINC ${BOINC_VERSION} already installed"
 else
