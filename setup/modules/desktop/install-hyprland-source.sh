@@ -914,13 +914,15 @@ TryExec=${PREFIX}/bin/Hyprland
 DesktopNames=Hyprland
 Type=Application
 EOF
-    sudo install -d "$LY_CUSTOM_DIR" "$WAYLAND_SESSION_DIR"
+    sudo install -d "$WAYLAND_SESSION_DIR"
     sudo install -m 0644 "$tmp" "${WAYLAND_SESSION_DIR}/${desktop_name}"
-    sudo install -m 0644 "$tmp" "${LY_CUSTOM_DIR}/${desktop_name}"
     rm -f "$tmp"
+    # Ly lists custom_sessions in addition to /usr/share/wayland-sessions.
+    # The same hyprland.desktop in both directories is two menu entries.
     sudo rm -f \
         "${WAYLAND_SESSION_DIR}/hyprland-source.desktop" \
-        "${LY_CUSTOM_DIR}/hyprland-source.desktop"
+        "${LY_CUSTOM_DIR}/hyprland-source.desktop" \
+        "${LY_CUSTOM_DIR}/${desktop_name}"
     install_local_lib_path
 }
 
