@@ -282,10 +282,28 @@ def prune_cache() -> None:
             path.unlink(missing_ok=True)
 
 
+def _version_uses_blocks(text: str) -> bool | None:
+    """0.8+ wants wallpaper { } blocks. 0.7 rejects them and wants preload lines."""
+    match = re.search(r"(\d+)\.(\d+)", text)
+    if match is None:
+        return None
+    return (int(match.group(1)), int(match.group(2))) >= (0, 8)
+
+
 def _hyprpaper_uses_blocks() -> bool:
-    """Prefix 0.8.4 uses wallpaper { } blocks. Rock's hyprpaper rejects them."""
     path = shutil.which("hyprpaper") or ""
-    return path.startswith("/opt/hyprland/")
+    if not path:
+        return False
+    result = subprocess.run(
+        [path, "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    decision = _version_uses_blocks(f"{result.stdout}\n{result.stderr}")
+    if decision is not None:
+        return decision
+    return path.startswith(("/opt/hyprland/", "/usr/local/"))
 
 
 def write_hyprpaper_conf(mapping: dict[str, str]) -> None:
@@ -450,6 +468,15 @@ def cmd_selftest() -> int:
             return 1
         if image_kind(jpeg) != "jpeg" or image_kind(png) != "png":
             print("selftest: jpeg/png magic failed", file=sys.stderr)
+            return 1
+        if _version_uses_blocks("hyprpaper v0.8.4") is not True:
+            print("selftest: 0.8 should use blocks", file=sys.stderr)
+            return 1
+        if _version_uses_blocks("hyprpaper 0.7.4") is not False:
+            print("selftest: 0.7 should use preload lines", file=sys.stderr)
+            return 1
+        if _version_uses_blocks("no version here") is not None:
+            print("selftest: missing version should be unknown", file=sys.stderr)
             return 1
         print("selftest ok")
         return 0

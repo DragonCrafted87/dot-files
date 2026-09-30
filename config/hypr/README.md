@@ -192,6 +192,8 @@ through `hypr-session-exec.sh`. The timer is a oneshot and only restarts
 that unit. Waking from idle runs `apply` again so a monitor that was
 disabled at 06:30 gets a still. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
 `.jpg`) are dropped; hyprpaper exits if it is asked to preload one.
+hyprpaper 0.8 and newer gets `wallpaper { }` blocks. The 0.7
+`wallpaper = MONITOR,path` lines leave every output with no target.
 
 ```bash
 ~/.config/hypr/scripts/astro-wallpaper.sh apply

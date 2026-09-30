@@ -90,7 +90,7 @@ install_build_deps() {
     local pkgs=() picked group
     local groups=(
         "gcc-c++ gcc-c++-14 gcc" "mold" "atomic-devel libatomic-devel"
-        "cmake" "meson" "ninja ninja-build" "git"
+        "cmake" "meson" "ninja ninja-build" "make" "git"
         "pkgconf pkgconfig pkgconf-pkg-config" "jq" "cpio" "hwdata"
         "wayland-devel lib64wayland-devel" "wayland-protocols-devel wayland-protocols"
         "libdrm-devel lib64drm-devel lib64drm2-devel" "libxkbcommon-devel lib64xkbcommon-devel"
@@ -1167,6 +1167,7 @@ command -v g++ >/dev/null 2>&1 || die "g++ is not on PATH after package install"
 command -v mold >/dev/null 2>&1 || die "mold is not on PATH after package install"
 command -v cmake >/dev/null 2>&1 || die "cmake is not on PATH after package install"
 command -v meson >/dev/null 2>&1 || die "meson is not on PATH after package install"
+command -v make >/dev/null 2>&1 || die "make is not on PATH after package install"
 
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     log "would build Hyprland ${HYPRLAND_TAG} and ecosystem into ${PREFIX}"
