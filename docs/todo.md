@@ -15,3 +15,8 @@ Not scheduled.
 ## quickshell
 
 - move to real applications once the swap to the source hyprland build is done
+
+## reset role
+
+- expand logging so we can figure out why something failed
+- figure out why the laptop reset failed

@@ -57,9 +57,9 @@ dual-session.
   `custom_sessions`.
 - [x] Drop `pin_prefix_hypr_link` (that rewrite exists to beat Rock
   `/usr/lib64/libhyprutils.so`).
-- [ ] `CMAKE_PREFIX_PATH` / `CMAKE_LIBRARY_PATH` can stay `/usr` as
+- [ ] `CMAKE_PREFIX_PATH` / `CMAKE_LIBRARY_PATH` can stay `/usr` (or `/usr/local`) as
   normal.
-- [ ] Do not install hypr\* cmake systemd units over `/usr` until the
+- [ ] Do not install hypr\* cmake systemd units over `/usr` (or `/usr/local`) until the
   rpms are gone; then let them land in
   `/usr/lib/systemd/user/`.
 
@@ -102,7 +102,7 @@ dual-session.
 ### Docs
 
 - [x] `AGENTS.md` Hyprland-from-source bullet (no `/opt`, no extra Ly
-  session, installing into `/usr` is allowed once rpms are gone).
+  session, installing into `/usr` (or `/usr/local`) is allowed once rpms are gone).
 - [x] `setup/README.md` "Hyprland from source" section.
 - [ ] `config/hypr/README.md` graphical-session paragraph about
   `hypr-session-exec.sh`.
