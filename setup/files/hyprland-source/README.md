@@ -27,11 +27,6 @@ dual-session.
 
 ### Host
 
-- [ ] `dnf remove` the session rpms from `install-hyprland-session`
-  (`hyprland`, `hyprland-qtutils`, `hypridle`, `hyprlock`,
-  `hyprpicker`, `hyprpolkitagent`, `hyprcursor`,
-  `xdg-desktop-portal-hyprland`). Leave `ly`, portals gtk, pipewire,
-  mako, kitty.
 - [ ] Confirm `/usr/bin/Hyprland` and `/usr/bin/hyprctl` are gone.
 - [ ] Delete `/opt/hyprland` after the `/usr` install works.
 - [ ] Delete `~/.cache/hyprland-source` if you do not need a rebuild
@@ -41,8 +36,6 @@ dual-session.
 - [ ] Remove `/usr/lib/systemd/user/hyprsunset.service` if it still
   points at `/opt/hyprland/bin/hyprsunset` (cmake wrote that during
   the prefix build).
-- [ ] Log in once with stock **Hyprland** in Ly. Pick that as the saved
-  session.
 
 ### Installer (`install-hyprland-source.sh`)
 
@@ -97,7 +90,6 @@ dual-session.
 - [x] Fold leftover session glue (ly enable, `hyprland-session.service`,
   drop-in glob) into one module, or keep this module as
   "login stack" without hypr rpms.
-- [ ] `roles.conf`: one hyprland module per role, not session+source.
 
 ### Docs
 
