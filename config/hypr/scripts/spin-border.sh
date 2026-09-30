@@ -5,14 +5,16 @@
 # Hyprland 0.56+ uses lua borderangle loop instead; skip this script there.
 set -euo pipefail
 
-PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland}"
+PREFIX="${HYPRLAND_SOURCE_PREFIX:-/usr/local}"
 
 should_run() {
     local pid exe
     pid="$(pgrep -u "$(id -u)" -x Hyprland | head -n 1 || true)"
     [[ -n "$pid" ]] || return 0
     exe="$(readlink -f "/proc/${pid}/exe" 2>/dev/null || true)"
-    [[ "$exe" != "${PREFIX}/bin/Hyprland" ]]
+    # 0.56 borderangle covers both the /usr/local install and a leftover
+    # /opt/hyprland tree from before the prefix move.
+    [[ "$exe" != "${PREFIX}/bin/Hyprland" && "$exe" != "/usr/local/bin/Hyprland" && "$exe" != "/opt/hyprland/bin/Hyprland" ]]
 }
 
 if [[ "${1:-}" == "--should-run" ]]; then

@@ -62,12 +62,13 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
   `install-gaming-packages`, KDE chrome → `configure-mime-defaults`).
 - Source-build pins live in `setup/versions.conf`. `lib.sh` loads them
   unless the same key is already in the environment.
-- `install-hyprland-session` keeps the OpenMandriva Hyprland packages and
-  enables `ly.service`.
-- `install-hyprland-source` builds the pinned Hyprland tag and the hyprland
-  ecosystem into `/opt/hyprland`. It must not overwrite `/usr` binaries
-  or `/usr/share/wayland-sessions/hyprland.desktop`. Ly extra session is
-  `hyprland-source.desktop` (**Hyprland (source)**).
+- `install-hyprland-session` enables `ly.service` and the user session
+  units. It does not install the OpenMandriva Hyprland packages.
+- `install-hyprland-source` builds the pinned Hyprland tag and the
+  hyprland ecosystem into `/usr/local` when `rpm -q hyprland` fails.
+  While that package is installed the module exits without building.
+  It must not overwrite `/usr` binaries. Ly session **Hyprland** uses
+  `Exec=/usr/local/bin/Hyprland`.
 - `configure-litra-glow` installs hidraw udev for Logitech Litra Glow
   (`046d:c900`) and adds the user to `video`.
 - `configure-ratbag` installs `ratbagd` (and the Piper GUI), udev rules
@@ -236,5 +237,5 @@ PipeWire is 1.4.x + WirePlumber. Volume CLI is `wpctl`.
 - Commit secrets. Transfer with `setup/utility/transfer-secrets.sh`.
 - Overwrite an existing real `~/.config/<name>` directory; the linker
   will skip it.
-- Install the source Hyprland stack into `/usr` or `/usr/local` in a way
-  that shadows the OpenMandriva packages.
+- Install the source Hyprland stack into `/usr`. `/usr/local` is the
+  source prefix, and only after the distro `hyprland` package is gone.

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Build the pinned Hyprland tag plus the hypr* ecosystem into /opt/hyprland.
-# Tags live in setup/versions.conf. Distro Hyprland stays in /usr.
+# Build the pinned Hyprland tag plus the hypr* ecosystem into /usr/local.
+# Tags live in setup/versions.conf. Skip the whole install while the
+# distro hyprland rpm is still present (role reset is what removes it).
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -10,14 +11,12 @@ require_user
 
 HYPRLAND_TAG="${HYPRLAND_TAG:?set HYPRLAND_TAG in setup/versions.conf}"
 HYPRLAND_SOURCE_VERSION="${HYPRLAND_SOURCE_VERSION:-${HYPRLAND_TAG#v}}"
-PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland}"
+PREFIX="${HYPRLAND_SOURCE_PREFIX:-/usr/local}"
 HYPRLAND_PATCH_CXX23="${HYPRLAND_PATCH_CXX23:-0}"
 HYPRLAND_PATCH_STRING_CONCAT="${HYPRLAND_PATCH_STRING_CONCAT:-1}"
 HYPRLAND_DISABLE_PCH="${HYPRLAND_DISABLE_PCH:-0}"
 SRC_ROOT="${HYPRLAND_SOURCE_SRC:-${DOTFILES_HOME}/.cache/hyprland-source}"
 STAMP="${PREFIX}/share/hyprland-source/.dotfiles-stamp"
-SESSION_DESKTOP_SRC="${SETUP_FILES_DIR}/hyprland-source/hyprland-source.desktop"
-SESSION_WRAPPER_SRC="${SETUP_FILES_DIR}/hyprland-source/start-hyprland-source.sh"
 LY_CUSTOM_DIR="/etc/ly/custom-sessions"
 WAYLAND_SESSION_DIR="/usr/share/wayland-sessions"
 
@@ -196,6 +195,22 @@ export_prefix_env() {
     export PKG_CONFIG_PATH="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
     export CMAKE_PREFIX_PATH="${PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
     export LD_LIBRARY_PATH="${PREFIX}/lib64:${PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+    case " ${LDFLAGS:-} " in
+        *" -Wl,-rpath,${PREFIX}/lib64 "*) ;;
+        *) LDFLAGS="${LDFLAGS:+${LDFLAGS} }-Wl,-rpath,${PREFIX}/lib64" ;;
+    esac
+    export LDFLAGS
+}
+
+# Role reset removes the distro package. Until that is gone, do not build
+# and do not write /usr/local or /opt/hyprland.
+skip_if_distro_hyprland() {
+    local ver
+    ver="$(rpm -q hyprland 2>/dev/null || true)"
+    if [[ -n "$ver" ]]; then
+        log "skip Hyprland source: distro package still installed: ${ver}"
+        exit 0
+    fi
 }
 
 ensure_tagged_repo() {
@@ -447,18 +462,6 @@ fill_cmake_config_flags() {
     [[ -n "${RANLIB:-}" ]] && cmake_config_flags+=("-DCMAKE_RANLIB=${RANLIB}")
 }
 
-# pkg_check_modules IMPORTED_TARGET can resolve -lhyprutils to Rock /usr/lib64
-# when another dep listed -L/usr/lib64 first. Force prefix SONAMEs in the build.
-pin_prefix_hypr_link() {
-    local build="$1" lib
-    [[ -d "$build" ]] || return 0
-    for lib in hyprutils hyprlang hyprgraphics hyprcursor hyprwire hyprtoolkit aquamarine; do
-        [[ -e "${PREFIX}/lib64/lib${lib}.so" ]] || continue
-        find "$build" \( -name CMakeCache.txt -o -name link.txt -o -name flags.make \) -exec \
-            sed -i "s|/usr/lib64/lib${lib}.so|${PREFIX}/lib64/lib${lib}.so|g" {} +
-    done
-}
-
 cmake_skip_target() {
     case "$1" in
         *test*|*Test*|*tests*|hyprgraphics_image|hyprgraphics_arg|simpleWindow|commitThread|attachments|output) return 0 ;;
@@ -663,7 +666,6 @@ build_cmake_src() {
     rm -rf "${src}/build"
     fill_cmake_config_flags
     cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" "${extra[@]}"
-    pin_prefix_hypr_link "${src}/build"
     jobs="$(nproc)"
     while IFS= read -r t; do [[ -n "$t" ]] && targets+=("$t"); done < <(cmake_installable_targets "${src}/build" | sort -u)
     if [[ "${#targets[@]}" -gt 0 ]]; then
@@ -792,8 +794,9 @@ ensure_libxkbcommon() {
     build_meson_src "${SRC_ROOT}/libxkbcommon" -Denable-docs=false -Denable-wayland=false -Denable-x11=true -Denable-xkbregistry=true
 }
 
-# Prefix libxkbcommon is built with --prefix=/opt/hyprland. xkeyboard-config
-# files stay in /usr/share/X11/xkb; without this link Hyprland aborts in
+# libxkbcommon built with --prefix=/usr/local looks in
+# /usr/local/share/X11/xkb. The xkeyboard-config files stay in
+# /usr/share/X11/xkb; without this link Hyprland aborts in
 # CKeybindManager::updateXKBTranslationState.
 ensure_xkb_data() {
     local dest="${PREFIX}/share/X11/xkb" src="/usr/share/X11/xkb"
@@ -881,16 +884,34 @@ maybe_build_xcb_errors() {
     ( cd "${SRC_ROOT}/libxcb-errors" && ./autogen.sh --prefix="$PREFIX" && make -j"$(nproc)" && sudo make install )
 }
 
+install_local_lib_path() {
+    local conf="/etc/ld.so.conf.d/hyprland-local.conf"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would register ${PREFIX}/lib64 with ldconfig"; return 0; }
+    printf '%s\n%s\n' "${PREFIX}/lib64" "${PREFIX}/lib" | sudo tee "$conf" >/dev/null
+    sudo ldconfig
+}
+
 install_session_files() {
-    local wrapper_dest="${PREFIX}/bin/start-hyprland-source" desktop_name="hyprland-source.desktop"
-    [[ -f "$SESSION_WRAPPER_SRC" ]] || die "missing ${SESSION_WRAPPER_SRC}"
-    [[ -f "$SESSION_DESKTOP_SRC" ]] || die "missing ${SESSION_DESKTOP_SRC}"
+    local desktop_name="hyprland.desktop" tmp
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && { log "would install Ly session ${desktop_name}"; return 0; }
-    sudo install -d "${PREFIX}/bin" "${PREFIX}/share/wayland-sessions" "$LY_CUSTOM_DIR" "$WAYLAND_SESSION_DIR"
-    sudo install -m 0755 "$SESSION_WRAPPER_SRC" "$wrapper_dest"
-    sudo install -m 0644 "$SESSION_DESKTOP_SRC" "${PREFIX}/share/wayland-sessions/${desktop_name}"
-    sudo install -m 0644 "$SESSION_DESKTOP_SRC" "${WAYLAND_SESSION_DIR}/${desktop_name}"
-    sudo install -m 0644 "$SESSION_DESKTOP_SRC" "${LY_CUSTOM_DIR}/${desktop_name}"
+    tmp="$(mktemp)"
+    cat >"$tmp" <<EOF
+[Desktop Entry]
+Name=Hyprland
+Comment=Hyprland built into ${PREFIX}
+Exec=${PREFIX}/bin/Hyprland
+TryExec=${PREFIX}/bin/Hyprland
+DesktopNames=Hyprland
+Type=Application
+EOF
+    sudo install -d "$LY_CUSTOM_DIR" "$WAYLAND_SESSION_DIR"
+    sudo install -m 0644 "$tmp" "${WAYLAND_SESSION_DIR}/${desktop_name}"
+    sudo install -m 0644 "$tmp" "${LY_CUSTOM_DIR}/${desktop_name}"
+    rm -f "$tmp"
+    sudo rm -f \
+        "${WAYLAND_SESSION_DIR}/hyprland-source.desktop" \
+        "${LY_CUSTOM_DIR}/hyprland-source.desktop"
+    install_local_lib_path
 }
 
 install_prefix_desktops() {
@@ -1003,7 +1024,6 @@ ensure_hyprcapture() {
     cmake -S "$dir" -B "${dir}/build" "${cmake_config_flags[@]}" \
         -DHYPRLAND_SOURCE_DIR="${SRC_ROOT}/Hyprland" \
         -DHYPRCAPTURE_DEFAULT_HELPER_PATH="${ui}"
-    pin_prefix_hypr_link "${dir}/build"
     cmake --build "${dir}/build" --config Release -j"$(nproc)" \
         --target hyprcapture --target hyprcapture-ui
     built_so="$(find "${dir}/build" -name 'libhyprcapture.so' -type f -print -quit)"
@@ -1116,6 +1136,7 @@ write_stamp() {
     stamp_payload | sudo tee "$STAMP" >/dev/null
 }
 
+skip_if_distro_hyprland
 reconcile_dropped_hyprlauncher_stamp
 
 if [[ -x "${PREFIX}/bin/Hyprland" && -f "$STAMP" ]] && [[ "$(cat "$STAMP")" == "$(stamp_payload)" ]] && [[ "${HYPRLAND_SOURCE_FORCE:-0}" != "1" ]]; then
@@ -1152,7 +1173,7 @@ configure_ly_source_session
 write_stamp
 
 if [[ -x "${PREFIX}/bin/Hyprland" ]]; then
-    log "installed ${HYPRLAND_TAG} to ${PREFIX} (Ly session: Hyprland (source))"
+    log "installed ${HYPRLAND_TAG} to ${PREFIX} (Ly session: Hyprland)"
 else
     die "build finished but ${PREFIX}/bin/Hyprland is missing"
 fi

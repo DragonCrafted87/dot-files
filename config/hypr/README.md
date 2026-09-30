@@ -20,7 +20,8 @@ keep their last layout.
 
 ## Graphical session (systemd)
 
-ly launches `Hyprland.desktop` (`Exec=Hyprland`), not the UWSM session.
+ly launches `Hyprland.desktop` (`Exec=/usr/local/bin/Hyprland` after the
+source install), not a UWSM session.
 `graphical-session.target` has `RefuseManualStart=yes`, so a raw compositor
 never reaches it and `WantedBy=graphical-session.target` units stay dead
 (hypridle, hyprpolkitagent, mako, network-mounts).
@@ -34,7 +35,7 @@ runs `stop` so session units go away with the compositor. Linger still
 starts `default.target` at boot; that path must not claim a graphical
 session.
 
-`uwsm` is installed and unused. The source build passes `-DNO_UWSM=true`.
+uwsm is not installed. The source build passes `-DNO_UWSM=true`.
 Its env preloader and `uwsm app` slices are more session manager than
 this login needs. What we keep from that idea: graphical units stop
 with the compositor, and linger services do not. `hyprland-session.service`
@@ -47,9 +48,9 @@ drop-in keeps logout behavior if a package update drops the line).
 binds (kitty, dolphin) stay children of Hyprland.
 
 `hypridle`, `hyprpolkitagent`, `xdg-desktop-portal-hyprland`, and
-`hyprsunset` use `scripts/hypr-session-exec.sh` so they follow the
-running compositor: `/opt/hyprland` for **Hyprland (source)**, `/usr`
-for the distro session. `hyprsunset-times.py` rewrites
+`hyprsunset` use `scripts/hypr-session-exec.sh`. It runs `/usr/local/bin`
+for a `/usr/local` compositor, `/opt/hyprland` for a leftover prefix,
+and `/usr` for a distro session. `hyprsunset-times.py` rewrites
 `hyprsunset.conf` from the built-in coordinates, or from `SUN_LAT` /
 `SUN_LON` when the host file sets both. A weekly
 user timer runs it, and session start runs it when that file is older

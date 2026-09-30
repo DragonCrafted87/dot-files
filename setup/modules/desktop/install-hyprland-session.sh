@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Login and session stack for GUI roles, matching the current workstation.
-# Distro Hyprland stays here. install-hyprland-source.sh adds a second
-# prefix at /opt/hyprland that Ly can pick without replacing these rpms.
+# Ly, portals, and user session units for GUI roles.
+# Hyprland itself comes from install-hyprland-source.sh into /usr/local
+# after role reset has removed the distro hyprland rpm. This module does
+# not install that rpm, uwsm, or pavucontrol-qt.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -11,23 +12,13 @@ require_user
 
 ensure_packages \
     ly \
-    hyprland \
-    hyprland-qtutils \
-    hypridle \
-    hyprlock \
-    hyprpicker \
-    hyprpolkitagent \
-    hyprcursor \
     quickshell \
     kitty \
-    uwsm \
     xdg-desktop-portal \
-    xdg-desktop-portal-hyprland \
     xdg-desktop-portal-gtk \
     pipewire \
     pipewire-pulse \
     wireplumber \
-    pavucontrol-qt \
     playerctl \
     brightnessctl \
     ddcutil \
@@ -39,11 +30,6 @@ ensure_packages \
     fonts-ttf-noto-emoji \
     fonts-ttf-dejavu \
     adobe-source-code-pro-fonts
-
-# Optional on current Rock/OMV; install-hyprshutdown.sh builds it if missing.
-if dnf list --available hyprshutdown >/dev/null 2>&1 || rpm -q hyprshutdown >/dev/null 2>&1; then
-    ensure_packages hyprshutdown
-fi
 
 disable_service sddm.service
 disable_service plasma6-sddm.service

@@ -1,12 +1,12 @@
 -- Mirrors conf.d/programs-autostart.conf for Hyprland 0.56+.
 -- Monitor layouts still come from display-switch.sh restore (hyprctl keyword).
 
-local captureSo = "/opt/hyprland/lib/libhyprcapture.so"
+local captureSo = "/usr/local/lib/libhyprcapture.so"
 
 hl.config({
     plugin = {
         hyprcapture = {
-            helper = "/opt/hyprland/bin/hyprcapture-ui",
+            helper = "/usr/local/bin/hyprcapture-ui",
         },
     },
 })

@@ -4,7 +4,9 @@ Not scheduled.
 
 ## hyprland-source
 
-- once confirmed stable remove distro hyprland following the outline in ./setup/files/hyprland-source/README.md
+- distro Hyprland leaves via role reset. `install-hyprland-source` skips while `rpm -q hyprland` succeeds, then installs into `/usr/local` (not `/opt/hyprland`)
+- after every host on the branch has been reset, delete the 0.48 `hyprland.conf` tree and `spin-border.sh` (see `setup/files/hyprland-source/README.md`)
+- a package server so each machine does not rebuild is later, not part of this swap
 
 ## htpc
 

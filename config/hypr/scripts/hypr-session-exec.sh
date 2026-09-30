@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Run a hypr* tool from the compositor that owns this session.
-# Distro Hyprland -> /usr. Source prefix -> /opt/hyprland.
+# Run a hypr* tool for the compositor that owns this session.
+# /usr/local is the source install. /opt/hyprland is a leftover prefix.
+# A distro session still uses /usr.
 set -euo pipefail
 
-PREFIX="${HYPRLAND_SOURCE_PREFIX:-/opt/hyprland}"
 cmd="${1:-}"
 shift || true
 
@@ -28,21 +28,35 @@ compositor_exe() {
     return 1
 }
 
-exe="$(compositor_exe || true)"
-if [[ "$exe" == "${PREFIX}/bin/Hyprland" ]]; then
-    export PATH="${PREFIX}/bin:${PATH:-/usr/bin}"
-    export LD_LIBRARY_PATH="${PREFIX}/lib64:${PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-    export XDG_DATA_DIRS="${PREFIX}/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-    export XKB_CONFIG_ROOT="${XKB_CONFIG_ROOT:-/usr/share/X11/xkb}"
-    if [[ -x "${PREFIX}/bin/${cmd}" ]]; then
-        exec "${PREFIX}/bin/${cmd}" "$@"
+run_from() {
+    local root="$1"
+    shift
+    if [[ -x "${root}/bin/${cmd}" ]]; then
+        exec "${root}/bin/${cmd}" "$@"
     fi
-    if [[ -x "${PREFIX}/libexec/${cmd}" ]]; then
-        exec "${PREFIX}/libexec/${cmd}" "$@"
+    if [[ -x "${root}/libexec/${cmd}" ]]; then
+        exec "${root}/libexec/${cmd}" "$@"
     fi
-    printf 'hypr-session-exec: missing %s in %s\n' "$cmd" "$PREFIX" >&2
+    printf 'hypr-session-exec: missing %s in %s\n' "$cmd" "$root" >&2
     exit 1
-fi
+}
+
+exe="$(compositor_exe || true)"
+case "$exe" in
+    /usr/local/bin/Hyprland)
+        export PATH="/usr/local/bin:${PATH:-/usr/bin}"
+        export XKB_CONFIG_ROOT="${XKB_CONFIG_ROOT:-/usr/share/X11/xkb}"
+        unset LD_LIBRARY_PATH
+        run_from /usr/local "$@"
+        ;;
+    /opt/hyprland/bin/Hyprland)
+        export PATH="/opt/hyprland/bin:${PATH:-/usr/bin}"
+        export LD_LIBRARY_PATH="/opt/hyprland/lib64:/opt/hyprland/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+        export XDG_DATA_DIRS="/opt/hyprland/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+        export XKB_CONFIG_ROOT="${XKB_CONFIG_ROOT:-/usr/share/X11/xkb}"
+        run_from /opt/hyprland "$@"
+        ;;
+esac
 
 if command -v "$cmd" >/dev/null 2>&1; then
     exec "$cmd" "$@"
