@@ -195,6 +195,16 @@ export_prefix_env() {
     export PKG_CONFIG_PATH="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
     export CMAKE_PREFIX_PATH="${PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
     export LD_LIBRARY_PATH="${PREFIX}/lib64:${PREFIX}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+    # rpath is runtime only. hyprland-qt-support links the bare name hyprlang,
+    # and mold does not search PREFIX/lib64 unless gcc is given -L or LIBRARY_PATH.
+    case ":${LIBRARY_PATH:-}:" in
+        *":${PREFIX}/lib64:"*) ;;
+        *) export LIBRARY_PATH="${PREFIX}/lib64:${PREFIX}/lib${LIBRARY_PATH:+:${LIBRARY_PATH}}" ;;
+    esac
+    case " ${LDFLAGS:-} " in
+        *" -L${PREFIX}/lib64 "*) ;;
+        *) LDFLAGS="${LDFLAGS:+${LDFLAGS} }-L${PREFIX}/lib64 -L${PREFIX}/lib" ;;
+    esac
     case " ${LDFLAGS:-} " in
         *" -Wl,-rpath,${PREFIX}/lib64 "*) ;;
         *) LDFLAGS="${LDFLAGS:+${LDFLAGS} }-Wl,-rpath,${PREFIX}/lib64" ;;
