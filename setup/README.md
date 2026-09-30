@@ -54,7 +54,9 @@ and HTPC stop at Ly. Server stops at the text console.
 
 Quitting the pager or answering no schedules nothing. `--force` is not
 a reset flag. A failed phase reboots once and retries. A second failure
-stays on the console until `--reset-abort`.
+stays on the console until `--reset-abort`. The install boot waits until
+`mirror.openmandriva.org` resolves before it runs the role, so a slow
+DNS startup does not spend both attempts.
 
 ```bash
 ./setup/role.sh --reset
@@ -134,24 +136,24 @@ Copy secrets onto a new box without going through `init-remote.sh`:
 
 ## Hyprland from source
 
-`install-hyprland-session` keeps the OpenMandriva Hyprland rpms and the
-stock Ly session. `install-hyprland-source` (workstation / laptop / htpc)
-then builds the pinned Hyprland tag plus the hypr\* ecosystem into
-`/opt/hyprland` so the two stacks do not share libraries or binaries.
+`install-hyprland-session` enables Ly and the user session units. It
+does not install the OpenMandriva Hyprland rpms, uwsm, or
+pavucontrol-qt. Role reset removes the distro `hyprland` package.
+`install-hyprland-source` (workstation / laptop / htpc) exits 0 while
+`rpm -q hyprland` still succeeds. When that package is gone it builds
+the pinned tag plus the hypr\* ecosystem into `/usr/local`.
 Pins live in `setup/versions.conf` next to the BOINC and MakeMKV
-versions. Current pin is **v0.56.2**; a later bump overwrites the same
-prefix in place.
+versions. Current pin is **v0.56.2**; a later bump overwrites
+`/usr/local` in place. Do not set the prefix to `/usr`.
 
-Ly extra session: **Hyprland (source)**. Desktop file lives in
-`/etc/ly/custom-sessions/` and `/usr/share/wayland-sessions/` under the
-name `hyprland-source.desktop`, never overwriting the distro
-`hyprland.desktop`. The wrapper
-`/opt/hyprland/bin/start-hyprland-source` prepends the prefix to
-`PATH` / `LD_LIBRARY_PATH` only for that session. Exec does not encode
-the tag, so Ly does not need a desktop-file edit on upgrades.
-`hypridle`, `hyprpolkitagent`, the Hyprland portal, and `hyprsunset`
-run through `hypr-session-exec.sh` so they follow the compositor that
-is actually running.
+Ly session name is **Hyprland**, with
+`Exec=/usr/local/bin/start-hyprland`. The desktop file is
+`/usr/share/wayland-sessions/hyprland.desktop`.
+`hypridle`, `hyprpolkitagent`, the Hyprland portal, `hyprsunset`, and
+`hyprpaper` go through `hypr-session-exec.sh`. That runs
+`/usr/local/bin` when the compositor is `/usr/local/bin/Hyprland`,
+`/opt/hyprland` for a leftover prefix, and `/usr` for a distro session.
+hyprpwcenter is the volume UI.
 
 OpenMandriva has no single published dep list. The module translates the
 Fedora set from [Hyprland discussion #284](https://github.com/hyprwm/Hyprland/discussions/284)

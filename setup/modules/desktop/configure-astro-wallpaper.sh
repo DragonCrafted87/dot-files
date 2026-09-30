@@ -8,11 +8,8 @@ set -euo pipefail
 
 require_user
 
-paper_pkg="$(pick_pkg hyprpaper || true)"
-if [[ -n "$paper_pkg" ]]; then
-    ensure_packages "$paper_pkg"
-else
-    warn "hyprpaper package not found in dnf"
+if [[ ! -x "${HYPRLAND_SOURCE_PREFIX:-/usr/local}/bin/hyprpaper" ]]; then
+    warn "hyprpaper missing at ${HYPRLAND_SOURCE_PREFIX:-/usr/local}/bin/hyprpaper; install-hyprland-source provides it"
 fi
 
 unit_dir="${DOTFILES_HOME}/.config/systemd/user"

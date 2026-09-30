@@ -1,7 +1,0 @@
-[Desktop Entry]
-Name=Hyprland (source)
-Comment=Hyprland built into /opt/hyprland (does not replace the OpenMandriva package)
-Exec=/opt/hyprland/bin/start-hyprland-source
-TryExec=/opt/hyprland/bin/Hyprland
-DesktopNames=Hyprland
-Type=Application
