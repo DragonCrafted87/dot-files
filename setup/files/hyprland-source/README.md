@@ -1,34 +1,38 @@
 # Hyprland source prefix
 
 `install-hyprland-source` builds the Hyprland tag and hypr\* ecosystem
-pins from `setup/versions.conf` into `/opt/hyprland`. Distro rpms stay
-in `/usr`. Ly gets a second session named **Hyprland (source)**. The
-desktop file Exec path is stable across tag bumps; re-running the
-module overwrites the prefix in place.
+pins from `setup/versions.conf` into `/usr/local`. Role reset removes
+the distro hypr rpms. Ly uses the stock session name **Hyprland**,
+from `/usr/share/wayland-sessions/hyprland.desktop`, with
+`Exec=/usr/local/bin/start-hyprland`. Re-running the module overwrites
+`/usr/local` in place. `HYPRLAND_SOURCE_PREFIX` is only a one-off
+override.
 
-This prefix is GCC 14 + libstdc++ + mold, matching OpenMandriva cooker
-hyprland 0.56.2 / aquamarine. Distro Rock remains 0.48.1 in `/usr`.
-BOINC and MakeMKV source builds still use `compiler.bashrc` clang.
+This build is GCC 14 + libstdc++ + mold, matching OpenMandriva cooker
+hyprland 0.56.2 / aquamarine. BOINC and MakeMKV source builds still
+use `compiler.bashrc` clang.
 
 Bump tags in `setup/versions.conf`. An already-exported env var still
 wins for a one-off (`HYPRLAND_TAG=v0.56.2`). The stamp file under
-`$PREFIX/share/hyprland-source/` records the last successful set.
+`/usr/local/share/hyprland-source/` records the last successful set.
 
-## When distro Hyprland goes away
+## When the stack moves to `/usr`
 
-Goal: one stack in `/usr` (or `/usr/local`), stock Ly session `Hyprland`,
-no `/opt/hyprland`. Remove the OpenMandriva hypr\* rpms **before**
-installing the source tree into `/usr`, or cmake will keep linking Rock
-`libhyprutils.so.5`.
+The running install is `/usr/local`. Do not point this module's prefix
+at `/usr` while OpenMandriva packages still own that tree. cmake will
+link Rock `libhyprutils.so.5` if those rpms are present.
 
 Keep the Rock compile shims (GCC 14 `append_range` / `#embed` /
 `string_view` / `pci.h` / glaze 8). Those are distro toolchain, not
 dual-session.
 
+- [ ] Build an rpm that installs this stack into `/usr` once a package
+  repo exists. Until that package exists, the prefix stays `/usr/local`.
+
 ### Host
 
 - [ ] Confirm `/usr/bin/Hyprland` and `/usr/bin/hyprctl` are gone.
-- [ ] Delete `/opt/hyprland` after the `/usr` install works.
+- [ ] Delete `/opt/hyprland` after the `/usr/local` install works.
 - [ ] Delete `~/.cache/hyprland-source` if you do not need a rebuild
   cache.
 - [ ] Remove `/usr/share/wayland-sessions/hyprland-source.desktop` and
@@ -39,22 +43,21 @@ dual-session.
 
 ### Installer (`install-hyprland-source.sh`)
 
-- [x] Default `PREFIX` to `/usr` (or `/usr/local`). Drop
-  `HYPRLAND_SOURCE_PREFIX` unless you still want an override.
-- [ ] Stamp under `/usr/share/hyprland-source/` or drop the stamp if
-  rpm-style files are enough.
+- [x] Default `PREFIX` to `/usr/local`. Keep `HYPRLAND_SOURCE_PREFIX`
+  as a one-off override.
+- [ ] Move the stamp to `/usr/share/hyprland-source/` with the rpm, or
+  drop it if the package owns the files. Today it lives under
+  `/usr/local/share/hyprland-source/`.
 - [x] Stop installing `start-hyprland-source` and
-  `hyprland-source.desktop`. Stock `hyprland.desktop` `Exec=Hyprland`
-  is enough.
+  `hyprland-source.desktop`. Stock `hyprland.desktop` `Exec` is
+  `/usr/local/bin/start-hyprland`.
 - [ ] Stop calling `configure_ly_source_session` / writing
   `custom_sessions`.
 - [x] Drop `pin_prefix_hypr_link` (that rewrite exists to beat Rock
   `/usr/lib64/libhyprutils.so`).
-- [ ] `CMAKE_PREFIX_PATH` / `CMAKE_LIBRARY_PATH` can stay `/usr` (or `/usr/local`) as
-  normal.
-- [ ] Do not install hypr\* cmake systemd units over `/usr` (or `/usr/local`) until the
-  rpms are gone; then let them land in
-  `/usr/lib/systemd/user/`.
+- [ ] `CMAKE_PREFIX_PATH` / `CMAKE_LIBRARY_PATH` stay `/usr/local`.
+- [ ] Leave hypr\* cmake systemd units out of `/usr`. The rpm can
+  install them under `/usr/lib/systemd/user/`.
 
 ### Dual-session machinery (delete)
 
@@ -71,7 +74,8 @@ dual-session.
 - [x] `graphical-session.sh`: drop `HYPRLAND_SOURCE_PREFIX` from
   `SESSION_VARS`. Keep importing `WAYLAND_DISPLAY` /
   `HYPRLAND_INSTANCE_SIGNATURE`. `PATH` / `LD_LIBRARY_PATH` /
-  `XDG_DATA_DIRS` import is optional once everything is `/usr`.
+  `XDG_DATA_DIRS` import is optional once everything is `/usr/local`
+  (and `/usr` after the rpm).
 - [ ] `ensure_dropins` can stay for other drop-ins.
 
 ### `install-hyprland-session.sh` / roles
@@ -94,7 +98,7 @@ dual-session.
 ### Docs
 
 - [x] `AGENTS.md` Hyprland-from-source bullet (no `/opt`, no extra Ly
-  session, installing into `/usr` (or `/usr/local`) is allowed once rpms are gone).
+  session, install prefix `/usr/local`).
 - [x] `setup/README.md` "Hyprland from source" section.
 - [ ] `config/hypr/README.md` graphical-session paragraph about
   `hypr-session-exec.sh`.
@@ -121,10 +125,12 @@ this cutover. After distro Hyprland is gone:
 ### Check after the cutover
 
 - [ ] `command -v Hyprland hyprctl hypridle hyprlock hyprpaper` →
-  `/usr/bin/...`
-- [ ] `ldd $(command -v Hyprland)` NEEDED `libhyprutils` from `/usr/lib64`
-  with the source SONAME (currently `.so.13`), not Rock `.so.5`.
-- [ ] `systemctl --user cat hypridle.service` `ExecStart=/usr/bin/hypridle`
-  (vendor unit, no session-bin drop-in).
+  `/usr/local/bin/...` (`/usr/bin/...` after the rpm).
+- [ ] `ldd $(command -v Hyprland)` NEEDED `libhyprutils` from
+  `/usr/local/lib64` with the source SONAME (currently `.so.13`), not
+  Rock `.so.5`.
+- [ ] `systemctl --user cat hypridle.service` `ExecStart` uses
+  `/usr/local/bin/hypridle` (`/usr/bin/hypridle` after the rpm), with
+  no session-bin drop-in.
 - [ ] Ly shows one **Hyprland** entry.
 - [ ] `astro-wallpaper.sh apply` talks to this `hyprctl` / `hyprpaper`.
