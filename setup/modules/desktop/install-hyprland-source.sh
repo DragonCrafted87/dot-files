@@ -206,11 +206,11 @@ export_prefix_env() {
 # and do not write /usr/local or /opt/hyprland.
 skip_if_distro_hyprland() {
     local ver
-    ver="$(rpm -q hyprland 2>/dev/null || true)"
-    if [[ -n "$ver" ]]; then
-        log "skip Hyprland source: distro package still installed: ${ver}"
-        exit 0
-    fi
+    # rpm -q prints "package hyprland is not installed" on stdout and exits 1.
+    # Gate on the status, not on whether that text is non-empty.
+    ver="$(rpm -q hyprland 2>/dev/null)" || return 0
+    log "skip Hyprland source: distro package still installed: ${ver}"
+    exit 0
 }
 
 ensure_tagged_repo() {
