@@ -107,7 +107,10 @@ Dolphin is the Hyprland file manager (`SUPER+E`). After
 `remove-plasma-sddm` strips Plasma, it has no KService/MIME map unless
 `install-desktop-packages` installs `plasma6-dolphin` plus KIO extras and
 `configure-mime-defaults` writes `~/.config/mimeapps.list` and runs
-`kbuildsycoca6`. The other half is `config/hypr/conf.d/env.conf`
+`kbuildsycoca6`. Text and Markdown go to the installed VS Code entry.
+An existing list keeps handlers whose desktop file is still on disk;
+missing ones are filled in, and handlers that name a removed desktop
+file are replaced. The other half is `config/hypr/conf.d/env.conf`
 (`XDG_CURRENT_DESKTOP=Hyprland:KDE`) so KIO treats LibreOffice and Okular
 as valid "Open with" targets.
 

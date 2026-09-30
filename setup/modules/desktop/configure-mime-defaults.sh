@@ -4,7 +4,12 @@
 # That KDE tag also flips Dolphin 25.04 to single-click and binds
 # double-click to "nothing", so this module pins SingleClick=false.
 # Loose config/kdeglobals is applied here; link-user-config ignores files.
-# Text and source files default to VS Code (code.desktop), not Kate.
+# Text and source files default to VS Code, not Kate.
+# mimeapps.list names code.desktop; this module rewrites that to the
+# desktop file that is actually installed (the distro package ships
+# com.microsoft.VSCode.desktop). An unmanaged mimeapps.list keeps
+# handlers whose desktop file exists. Missing handlers are added, and
+# handlers that point at a desktop file that is gone are replaced.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -34,23 +39,199 @@ ensure_dir "$svc_kf6"
 ensure_dir "$svc_kf5"
 ensure_dir "$(dirname "$mime_xml_dest")"
 
-write_mimeapps=0
-if [[ ! -f "$dest" ]]; then
-    write_mimeapps=1
-elif grep -q '^# managed by dot-files configure-mime-defaults' "$dest"; then
-    if ! cmp -s "$src" "$dest"; then
-        write_mimeapps=1
-    fi
-else
-    warn "leave existing ${dest} (not managed by this module)"
-fi
+# Rewrite code.desktop, then install or merge.
+# Prints "<action>\t<desktop-id>\t<found|missing>".
+mime_result="$(
+    DOTFILES_DRY_RUN="${DOTFILES_DRY_RUN:-0}" python3 - "$src" "$dest" "$DOTFILES_HOME" <<'PY'
+import os
+import sys
+from pathlib import Path
 
-if [[ "$write_mimeapps" -eq 1 ]]; then
-    log "write ${dest}"
-    if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
-        install -m 0644 "$src" "$dest"
-    fi
+src_path, dest_path, home = sys.argv[1:4]
+dry_run = os.environ.get("DOTFILES_DRY_RUN") == "1"
+token = "code.desktop"
+candidates = (
+    "com.microsoft.VSCode.desktop",
+    "code.desktop",
+    "code-oss.desktop",
+    "vscodium.desktop",
+    "codium.desktop",
+)
+
+
+def data_dirs():
+    dirs = [Path(home) / ".local/share"]
+    xdg = os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share")
+    seen = set()
+    ordered = []
+    for part in [str(dirs[0]), *xdg.split(":")]:
+        if not part or part in seen:
+            continue
+        seen.add(part)
+        ordered.append(Path(part))
+    return ordered
+
+
+def desktop_exists(desktop_id):
+    name = desktop_id.strip()
+    if not name:
+        return False
+    for directory in data_dirs():
+        if (directory / "applications" / name).is_file():
+            return True
+    return False
+
+
+def vscode_desktop_id():
+    for candidate in candidates:
+        if desktop_exists(candidate):
+            return candidate, "found"
+    return token, "missing"
+
+
+def substitute(text, desktop_id):
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#") or "=" not in line:
+            lines.append(line)
+            continue
+        lines.append(line.replace(token, desktop_id))
+    return "\n".join(lines) + "\n"
+
+
+def parse_mimeapps(text):
+    preamble = []
+    order = []
+    body = {}
+    current = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if (
+            stripped.startswith("[")
+            and stripped.endswith("]")
+            and "=" not in stripped
+        ):
+            current = stripped[1:-1]
+            if current not in body:
+                body[current] = []
+                order.append(current)
+            continue
+        if current is None:
+            preamble.append(line)
+            continue
+        body[current].append(line)
+    return preamble, order, body
+
+
+def section_keys(lines):
+    keys = {}
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        keys[key] = value
+    return keys
+
+
+def first_desktop(value):
+    cleaned = value.strip().strip(";")
+    if not cleaned:
+        return ""
+    return cleaned.split(";", 1)[0].strip()
+
+
+def render(preamble, order, body):
+    parts = []
+    if any(line.strip() for line in preamble):
+        parts.append("\n".join(preamble).rstrip("\n"))
+    for name in order:
+        block = [f"[{name}]", *body[name]]
+        parts.append("\n".join(block).rstrip("\n"))
+    return "\n\n".join(parts) + "\n"
+
+
+desktop_id, desktop_state = vscode_desktop_id()
+src_text = substitute(Path(src_path).read_text(), desktop_id)
+dest = Path(dest_path)
+dest_raw = dest.read_text() if dest.is_file() else ""
+managed = any(
+    line.startswith("# managed by dot-files configure-mime-defaults")
+    for line in dest_raw.splitlines()
+)
+
+action = "keep"
+new = dest_raw
+if not dest.is_file() or managed:
+    action = "write"
+    new = src_text
+else:
+    src_preamble, src_order, src_body = parse_mimeapps(src_text)
+    preamble, order, body = parse_mimeapps(dest_raw)
+    del src_preamble
+    changed = False
+    for name in src_order:
+        wanted = section_keys(src_body[name])
+        if name not in body:
+            body[name] = []
+            order.append(name)
+            changed = True
+        current = section_keys(body[name])
+        for key, value in wanted.items():
+            existing = current.get(key)
+            if existing is None:
+                insert_at = len(body[name])
+                while insert_at > 0 and body[name][insert_at - 1].strip() == "":
+                    insert_at -= 1
+                body[name].insert(insert_at, f"{key}={value}")
+                changed = True
+                continue
+            named = first_desktop(existing)
+            if named and desktop_exists(named):
+                continue
+            replaced = False
+            updated = []
+            for line in body[name]:
+                stripped = line.strip()
+                if not replaced and stripped.startswith(f"{key}="):
+                    updated.append(f"{key}={value}")
+                    replaced = True
+                else:
+                    updated.append(line)
+            if not replaced:
+                updated.append(f"{key}={value}")
+            body[name] = updated
+            changed = True
+    if changed:
+        action = "merge"
+        new = render(preamble, order, body)
+
+if new == dest_raw:
+    action = "keep"
+
+sys.stdout.write(f"{action}\t{desktop_id}\t{desktop_state}\n")
+if dry_run or action == "keep":
+    raise SystemExit(0)
+
+dest.parent.mkdir(parents=True, exist_ok=True)
+dest.write_text(new)
+PY
+)"
+mime_action="${mime_result%%$'\t'*}"
+mime_rest="${mime_result#*$'\t'}"
+vscode_desktop_id="${mime_rest%%$'\t'*}"
+vscode_desktop_state="${mime_rest#*$'\t'}"
+log "VS Code desktop id: ${vscode_desktop_id}"
+if [[ "$vscode_desktop_state" == "missing" ]]; then
+    warn "VS Code desktop file not found; MIME defaults still name code.desktop"
 fi
+case "$mime_action" in
+    write) log "write ${dest}" ;;
+    merge) log "merge MIME defaults into ${dest}" ;;
+    keep) log "MIME defaults already set in ${dest}" ;;
+    *) die "unexpected mimeapps result: ${mime_result}" ;;
+esac
 
 if [[ -f "$menu_src" ]]; then
     if [[ ! -f "$menu_dest" ]] || ! cmp -s "$menu_src" "$menu_dest"; then

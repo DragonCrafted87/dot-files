@@ -2,6 +2,7 @@
 # Default handlers for Dolphin / xdg-open after Plasma is stripped.
 # Desktop ids match OpenMandriva KF6 + distro LibreOffice packages.
 # Text and source files open in VS Code, not Kate / KWrite.
+# code.desktop is rewritten to the installed VS Code desktop file.
 
 [Default Applications]
 inode/directory=org.kde.dolphin.desktop
@@ -74,6 +75,7 @@ x-scheme-handler/https=brave-browser.desktop
 [Added Associations]
 inode/directory=org.kde.dolphin.desktop;code.desktop;
 application/x-code-workspace=code.desktop;
+application/x-desktop=code.desktop;
 text/plain=code.desktop;
 text/markdown=code.desktop;
 text/x-markdown=code.desktop;
