@@ -37,6 +37,41 @@ do_reboot() {
     systemctl reboot
 }
 
+# network-online.target does not wait on this distro: NetworkManager-wait-online
+# is disabled, so the target is reached while mirror names still fail to resolve.
+# Spend the wait here. A reboot would just race DNS again and burn an attempt.
+wait_for_install_dns() {
+    local host="${RESET_MIRROR_HOST:-mirror.openmandriva.org}"
+    local limit="${RESET_DNS_WAIT_SECS:-300}"
+    local step=5
+    local waited=0
+    if [[ "$DRY" == 1 ]]; then
+        record "wait-dns ${host}"
+        return "${RESET_TEST_DNS_RC:-0}"
+    fi
+    if [[ -x /usr/bin/nm-online ]]; then
+        log_line "waiting for NetworkManager before ${host}"
+        NM_ONLINE_TIMEOUT=60 /usr/bin/nm-online -s -q \
+            || log_line "NetworkManager startup wait ended; still checking DNS"
+    fi
+    log_line "waiting up to ${limit}s for DNS ${host}"
+    while true; do
+        if getent hosts "$host" >/dev/null 2>&1; then
+            log_line "DNS ready for ${host} after ${waited}s"
+            return 0
+        fi
+        if [[ "$waited" -ge "$limit" ]]; then
+            log_line "DNS not ready for ${host} after ${waited}s"
+            return 1
+        fi
+        if [[ $((waited % 15)) -eq 0 ]]; then
+            log_line "DNS not ready for ${host} (${waited}s)"
+        fi
+        sleep "$step"
+        waited=$((waited + step))
+    done
+}
+
 do_mask_ly() {
     record mask-ly
     if [[ "$DRY" == 1 ]]; then
@@ -170,6 +205,7 @@ run_attempt() {
             set +e
             (
                 set -e
+                wait_for_install_dns
                 run_install
             )
             rc=$?

@@ -54,7 +54,9 @@ and HTPC stop at Ly. Server stops at the text console.
 
 Quitting the pager or answering no schedules nothing. `--force` is not
 a reset flag. A failed phase reboots once and retries. A second failure
-stays on the console until `--reset-abort`.
+stays on the console until `--reset-abort`. The install boot waits until
+`mirror.openmandriva.org` resolves before it runs the role, so a slow
+DNS startup does not spend both attempts.
 
 ```bash
 ./setup/role.sh --reset
