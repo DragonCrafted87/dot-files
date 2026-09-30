@@ -145,7 +145,7 @@ versions. Current pin is **v0.56.2**; a later bump overwrites
 `/usr/local` in place. Do not set the prefix to `/usr`.
 
 Ly session name is **Hyprland**, with
-`Exec=/usr/local/bin/Hyprland`. The desktop file is
+`Exec=/usr/local/bin/start-hyprland`. The desktop file is
 `/usr/share/wayland-sessions/hyprland.desktop`.
 `hypridle`, `hyprpolkitagent`, the Hyprland portal, `hyprsunset`, and
 `hyprpaper` go through `hypr-session-exec.sh`. That runs

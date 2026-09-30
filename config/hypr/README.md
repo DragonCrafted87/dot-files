@@ -20,8 +20,8 @@ keep their last layout.
 
 ## Graphical session (systemd)
 
-ly launches `Hyprland.desktop` (`Exec=/usr/local/bin/Hyprland` after the
-source install), not a UWSM session.
+ly launches `Hyprland.desktop` (`Exec=/usr/local/bin/start-hyprland`
+after the source install), not a UWSM session.
 `graphical-session.target` has `RefuseManualStart=yes`, so a raw compositor
 never reaches it and `WantedBy=graphical-session.target` units stay dead
 (hypridle, hyprpolkitagent, mako, network-mounts).

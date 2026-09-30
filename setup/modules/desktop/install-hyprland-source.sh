@@ -909,8 +909,8 @@ install_session_files() {
 [Desktop Entry]
 Name=Hyprland
 Comment=Hyprland built into ${PREFIX}
-Exec=${PREFIX}/bin/Hyprland
-TryExec=${PREFIX}/bin/Hyprland
+Exec=${PREFIX}/bin/start-hyprland
+TryExec=${PREFIX}/bin/start-hyprland
 DesktopNames=Hyprland
 Type=Application
 EOF

@@ -68,7 +68,7 @@ bare `setup/files/foo` with a shebang and then `install` it as `foo.sh`.
   hyprland ecosystem into `/usr/local` when `rpm -q hyprland` fails.
   While that package is installed the module exits without building.
   It must not overwrite `/usr` binaries. Ly session **Hyprland** uses
-  `Exec=/usr/local/bin/Hyprland`.
+  `Exec=/usr/local/bin/start-hyprland`.
 - `configure-litra-glow` installs hidraw udev for Logitech Litra Glow
   (`046d:c900`) and adds the user to `video`.
 - `configure-ratbag` installs `ratbagd` (and the Piper GUI), udev rules
