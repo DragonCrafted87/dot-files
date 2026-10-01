@@ -57,17 +57,50 @@ rotate_backup() {
     mv -f -- "$new" "$dest"
 }
 
-# up may proceed only when the golden domain is not running and the
-# share copy of the golden disk exists.
+# The golden qcow2 is safe to use as a backing file only when the
+# domain is shut off, or libvirt has no such domain. paused, in
+# shutdown, and an unreadable hypervisor still have the file open.
+golden_is_idle() {
+    local golden_state="$1"
+    [[ "$golden_state" == "shut off" || "$golden_state" == "absent" ]]
+}
+
 up_allowed() {
     local golden_state="$1"
     local backup_file="$2"
-    [[ "$golden_state" != "running" ]] || return 1
+    golden_is_idle "$golden_state" || return 1
     [[ -f "$backup_file" ]] || return 1
 }
 
+# rc 0 returns virsh's state. "failed to get domain" means the name is
+# not defined. Any other failure is unknown, so callers do not treat a
+# broken hypervisor connection as a missing domain.
+classify_domstate() {
+    local rc="$1"
+    local out="$2"
+    local err="$3"
+    if [[ "$rc" -eq 0 ]]; then
+        printf '%s\n' "$out"
+        return 0
+    fi
+    if [[ "$err" == *"failed to get domain"* ]]; then
+        printf 'absent\n'
+        return 0
+    fi
+    printf 'unknown\n'
+}
+
 domain_state() {
-    sudo virsh domstate "$1" 2>/dev/null || true
+    local out err rc
+    err="$(mktemp)"
+    set +e
+    out="$(sudo virsh domstate "$1" 2>"$err")"
+    rc=$?
+    set -e
+    classify_domstate "$rc" "$out" "$(cat "$err")"
+    rc=$?
+    rm -f -- "$err"
+    return "$rc"
 }
 
 packages_missing() {
@@ -558,8 +591,31 @@ EOF
         <"$PASS_FILE"
 }
 
+# sddm swallows the ACPI button, and systemctl poweroff can sit on
+# polkit. Ask the guest to power off, then cut power if it is still up.
+power_off_domain() {
+    local name="$1"
+    local i state
+    state="$(domain_state "$name")"
+    if [[ "$state" == "shut off" || "$state" == "absent" ]]; then
+        return 0
+    fi
+    ssh_guest "$name" "sudo -S systemctl poweroff --no-block" \
+        <"$PASS_FILE" || true
+    for i in $(seq 1 15); do
+        state="$(domain_state "$name")"
+        [[ "$state" == "shut off" || "$state" == "absent" ]] && break
+        sleep 3
+    done
+    state="$(domain_state "$name")"
+    if [[ "$state" != "shut off" && "$state" != "absent" ]]; then
+        sudo virsh destroy "$name" >/dev/null
+    fi
+    wait_shutoff "$name"
+}
+
 cmd_seal() {
-    local host i state
+    local host
     require_host
     ensure_key
     ensure_password
@@ -570,27 +626,14 @@ cmd_seal() {
     ssh_guest "$GOLDEN_NAME" "cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys" \
         <"${KEY_FILE}.pub"
     write_repo_mount
-    # The display manager swallows the ACPI power button, and a normal
-    # systemctl poweroff can sit on polkit. Ask for a poweroff, then cut
-    # power if the domain is still up. The disk is idle at that point.
-    ssh_guest "$GOLDEN_NAME" "sudo -S systemctl poweroff --no-block" \
-        <"$PASS_FILE" || true
-    for i in $(seq 1 15); do
-        state="$(domain_state "$GOLDEN_NAME")"
-        [[ "$state" == "shut off" ]] && break
-        sleep 3
-    done
-    if [[ "$(domain_state "$GOLDEN_NAME")" != "shut off" ]]; then
-        sudo virsh destroy "$GOLDEN_NAME" >/dev/null
-    fi
-    wait_shutoff "$GOLDEN_NAME"
+    power_off_domain "$GOLDEN_NAME"
     rotate_backup "$GOLDEN_DISK" "$BACKUP_DIR"
 }
 
 cmd_backup() {
     local state
     state="$(domain_state "$GOLDEN_NAME")"
-    [[ "$state" != "running" ]] || die "shut the golden domain down before backup"
+    golden_is_idle "$state" || die "shut the golden domain down before backup (state: ${state:-empty})"
     if [[ ! -f "$GOLDEN_DISK" ]] && ! sudo test -f "$GOLDEN_DISK"; then
         die "missing ${GOLDEN_DISK}"
     fi
@@ -602,11 +645,11 @@ clone_filesystem_args() {
 }
 
 cmd_up() {
-    local state
+    local state clone_state
     require_host
     state="$(domain_state "$GOLDEN_NAME")"
     if ! up_allowed "$state" "${BACKUP_DIR}/golden.qcow2"; then
-        die "refusing to boot the clone (golden state: ${state:-absent})"
+        die "refusing to boot the clone (golden state: ${state:-empty})"
     fi
     if [[ ! -f "$GOLDEN_DISK" ]] && ! sudo test -f "$GOLDEN_DISK"; then
         die "missing ${GOLDEN_DISK}"
@@ -614,25 +657,33 @@ cmd_up() {
     if [[ ! -e "$CLONE_DISK" ]] && ! sudo test -e "$CLONE_DISK"; then
         sudo qemu-img create -f qcow2 -b "$GOLDEN_DISK" -F qcow2 "$CLONE_DISK"
     fi
-    if [[ -z "$(domain_state "$CLONE_NAME")" ]]; then
-        sudo virt-install \
-            --name "$CLONE_NAME" \
-            --memory 8192 \
-            --vcpus 4 \
-            --cpu host-passthrough \
-            --disk "path=${CLONE_DISK},bus=virtio" \
-            --import \
-            --os-variant linux2022 \
-            --graphics spice \
-            --boot uefi \
-            --network network=default \
-            --memorybacking source.type=memfd,access.mode=shared \
-            --filesystem "$(clone_filesystem_args)" \
-            --noautoconsole \
-            --wait 0
-    else
-        sudo virsh start "$CLONE_NAME"
-    fi
+    clone_state="$(domain_state "$CLONE_NAME")"
+    case "$clone_state" in
+        absent)
+            sudo virt-install \
+                --name "$CLONE_NAME" \
+                --memory 8192 \
+                --vcpus 4 \
+                --cpu host-passthrough \
+                --disk "path=${CLONE_DISK},bus=virtio" \
+                --import \
+                --os-variant linux2022 \
+                --graphics spice \
+                --boot uefi \
+                --network network=default \
+                --memorybacking source.type=memfd,access.mode=shared \
+                --filesystem "$(clone_filesystem_args)" \
+                --noautoconsole \
+                --wait 0
+            ;;
+        "shut off")
+            sudo virsh start "$CLONE_NAME"
+            ;;
+        running) ;;
+        *)
+            die "clone domain is ${clone_state}"
+            ;;
+    esac
 }
 
 cmd_ssh() {
@@ -641,17 +692,21 @@ cmd_ssh() {
 }
 
 cmd_down() {
-    sudo virsh shutdown "$CLONE_NAME"
-    wait_shutoff "$CLONE_NAME"
+    power_off_domain "$CLONE_NAME"
 }
 
 cmd_destroy_clone() {
-    if [[ -n "$(domain_state "$CLONE_NAME")" ]]; then
+    local state
+    state="$(domain_state "$CLONE_NAME")"
+    if [[ "$state" == "unknown" ]]; then
+        die "cannot read clone domain state"
+    fi
+    if [[ "$state" != "absent" ]]; then
         sudo virsh destroy "$CLONE_NAME" >/dev/null 2>&1 || true
         sudo virsh undefine "$CLONE_NAME" --nvram >/dev/null 2>&1 || \
             sudo virsh undefine "$CLONE_NAME" >/dev/null 2>&1 || true
     fi
-    if [[ -e "$CLONE_DISK" ]]; then
+    if [[ -e "$CLONE_DISK" ]] || sudo test -e "$CLONE_DISK"; then
         sudo rm -f -- "$CLONE_DISK"
     fi
 }

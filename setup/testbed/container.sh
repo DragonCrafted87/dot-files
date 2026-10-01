@@ -16,6 +16,7 @@ REPO="$(cd "${here}/../.." && pwd)"
 use_secrets=0
 with_source=0
 copied_paths=()
+HOST_GID="$(id -g)"
 
 die() {
     printf 'error: %s\n' "$*" >&2
@@ -149,8 +150,8 @@ copy_secrets() {
             docker exec -u root "$NAME" mkdir -p -- "${GUEST_HOME}/${parent}"
         fi
         docker cp "$src" "${NAME}:${GUEST_HOME}/${rel}"
-        docker exec -u root "$NAME" chown dragon:dragon -- "${GUEST_HOME}/${rel}"
         copied_paths+=("$rel")
+        docker exec -u root "$NAME" chown "dragon:${HOST_GID}" -- "${GUEST_HOME}/${rel}"
     done <"$list"
 }
 
@@ -166,8 +167,8 @@ cleanup_secrets() {
 run_guarded() {
     local rc=0
     if [[ "$use_secrets" -eq 1 ]]; then
-        copy_secrets
         trap cleanup_secrets EXIT
+        copy_secrets
     fi
     "$@" || rc=$?
     if [[ "$use_secrets" -eq 1 ]]; then
@@ -318,4 +319,6 @@ main() {
     esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi
