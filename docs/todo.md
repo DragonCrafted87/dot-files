@@ -20,3 +20,4 @@ Not scheduled.
 
 - expand logging so we can figure out why something failed
 - figure out why the laptop reset failed
+- try installer changes in the [testbed](../setup/testbed/README.md) before a live reset

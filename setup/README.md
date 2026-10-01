@@ -69,6 +69,10 @@ DNS startup does not spend both attempts.
 Flatpaks. Add names to `files/packages/never-remove.list` if something
 you want is listed.
 
+Installer changes can be tried in the OpenMandriva container, and a
+role reset in the libvirt clone, before they run on a live machine.
+See [testbed/README.md](testbed/README.md).
+
 A single module can be run on its own:
 
 ```bash
