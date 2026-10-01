@@ -21,3 +21,7 @@ Not scheduled.
 - expand logging so we can figure out why something failed
 - figure out why the laptop reset failed
 - try installer changes in the [testbed](../setup/testbed/README.md) before a live reset
+
+## boinc
+
+- looks like we may have missed something in the build as it doesn't look like gpu tasks are running
