@@ -9,12 +9,12 @@ set -euo pipefail
 
 require_user
 
-[[ -f "${SSH_KEY_PATH}.pub" ]] || die "missing ${SSH_KEY_PATH}.pub; run configure-ssh-key first"
-
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     printf 'dry-run: gh ssh-key add %s if gh is logged in\n' "${SSH_KEY_PATH}.pub"
     exit 0
 fi
+
+[[ -f "${SSH_KEY_PATH}.pub" ]] || die "missing ${SSH_KEY_PATH}.pub; run configure-ssh-key first"
 
 if ! command -v gh >/dev/null 2>&1; then
     log "gh not installed on this box; key should already be on GitHub from init-remote.sh"
