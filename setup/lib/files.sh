@@ -61,9 +61,9 @@ ensure_repo() {
     local url="$1"
     local dir="$2"
 
-    # A linked worktree has a .git file, not a directory. The testbed
-    # virtiofs mount can also be a checkout whose gitdir is outside the
-    # guest, so git itself cannot see it. The files are still the repo.
+    # The virtiofs checkout may be a normal clone or a linked worktree.
+    # Git can update the clone. A worktree gitdir can sit outside the
+    # guest, so a tree that already has setup/role.sh is kept as-is.
     if git -C "$dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         log "update ${dir}"
         if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
