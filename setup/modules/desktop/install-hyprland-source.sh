@@ -89,7 +89,7 @@ EOF
 install_build_deps() {
     local pkgs=() picked group
     local groups=(
-        "gcc-c++ gcc-c++-14 gcc" "mold" "atomic-devel libatomic-devel"
+        "gcc-c++ gcc-c++-14 gcc" "glibc-devel" "mold" "atomic-devel libatomic-devel"
         "cmake" "meson" "ninja ninja-build" "make" "git"
         "pkgconf pkgconfig pkgconf-pkg-config" "jq" "cpio" "hwdata"
         "wayland-devel lib64wayland-devel" "wayland-protocols-devel wayland-protocols"
