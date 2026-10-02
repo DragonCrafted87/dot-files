@@ -668,7 +668,9 @@ cmd_up() {
                 --disk "path=${CLONE_DISK},bus=virtio" \
                 --import \
                 --os-variant linux2022 \
-                --graphics spice \
+                --graphics vnc,listen=127.0.0.1 \
+                --video virtio \
+                --sound none \
                 --boot uefi \
                 --network network=default \
                 --memorybacking source.type=memfd,access.mode=shared \

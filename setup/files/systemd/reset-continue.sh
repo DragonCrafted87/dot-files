@@ -40,6 +40,30 @@ do_reboot() {
 # network-online.target does not wait on this distro: NetworkManager-wait-online
 # is disabled, so the target is reached while mirror names still fail to resolve.
 # Spend the wait here. A reboot would just race DNS again and burn an attempt.
+wait_for_repo() {
+    local repo="$1"
+    local limit="${RESET_REPO_WAIT_SECS:-180}"
+    local step=2
+    local waited=0
+    if [[ "$DRY" == 1 ]]; then
+        record "wait-repo ${repo}"
+        return "${RESET_TEST_REPO_RC:-0}"
+    fi
+    log_line "waiting up to ${limit}s for ${repo}/setup/role.sh"
+    while [[ ! -f "${repo}/setup/role.sh" ]]; do
+        if [[ "$waited" -ge "$limit" ]]; then
+            log_line "repo not ready at ${repo} after ${waited}s"
+            return 1
+        fi
+        if [[ $((waited % 10)) -eq 0 ]]; then
+            log_line "repo not ready at ${repo} (${waited}s)"
+        fi
+        sleep "$step"
+        waited=$((waited + step))
+    done
+    log_line "repo ready at ${repo} after ${waited}s"
+}
+
 wait_for_install_dns() {
     local host="${RESET_MIRROR_HOST:-mirror.openmandriva.org}"
     local limit="${RESET_DNS_WAIT_SECS:-300}"
@@ -113,6 +137,7 @@ run_remove() {
     fi
     local repo
     repo="$(read_trim "${PLAN_DIR}/repo")"
+    wait_for_repo "$repo"
     RESET_CONFIRM=yes RESET_FROM_BOOT=1 \
         python3 "${repo}/setup/modules/common/prune-extra-packages.py"
 }
@@ -124,6 +149,9 @@ run_install() {
     repo="$(read_trim "${PLAN_DIR}/repo")"
     role="$(read_trim "${PLAN_DIR}/role")"
     user="$(read_trim "${PLAN_DIR}/user")"
+    if [[ "$DRY" != 1 ]]; then
+        wait_for_repo "$repo"
+    fi
     home="$(getent passwd "$user" | cut -d: -f6)"
     uid="$(id -u "$user")"
     [[ -n "$home" && -n "$uid" ]] || return 1
@@ -196,6 +224,7 @@ run_attempt() {
             set +e
             (
                 set -e
+                wait_for_install_dns
                 run_remove
             )
             rc=$?
