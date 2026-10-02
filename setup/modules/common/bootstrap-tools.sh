@@ -14,4 +14,7 @@ if command -v git >/dev/null 2>&1 && command -v curl >/dev/null 2>&1; then
 fi
 
 ensure_packages git curl
+if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+    exit 0
+fi
 command -v git >/dev/null 2>&1 || die "git is still missing after dnf install"

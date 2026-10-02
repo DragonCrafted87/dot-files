@@ -43,9 +43,34 @@ find_module() {
     return 1
 }
 
+# DOTFILES_SKIP_MODULES is a comma-separated list of basenames.
+# Empty entries, surrounding spaces, and a trailing .sh are ignored.
+module_is_skipped() {
+    local module="${1%.sh}"
+    local entry
+    local list="${DOTFILES_SKIP_MODULES:-}"
+    local -a entries=()
+
+    [[ -n "$list" ]] || return 1
+    module="${module##*/}"
+    IFS=',' read -ra entries <<<"$list"
+    for entry in "${entries[@]}"; do
+        entry="${entry#"${entry%%[![:space:]]*}"}"
+        entry="${entry%"${entry##*[![:space:]]}"}"
+        entry="${entry%.sh}"
+        [[ -n "$entry" ]] || continue
+        [[ "$entry" == "$module" ]] && return 0
+    done
+    return 1
+}
+
 run_module() {
     local module="$1"
     local path
+    if module_is_skipped "$module"; then
+        log "skip module ${module} (DOTFILES_SKIP_MODULES)"
+        return 0
+    fi
     path="$(find_module "$module")" || die "missing module: ${module}"
     log "module ${module}"
     # shellcheck disable=SC1090

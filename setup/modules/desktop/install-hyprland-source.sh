@@ -1010,6 +1010,10 @@ PY
 ensure_hyprcapture() {
     local dir="${SRC_ROOT}/HyprCapture"
     local so ui built_so built_ui
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        log "would build hyprcapture into ${PREFIX}"
+        return 0
+    fi
     should_build_component hyprcapture || return 0
     so="${PREFIX}/lib/libhyprcapture.so"
     ui="${PREFIX}/bin/hyprcapture-ui"
@@ -1162,13 +1166,6 @@ if [[ -x "${PREFIX}/bin/Hyprland" && -f "$STAMP" ]] && [[ "$(cat "$STAMP")" == "
 fi
 
 install_build_deps
-command -v gcc >/dev/null 2>&1 || die "gcc is not on PATH after package install"
-command -v g++ >/dev/null 2>&1 || die "g++ is not on PATH after package install"
-command -v mold >/dev/null 2>&1 || die "mold is not on PATH after package install"
-command -v cmake >/dev/null 2>&1 || die "cmake is not on PATH after package install"
-command -v meson >/dev/null 2>&1 || die "meson is not on PATH after package install"
-command -v make >/dev/null 2>&1 || die "make is not on PATH after package install"
-
 if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     log "would build Hyprland ${HYPRLAND_TAG} and ecosystem into ${PREFIX}"
     install_session_files
@@ -1177,6 +1174,13 @@ if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     configure_ly_source_session
     exit 0
 fi
+
+command -v gcc >/dev/null 2>&1 || die "gcc is not on PATH after package install"
+command -v g++ >/dev/null 2>&1 || die "g++ is not on PATH after package install"
+command -v mold >/dev/null 2>&1 || die "mold is not on PATH after package install"
+command -v cmake >/dev/null 2>&1 || die "cmake is not on PATH after package install"
+command -v meson >/dev/null 2>&1 || die "meson is not on PATH after package install"
+command -v make >/dev/null 2>&1 || die "make is not on PATH after package install"
 
 build_stack
 install_session_files
