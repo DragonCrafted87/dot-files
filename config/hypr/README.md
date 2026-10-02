@@ -230,12 +230,15 @@ launch. The wrap script will see HDMI-only and use the live TV mode.
 
 `hypridle` calls the wrappers, which call the profile script:
 
-- `idle-display-off.sh` → `display-profile.sh idle-off`
-- `idle-display-on.sh` → `dpms on`, `display-profile.sh idle-on`
+- `idle-display-off.sh` → `display-profile.sh idle-off`, then `boinc-gpu idle`
+- `idle-display-on.sh` → `display-profile.sh idle-on`, then `boinc-gpu active`
 
-BOINC idle/GPU policy lives in `setup/files/boinc/prefs/<role>.xml`
-(`run_gpu_if_user_active`, `idle_time_to_run`). Hyprland no longer swaps
-those files.
+`boinc-gpu idle` sets BOINC GPU mode to `always`. `boinc-gpu active` sets
+it to `never`. Login retries `active` until the client answers; logout
+sets `idle`. Desktop prefs still say the GPU stays off while BOINC thinks
+someone is at the machine. That idle timer does not move on Wayland, so
+the display scripts are what actually start and stop GPU work. Role XML
+is not swapped.
 
 When `hosts.d/<host>.conf` sets `IDLE_MONITOR`, idle-off records
 workspaces on that output and `dpms off` that output **and** `DESK_PORTS`

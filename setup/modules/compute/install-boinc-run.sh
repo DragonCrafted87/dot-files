@@ -185,6 +185,7 @@ install_boinc_file "$tmp" "${BOINC_DIR}/remote_hosts.cfg"
 rm -f "$tmp"
 
 install_boinc_file "${src}/boinc-config.sh" /usr/local/bin/boinc-config 0755 1
+install_boinc_file "${src}/boinc-gpu.sh" /usr/local/bin/boinc-gpu 0755 1
 install_boinc_file "${src}/boinc-status.sh" /usr/local/bin/boinc-status 0755 1
 install_boinc_file "${src}/boinc-status-all.sh" /usr/local/bin/boinc-status-all 0755 1
 
@@ -193,7 +194,8 @@ install_manager_desktop
 
 systemctl --user daemon-reload
 enable_user_service boinc-client.service
-if [[ "$boinc_changed" -eq 1 ]] || ! systemctl --user is-active --quiet boinc-client.service; then
+if [[ "$boinc_changed" -eq 1 || "${BOINC_OPENCL_NEW:-0}" == "1" ]] \
+    || ! systemctl --user is-active --quiet boinc-client.service; then
     log "restart boinc-client user unit"
     run systemctl --user restart boinc-client.service || run systemctl --user start boinc-client.service
     sleep 3
