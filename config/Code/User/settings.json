@@ -1,25 +1,4 @@
 {
-    "yaml.disableSchemaDetection": [
-        "**/.github/workflows/*.yml",
-        "**/.github/workflows/*.yaml",
-        "**/.gitea/workflows/*.yml",
-        "**/.gitea/workflows/*.yaml",
-        "**/.forgejo/workflows/*.yml",
-        "**/.forgejo/workflows/*.yaml"
-    ],
-    "workbench.editorAssociations": {
-        "{git,gitlens,chat-editing-snapshot-text-model,copilot,git-graph,git-graph-3}:/**/*.qrc": "default",
-        "{git,gitlens,chat-editing-snapshot-text-model,copilot,git-graph,git-graph-3}:/**/*.ui": "default",
-        "*.copilotmd": "vscode.markdown.preview.editor",
-        "*.qrc": "qt-core.qrcEditor"
-    },
-    "qt-core.additionalQtPaths": [
-        {
-            "name": "Qt-5.15.15-linux-clang-x86_64_from_PATH",
-            "path": "/sbin/qmake"
-        }
-    ],
-    "redhat.telemetry.enabled": false,
     "git.useIntegratedAskPass": true,
     "git.terminalAuthentication": true,
     "git.autofetch": true,
@@ -27,23 +6,6 @@
     "terminal.integrated.env.linux": {
         "SSH_ASKPASS_REQUIRE": "never"
     },
-    "[dart]": {
-        "editor.formatOnSave": true,
-        "editor.formatOnType": true,
-        "editor.rulers": [
-            120
-        ],
-        "editor.selectionHighlight": false,
-        "editor.suggestSelection": "first",
-        "editor.tabCompletion": "onlySnippets",
-        "editor.wordBasedSuggestions": "off",
-    },
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.python",
-        "editor.formatOnSave": true,
-    },
-    "C_Cpp.intelliSenseEngine": "disabled",
-    "cmake.configureOnOpen": true,
     "debug.terminal.clearBeforeReusing": true,
     "editor.codeActionsOnSave": {},
     // Controls whether syntax highlighting should be copied into the clipboard.
@@ -59,11 +21,6 @@
     "explorer.confirmDragAndDrop": false,
     "explorer.expandSingleFolderWorkspaces": false,
     "explorer.openEditors.sortOrder": "fullPath",
-    "extensions.ignoreRecommendations": true,
-    "files.associations": {
-        "*.inline": "c",
-        "*.wixproj": "xml",
-    },
     "files.eol": "\n",
     "files.hotExit": "onExitAndWindowClose",
     "files.insertFinalNewline": true,
@@ -74,14 +31,7 @@
     ],
     "git.openRepositoryInParentFolders": "always",
     "git.suggestSmartCommit": false,
-    "gitConfigUser.profiles": [
-        "d:/git-home/.gitconfig"
-    ],
     "github.gitProtocol": "ssh",
-    "projectManager.git.baseFolders": [
-        "D:\\\\git-home",
-        "C:\\\\git-home"
-    ],
     "projectManager.git.ignoredFolders": [
         "node_modules",
         "out",
@@ -96,22 +46,7 @@
     "projectManager.showParentFolderInfoOnDuplicates": true,
     "projectManager.sortList": "Name",
     "projectManager.tags": [],
-    "python.languageServer": "Jedi",
-    "redhat.telemetry.enabled": false,
-    "remote.SSH.configFile": "D:\\git-home\\.ssh\\config",
-    "remote.SSH.defaultExtensions": [
-        "streetsidesoftware.code-spell-checker",
-        "ms-python.black-formatter",
-    ],
-    "remote.SSH.lockfilesInTmp": true,
-    "remote.SSH.logLevel": "trace",
-    "remote.SSH.useLocalServer": true,
-    "scm.alwaysShowRepositories": true,
-    "scm.repositories.sortOrder": "path",
     "security.workspace.trust.untrustedFiles": "open",
-    "settingsSync.ignoredSettings": [
-        "gitConfigUser.profiles"
-    ],
     "sonarlint.disableTelemetry": true,
     "telemetry.telemetryLevel": "off",
     "terminal.integrated.allowChords": false,
@@ -128,16 +63,6 @@
     },
     "terminal.integrated.shellIntegration.enabled": false,
     "terminal.integrated.tabs.focusMode": "singleClick",
-    "vscode-kubernetes.helm-path": "helm",
-    "vscode-kubernetes.kubectl-path": "kubectl",
-    "vscode-kubernetes.kubectl-path-windows": "D:\\git-home\\bin\\kubectl.exe",
-    "vscode-kubernetes.log-viewer.destination": "Webview",
-    "vscode-kubernetes.log-viewer.follow": true,
-    "vscode-kubernetes.log-viewer.since": 10800,
-    "vscode-kubernetes.log-viewer.tail": -1,
-    "vscode-kubernetes.log-viewer.timestamp": false,
-    "vscode-kubernetes.log-viewer.wrap": false,
-    "vscode-kubernetes.minikube-path": "minikube",
     "window.restoreFullscreen": true,
     "window.restoreWindows": "folders",
     "window.title": "${dirty}${activeEditorMedium}${separator}${rootName}${separator}${remoteName}",
@@ -154,50 +79,17 @@
     },
     "workbench.startupEditor": "none",
     "workbench.tree.renderIndentGuides": "always",
-    "cmake.showOptionsMovedNotification": false,
     "git.pruneOnFetch": true,
     "git.pullBeforeCheckout": true,
     "git.timeline.showUncommitted": true,
-    "dart.lineLength": 120,
-    "dart.renameFilesWithClasses": "prompt",
     "diffEditor.experimental.showMoves": true,
     "hediet.vscode-drawio.resizeImages": null,
     "prettyxml.settings.formatOnSave": true,
     "shellformat.useEditorConfig": true,
     "editor.detectIndentation": false,
-    "vs-kubernetes": {
-        "disable-linters": [
-            "resource-limits"
-        ],
-        "vs-kubernetes.namespace": "",
-        "vs-kubernetes.kubectl-path": "",
-        "vs-kubernetes.helm-path": "",
-        "vs-kubernetes.minikube-path": "",
-        "vs-kubernetes.kubectlVersioning": "user-provided",
-        "vs-kubernetes.outputFormat": "yaml",
-        "vs-kubernetes.kubeconfig": "/home/dragon/.kube/config",
-        "vs-kubernetes.knownKubeconfigs": [
-            "/home/dragon/.kube/config"
-        ],
-        "vs-kubernetes.autoCleanupOnDebugTerminate": false,
-        "vs-kubernetes.nodejs-autodetect-remote-root": true,
-        "vs-kubernetes.nodejs-remote-root": "",
-        "vs-kubernetes.nodejs-debug-port": 9229,
-        "vs-kubernetes.dotnet-vsdbg-path": "~/vsdbg/vsdbg",
-        "vs-kubernetes.local-tunnel-debug-provider": "",
-        "checkForMinikubeUpgrade": true,
-        "imageBuildTool": "Docker",
-        "vscode-kubernetes.helm-path-linux": "/home/dragon/.local/state/vs-kubernetes/tools/helm/linux-amd64/helm",
-        "vscode-kubernetes.minikube-path-linux": "/home/dragon/.local/state/vs-kubernetes/tools/minikube/linux-amd64/minikube",
-        "vscode-kubernetes.kubectl-path-linux": "/home/dragon/.local/state/vs-kubernetes/tools/kubectl/kubectl",
-        "vs-kubernetes.minikube-show-information-expiration": "2027-03-10T18:54:32.858Z"
-    },
     "remote.SSH.connectTimeout": 30,
     "remote.SSH.showLoginTerminal": true,
     "remote.SSH.localServerDownload": "always",
-    "[nix]": {
-        "editor.defaultFormatter": "jnoortheen.nix-ide",
-    },
     "git.confirmSync": false,
     "editor.fontSize": 16,
     "shellcheck.customArgs": [
@@ -209,32 +101,6 @@
     "workbench.editor.enablePreview": false,
     "editor.unicodeHighlight.invisibleCharacters": false,
     "diffviewer.outputFormat": "side-by-side",
-    "sshfs.configs": [
-        {
-            "name": "castellan",
-            "host": "castellan.stealthdragonland.net",
-            "username": "dragon",
-            "privateKeyPath": "d:\\git-home\\.ssh\\id_ecdsa",
-            "root": "~",
-        },
-        {
-            "name": "faerie",
-            "host": "192.168.0.103",
-            "root": "/home/dragon",
-            "username": "dragon",
-            "privateKeyPath": "d:\\git-home\\.ssh\\id_ecdsa",
-        },
-        {
-            "name": "mist-dragon-router",
-            "host": "192.168.0.1",
-            "username": "root",
-            "privateKeyPath": "D:\\git-home\\.ssh\\id_rsa",
-        },
-    ],
-    "cmake.pinnedCommands": [
-        "workbench.action.tasks.configureTaskRunner",
-        "workbench.action.tasks.runTask",
-    ],
     "cSpell.ignorePaths": [
         "package-lock.json",
         "node_modules",
@@ -245,13 +111,8 @@
         ".cspell.json",
         ".cspell/*.dict",
     ],
-    "scheme-fmt.pythonPath": "python",
     "notebook.defaultFormatter": "oliver-ni.scheme-fmt",
-    "dart.flutterHotReloadOnSave": "manualIfDirty",
     "editor.inlineSuggest.suppressSuggestions": true,
-    "ollama-autocoder.endpoint": "http://192.168.1.10:11434/api/generate",
-    "ollama-autocoder.continue inline": false,
-    "ollama-autocoder.model": "codellama:34b",
     "prettyxml.settings.indentSpaceLength": 2,
     "prettyxml.settings.attributesInNewlineThreshold": 9,
     "workbench.secondarySideBar.showLabels": false,
@@ -259,7 +120,7 @@
         "calligraphy-wyrm.stealthdragonland.net",
         "castellan.stealthdragonland.net",
     ],
-    "editor.unicodeHighlight.nonBasicASCII": false,
+    "editor.unicodeHighlight.nonBasicASCII": true,
     "github.copilot.enable": {
         "*": false,
         "plaintext": false,
@@ -283,12 +144,6 @@
     "taskExplorer.showLastTasks": false,
     "taskExplorer.showFavoritesButton": false,
     "explorer.confirmPasteNative": false,
-    "qt-core.additionalQtPaths": [
-        {
-            "name": "Qt-5.15.15-linux-clang-x86_64_from_PATH",
-            "path": "/sbin/qmake",
-        },
-    ],
     "terminal.integrated.rightClickBehavior": "paste",
     "chat.disableAIFeatures": true,
     "settingsSync.ignoredExtensions": [
@@ -306,12 +161,6 @@
         "**/.forgejo/workflows/*.yml",
         "**/.forgejo/workflows/*.yaml"
     ],
-    "qt-core.showWelcomePageOnActivation": false,
-    "githubPullRequests.autoRepositoryDetection": true,
-    "githubPullRequests.deleteBranchAfterMerge": true,
-    "githubPullRequests.focusedMode": "overview",
-    "githubPullRequests.neverIgnoreDefaultBranch": true,
-    "githubPullRequests.notifications": "pullRequests",
     "yaml.format.singleQuote": true,
     "workbench.colorTheme": "Dark Modern",
     "terminal.integrated.fontFamily": "Lucida Sans Typewriter",
@@ -653,11 +502,8 @@
     "window.controlsStyle": "hidden",
     "window.commandCenter": true,
     "workbench.layoutControl.enabled": true,
-    "qt-qml.doNotAskForQmllsDownload": true,
-    "qt-qml.qmlls.customExePath": "/usr/lib64/qt6/bin/qmlls",
-    "githubPullRequests.pullBranch": "always",
+    "diffEditor.useInlineViewWhenSpaceIsLimited": true,
+    "security.promptForLocalFileProtocolHandling": false,
     "githubPullRequests.hideViewedFiles": true,
-    "atlascode.bitbucket.enabled": true,
-    "atlascode.jira.enabled": true,
-    "atlascode.bitbucket.pipelines.monitorEnabled": false,
+    "git.detectWorktrees": true,
 }

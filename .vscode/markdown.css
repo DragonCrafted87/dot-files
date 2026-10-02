@@ -1,0 +1,17 @@
+body {
+    width: 1000px;
+    margin: 0 auto;
+    font-family: Aptos, 'Calibri', 'Book Antiqua', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 22;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-size: 26;
+    font-family: Aptos, 'Calibri', 'Book Antiqua', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-decoration: underline;
+}

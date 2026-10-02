@@ -43,6 +43,8 @@ install_build_deps() {
         "lib64xcb-util-devel xcb-util-devel"
         "lib64gtk+3.0-devel libgtk+3.0-devel"
         "lib64wxgtku3.2-devel lib64wxgtku3.0-devel lib64wxu3.2-devel"
+        "opencl-headers"
+        "lib64OpenCL-devel lib64opencl-devel"
         "gettext"
     )
     for group in "${groups[@]}"; do
@@ -61,12 +63,35 @@ install_build_deps() {
 # with it. A matching version stamp skips the compile, so every role
 # run has to install the runtime packages itself.
 install_runtime_deps() {
+    local had_icd=0
+    # Mesa Rusticl is the OpenCL platform for the 7900 XTX. Reset removes
+    # it, and a matching version stamp skips the compile, so every role
+    # run has to install it again. The client dlopens libOpenCL.so.
+    if [[ -f /etc/OpenCL/vendors/rusticl.icd ]]; then
+        had_icd=1
+    fi
     ensure_packages \
         lib64wx_baseu3.2_0 \
         lib64wx_baseu_net3.2_0 \
         lib64wx_gtk3u_core3.2_0 \
         lib64wx_gtk3u_html3.2_0 \
-        lib64wx_gtk3u_webview3.2_0
+        lib64wx_gtk3u_webview3.2_0 \
+        lib64RusticlOpenCL
+    BOINC_OPENCL_NEW=0
+    if [[ "$had_icd" -eq 0 && -f /etc/OpenCL/vendors/rusticl.icd ]]; then
+        BOINC_OPENCL_NEW=1
+    fi
+}
+
+boinc_opencl_linked() {
+    local lib
+    for lib in \
+        "${BOINC_PREFIX}/lib/libboinc_opencl.so" \
+        "${BOINC_PREFIX}/lib64/libboinc_opencl.so"; do
+        [[ -e "$lib" ]] || continue
+        ldd "$lib" 2>/dev/null | grep -q 'libOpenCL\.so' && return 0
+    done
+    return 1
 }
 
 boinc_already_built() {
@@ -74,7 +99,8 @@ boinc_already_built() {
     [[ -x "${BOINC_PREFIX}/bin/boincmgr" ]] || return 1
     [[ -x "${BOINC_PREFIX}/bin/boinccmd" ]] || return 1
     [[ -f "$STAMP" ]] || return 1
-    [[ "$(tr -d '[:space:]' <"$STAMP")" == "$BOINC_VERSION" ]]
+    [[ "$(tr -d '[:space:]' <"$STAMP")" == "$BOINC_VERSION" ]] || return 1
+    boinc_opencl_linked
 }
 
 sync_boinc_source() {
@@ -109,6 +135,11 @@ build_boinc() {
         ./_autosetup
         ./configure --prefix="$BOINC_PREFIX" --disable-server --disable-fcgi --disable-silent-rules --enable-unicode --with-ssl --with-x \
             CC="${CC:-clang}" CXX="${CXX:-clang++}" CFLAGS="${CFLAGS:-}" CXXFLAGS="${CXXFLAGS:-}"
+        # Upstream leaves libboinc_opencl_la_LIBADD empty, so the API
+        # library is installed with unresolved clGetPlatformIDs.
+        if [[ -f api/Makefile ]] && ! grep -q '^libboinc_opencl_la_LIBADD = .*OpenCL' api/Makefile; then
+            sed -i 's/^libboinc_opencl_la_LIBADD =.*/libboinc_opencl_la_LIBADD = -lOpenCL/' api/Makefile
+        fi
         make -j"$(nproc)"
         sudo make install
     )

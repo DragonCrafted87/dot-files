@@ -14,6 +14,9 @@ Restart=on-failure
 RestartSec=10
 TimeoutStartSec=60
 WorkingDirectory=%h/.local/share/boinc
+# Mesa Rusticl hides radeonsi until this is set. Without it the client
+# loads libOpenCL and reports that no platform has a device.
+Environment=RUSTICL_ENABLE=radeonsi
 ExecStartPre=/usr/bin/mkdir -p %h/.local/share/boinc
 ExecStart=/usr/local/bin/boinc --dir %h/.local/share/boinc --allow_remote_gui_rpc
 ExecReload=/bin/kill -HUP $MAINPID

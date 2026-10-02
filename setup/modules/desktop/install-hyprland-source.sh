@@ -223,6 +223,21 @@ skip_if_distro_hyprland() {
     exit 0
 }
 
+# cmake --install drops hypridle and hyprpolkitagent units into
+# /usr/local/lib/systemd/user without an enable symlink. A role that
+# reboots at the end of this module never reaches enable-session-units,
+# so the next login's graphical-session.target does not start them.
+enable_source_session_units() {
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    systemctl --user daemon-reload || true
+    if [[ -x "${PREFIX}/bin/hypridle" ]]; then
+        enable_user_service hypridle.service
+    fi
+    if [[ -x "${PREFIX}/bin/hyprpolkitagent" ]]; then
+        enable_user_service hyprpolkitagent.service
+    fi
+}
+
 ensure_tagged_repo() {
     local url="$1" dir="$2" ref="$3"
     if [[ -d "${dir}/.git" ]]; then
@@ -1162,6 +1177,7 @@ if [[ -x "${PREFIX}/bin/Hyprland" && -f "$STAMP" ]] && [[ "$(cat "$STAMP")" == "
     install_prefix_desktops
     ensure_hyprcapture
     configure_ly_source_session
+    enable_source_session_units
     exit 0
 fi
 
@@ -1172,6 +1188,7 @@ if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     install_prefix_desktops
     ensure_hyprcapture
     configure_ly_source_session
+    enable_source_session_units
     exit 0
 fi
 
@@ -1187,6 +1204,7 @@ install_session_files
 install_prefix_desktops
 ensure_hyprcapture
 configure_ly_source_session
+enable_source_session_units
 write_stamp
 
 if [[ -x "${PREFIX}/bin/Hyprland" ]]; then

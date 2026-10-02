@@ -248,8 +248,15 @@ has no working BOINC rpms. The compile is skipped when
 version. The manager still needs the wxGTK 3.2 runtime libraries
 (`lib64wx_baseu3.2_0`, `lib64wx_baseu_net3.2_0`,
 `lib64wx_gtk3u_core3.2_0`, `lib64wx_gtk3u_html3.2_0`,
-`lib64wx_gtk3u_webview3.2_0`). Reset removes the devel package that
-pulled those in, so every role run installs them again.
+`lib64wx_gtk3u_webview3.2_0`). GPU detection needs Mesa Rusticl
+(`lib64RusticlOpenCL`), which provides `/etc/OpenCL/vendors/rusticl.icd`.
+The client unit sets `RUSTICL_ENABLE=radeonsi` so that platform exposes
+the AMD GPUs.
+The compile needs `opencl-headers` and `lib64OpenCL-devel` so
+`libboinc_opencl` links `libOpenCL`. Reset removes the devel packages
+and Rusticl, and a matching version stamp skips the compile, so every
+role run installs the wxGTK libraries and Rusticl again. A stamp match
+does not count until `ldd` shows `libOpenCL.so` on `libboinc_opencl.so`.
 
 Source builds pick up `bashrc.d/compiler.bashrc` (`clang`, `lld`,
 `-march=native`). On AMD family 23+ that is the matching `znver*` ISA,
@@ -261,6 +268,7 @@ not a hard-coded `znver1`.
 ~/.cache/boinc-build/boinc                source checkout
 /usr/local/bin/boinc{,mgr,cmd}
 /usr/local/bin/boinc-config
+/usr/local/bin/boinc-gpu
 /usr/local/bin/boinc-status
 /usr/local/bin/boinc-status-all
 /usr/local/share/boinc/.dotfiles-version
@@ -309,8 +317,12 @@ RAM limits must use `ram_max_used_idle_pct` / `ram_max_used_busy_pct` /
 
 Native BOINC honors `run_if_user_active`, `run_gpu_if_user_active`, and
 `idle_time_to_run` directly. Desktop roles keep CPU on while the session
-is busy, leave the GPU off until three minutes of idle, and use the
-idle/busy RAM split. There is no hypridle prefs swap.
+is busy, leave the GPU off until the displays blank, and use the
+idle/busy RAM split. Hyprland does not swap pref files. `boinc-gpu`
+(from `idle-display-off.sh` / `idle-display-on.sh`, and from
+`graphical-session.sh` at login and logout) sets GPU mode to `always`
+or `never`. A server has no hypridle session, so its GPU follows the
+role XML.
 
 Current `global_preferences` overrides:
 
