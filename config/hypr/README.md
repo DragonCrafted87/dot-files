@@ -192,6 +192,11 @@ through `hypr-session-exec.sh`. The timer is a oneshot and only restarts
 that unit. Waking from idle runs `apply` again so a monitor that was
 disabled at 06:30 gets a still. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
 `.jpg`) are dropped; hyprpaper exits if it is asked to preload one.
+A still whose border median luminance is at least
+`ASTRO_WALLPAPER_MAX_BORDER` (default 200, on a 0–255 scale) is dropped.
+That removes charts, diagrams, and scans on a near-white field. A bright
+object on a dark field stays. `ffmpeg` reads the border. When `ffmpeg`
+is not installed, the check is skipped and the still is kept.
 hyprpaper 0.8 and newer gets `wallpaper { }` blocks. The 0.7
 `wallpaper = MONITOR,path` lines leave every output with no target.
 
