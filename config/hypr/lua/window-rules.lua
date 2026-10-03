@@ -39,3 +39,36 @@ hl.window_rule({
     rounding = 0,
     suppress_event = "maximize fullscreen",
 })
+
+-- One tiled Code window per code-1..code-5. The script also chooses the monitor.
+local code_classes = {
+    ["com.microsoft.VSCode"] = true,
+    ["code"] = true,
+    ["Code"] = true,
+    ["code-url-handler"] = true,
+    ["code-oss"] = true,
+    ["codium"] = true,
+    ["VSCodium"] = true,
+}
+
+local function shell_quote(text)
+    return "'" .. tostring(text):gsub("'", "'\\''") .. "'"
+end
+
+hl.on("window.open", function(window)
+    if window == nil or window.floating then
+        return
+    end
+    if not (code_classes[window.class] or code_classes[window.initial_class]) then
+        return
+    end
+    if window.address == nil or window.address == "" then
+        return
+    end
+    os.execute(
+        "python3 "
+            .. (os.getenv("HOME") or "")
+            .. "/.config/hypr/scripts/switch-workspace.py --place-code "
+            .. shell_quote(window.address)
+    )
+end)

@@ -29,6 +29,36 @@ for i = 1, 10 do
     hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
 end
 
+-- code-1..code-5. D is not a modifier, so the digit is a submap.
+-- Uppercase letters in a Lua bind string already mean Shift, so the
+-- send chord spells d in lowercase.
+local switch_code = "python3 " .. scripts .. "/switch-workspace.py"
+
+local function code_submap(name, extra)
+    hl.define_submap(name, "reset", function()
+        for i = 1, 5 do
+            local command = switch_code .. " code-" .. i .. " --prefer" .. extra
+            -- The digit is pressed while Super, and often Shift, are still held.
+            local keys = {
+                tostring(i),
+                "SUPER + " .. i,
+                "SHIFT + " .. i,
+                "SUPER + SHIFT + " .. i,
+            }
+            for _, key in ipairs(keys) do
+                hl.bind(key, hl.dsp.exec_cmd(command), { ignore_mods = true })
+            end
+        end
+        hl.bind("escape", hl.dsp.submap("reset"), { ignore_mods = true })
+        hl.bind("catchall", hl.dsp.submap("reset"), { ignore_mods = true })
+    end)
+end
+
+hl.bind(mainMod .. " + D", hl.dsp.submap("code-ws"))
+code_submap("code-ws", "")
+hl.bind(mainMod .. " + SHIFT + d", hl.dsp.submap("code-send"))
+code_submap("code-send", " --send")
+
 hl.bind(mainMod .. " + S", hl.dsp.window.move({ workspace = "special:minimized" }))
 
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))

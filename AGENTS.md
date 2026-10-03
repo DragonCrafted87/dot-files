@@ -130,6 +130,13 @@ scripts.
 Visible workspace: focus that monitor. Hidden: `moveworkspacetomonitor`
 to the monitor under the cursor, then focus it.
 
+`SUPER+D` then `1-5` focuses `code-1` through `code-5` on the monitor
+that contains the middle of the enabled layout, or the widest monitor
+when none does. `SUPER+SHIFT+D` then `1-5` sends the active window
+there. A new tiled Code window takes the first of those workspaces
+that does not already have one. The chords are Lua-only. On the 0.48
+tree, `SUPER+SHIFT+D` is still the desk profile.
+
 The filename is hyphenated. Keep `# pylint: disable=invalid-name` at the
 top. Call it with `python3`; do not rely on a shebang plus executable
 bit (pre-commit `check-executables-have-shebangs`).
