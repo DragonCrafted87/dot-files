@@ -41,6 +41,9 @@ hl.window_rule({
 })
 
 -- One tiled Code window per code-1..code-5. The script also chooses the monitor.
+-- hl.on callbacks die after 50ms, and os.execute blocks the compositor
+-- thread, so hyprctl cannot answer until the callback returns. Spawn and
+-- return. Class often arrives after the window is mapped.
 local code_classes = {
     ["com.microsoft.VSCode"] = true,
     ["code"] = true,
@@ -55,7 +58,7 @@ local function shell_quote(text)
     return "'" .. tostring(text):gsub("'", "'\\''") .. "'"
 end
 
-hl.on("window.open", function(window)
+local function place_code_window(window)
     if window == nil or window.floating then
         return
     end
@@ -65,10 +68,13 @@ hl.on("window.open", function(window)
     if window.address == nil or window.address == "" then
         return
     end
-    os.execute(
+    hl.exec_cmd(
         "python3 "
             .. (os.getenv("HOME") or "")
             .. "/.config/hypr/scripts/switch-workspace.py --place-code "
             .. shell_quote(window.address)
     )
-end)
+end
+
+hl.on("window.open", place_code_window)
+hl.on("window.class", place_code_window)
