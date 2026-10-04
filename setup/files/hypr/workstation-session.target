@@ -8,7 +8,6 @@ Wants=workstation-brave.service
 Wants=workstation-steam.service
 Wants=workstation-discord.service
 Wants=qs-startmenu.service
-Wants=workstation-spin-border.service
 Wants=workstation-litra.service
 Wants=workstation-kdeconnect.service
 

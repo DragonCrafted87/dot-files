@@ -1,5 +1,4 @@
--- Mirrors conf.d/programs-autostart.conf for Hyprland 0.56+.
--- Monitor layouts still come from display-switch.sh restore (hyprctl keyword).
+-- Session start and shutdown. Monitor restore is display-switch.sh.
 
 local captureSo = "/usr/local/lib/libhyprcapture.so"
 

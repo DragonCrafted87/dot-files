@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Session actions for the start menu and keybinds.
-# Prefer hyprshutdown so clients get a graceful close instead of dispatch exit.
+# hyprshutdown closes clients before logout, reboot, and poweroff.
 set -euo pipefail
 
 usage() {
@@ -13,17 +13,14 @@ have() { command -v "$1" >/dev/null 2>&1; }
 graceful() {
     local title="$1"
     local post="${2:-}"
-    if have hyprshutdown; then
-        if [[ -n "$post" ]]; then
-            exec hyprshutdown -t "$title" --post-cmd "$post"
-        fi
-        exec hyprshutdown -t "$title"
+    if ! have hyprshutdown; then
+        echo "hyprshutdown not found" >&2
+        exit 1
     fi
     if [[ -n "$post" ]]; then
-        # shellcheck disable=SC2086
-        exec $post
+        exec hyprshutdown -t "$title" --post-cmd "$post"
     fi
-    exec hyprctl dispatch exit
+    exec hyprshutdown -t "$title"
 }
 
 case "${1:-}" in

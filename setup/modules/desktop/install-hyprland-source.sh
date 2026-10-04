@@ -226,6 +226,114 @@ skip_if_distro_hyprland() {
     exit 0
 }
 
+# hyprsunset's cmake copies systemd.pc's systemduserunitdir, which is
+# /usr/lib/systemd/user on this distro. The prefix stack stays under
+# ${PREFIX} until an rpm owns /usr.
+pin_systemd_user_unit_dir() {
+    local f="${1}/CMakeLists.txt"
+    [[ -f "$f" ]] || return 0
+    grep -q 'pkg_get_variable(SYSTEMD_USER_UNIT_DIR systemd systemduserunitdir)' "$f" || return 0
+    log "pin systemd user units to CMAKE_INSTALL_PREFIX in ${f}"
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    python3 - "$f" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = """pkg_get_variable(SYSTEMD_USER_UNIT_DIR systemd systemduserunitdir)
+if (NOT SYSTEMD_USER_UNIT_DIR)
+  set(SYSTEMD_USER_UNIT_DIR "${CMAKE_INSTALL_PREFIX}/lib/systemd/user")
+endif()
+"""
+new = 'set(SYSTEMD_USER_UNIT_DIR "${CMAKE_INSTALL_PREFIX}/lib/systemd/user")\n'
+if old not in text:
+    raise SystemExit(0)
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+}
+
+# A previous prefix build may already have dropped that unit into /usr.
+# Move a prefix ExecStart under ${PREFIX}. Delete a unit that still
+# execs the old /opt/hyprland tree.
+relocate_prefix_user_units() {
+    local src dest base was_enabled
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    shopt -s nullglob
+    for src in /usr/lib/systemd/user/hypr*.service \
+        /usr/lib/systemd/user/xdg-desktop-portal-hyprland.service; do
+        [[ -f "$src" ]] || continue
+        base="$(basename "$src")"
+        dest="${PREFIX}/lib/systemd/user/${base}"
+        if grep -qF "ExecStart=/opt/hyprland/" "$src"; then
+            log "remove leftover ${src}"
+            systemctl --user disable "$base" || true
+            sudo rm -f "$src"
+            systemctl --user daemon-reload || true
+            continue
+        fi
+        grep -qE "ExecStart=${PREFIX}/(bin|libexec)/" "$src" || continue
+        was_enabled=0
+        if systemctl --user is-enabled --quiet "$base" 2>/dev/null; then
+            was_enabled=1
+        fi
+        log "move ${src} to ${dest}"
+        if [[ ! -f "$dest" ]]; then
+            sudo install -d "$(dirname "$dest")"
+            sudo install -m 0644 "$src" "$dest"
+        fi
+        sudo rm -f "$src"
+        systemctl --user daemon-reload || true
+        if [[ "$was_enabled" == "1" ]]; then
+            systemctl --user reenable "$base"
+        fi
+    done
+    shopt -u nullglob
+    heal_prefix_unit_enables
+}
+
+# enable leaves an existing wants symlink alone, even after the unit file
+# moves from /usr/lib to ${PREFIX}. reenable rewrites that link.
+heal_prefix_unit_enables() {
+    local link target base
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    shopt -s nullglob
+    for link in "${DOTFILES_HOME}/.config/systemd/user/"*.wants/hypr*.service \
+        "${DOTFILES_HOME}/.config/systemd/user/"*.wants/xdg-desktop-portal-hyprland.service; do
+        target="$(readlink "$link" 2>/dev/null || true)"
+        case "$target" in
+            /usr/lib/systemd/user/* | /opt/hyprland/*) ;;
+            *) continue ;;
+        esac
+        base="$(basename "$link")"
+        [[ -f "${PREFIX}/lib/systemd/user/${base}" ]] || continue
+        log "reenable ${base}"
+        systemctl --user reenable "$base"
+    done
+    shopt -u nullglob
+}
+
+# /usr/local is the install. /opt/hyprland is the previous prefix.
+# Stray /usr/bin copies are removed only when no rpm owns them.
+remove_cutover_leftovers() {
+    local bin
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    [[ -x "${PREFIX}/bin/Hyprland" ]] || return 0
+    if [[ -d /opt/hyprland ]] && ! mountpoint -q /opt/hyprland; then
+        log "remove leftover /opt/hyprland"
+        sudo rm -rf /opt/hyprland
+    fi
+    for bin in /usr/bin/Hyprland /usr/bin/hyprctl; do
+        [[ -e "$bin" ]] || continue
+        if rpm -qf "$bin" >/dev/null 2>&1; then
+            warn "leave ${bin}; an rpm still owns it"
+            continue
+        fi
+        log "remove leftover ${bin}"
+        sudo rm -f "$bin"
+    done
+}
+
 # cmake --install drops hypridle and hyprpolkitagent units into
 # /usr/local/lib/systemd/user without an enable symlink. A role that
 # reboots at the end of this module never reaches enable-session-units,
@@ -694,6 +802,7 @@ build_cmake_src() {
     rewrite_embed_tree "$src"
     patch_libstdcxx_format "$src"
     patch_pci_extern_c "$src"
+    pin_systemd_user_unit_dir "$src"
     rm -rf "${src}/build"
     fill_cmake_config_flags
     cmake -S "$src" -B "${src}/build" "${cmake_config_flags[@]}" "${extra[@]}"
@@ -1075,27 +1184,6 @@ ensure_hyprcapture() {
     log "installed hyprcapture ${HYPRCAPTURE_REV}"
 }
 
-set_ly_key() {
-    local file="$1" key="$2" value="$3"
-    [[ -f "$file" ]] || return 1
-    if grep -qE "^${key}[[:space:]]*=" "$file"; then
-        grep -qE "^${key}[[:space:]]*=[[:space:]]*${value}$" "$file" && return 0
-        log "set ${key} in ${file}"
-        [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]] && sudo sed -i -E "s|^${key}[[:space:]]*=.*|${key} = ${value}|" "$file"
-        return 0
-    fi
-    log "add ${key} to ${file}"
-    [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]] && printf '%s = %s\n' "$key" "$value" | sudo tee -a "$file" >/dev/null
-}
-
-configure_ly_source_session() {
-    if [[ -f /etc/ly/config.ini ]]; then set_ly_key /etc/ly/config.ini custom_sessions "$LY_CUSTOM_DIR"
-    elif [[ -f /etc/ly/config.lua ]]; then
-        if grep -qE "^[[:space:]]*custom_sessions[[:space:]]*=" /etc/ly/config.lua; then log "leave custom_sessions in /etc/ly/config.lua"
-    else warn "/etc/ly/config.lua has no custom_sessions"; fi
-else warn "Ly config not present yet"; fi
-}
-
 build_stack() {
     export_prefix_env
     log "compiler ${CC:-unset} / ${CXX:-unset} CFLAGS=${CFLAGS:-} CXXFLAGS=${CXXFLAGS:-} LDFLAGS=${LDFLAGS:-}"
@@ -1182,7 +1270,8 @@ if [[ -x "${PREFIX}/bin/Hyprland" && -f "$STAMP" ]] && [[ "$(cat "$STAMP")" == "
     install_session_files
     install_prefix_desktops
     ensure_hyprcapture
-    configure_ly_source_session
+    relocate_prefix_user_units
+    remove_cutover_leftovers
     enable_source_session_units
     exit 0
 fi
@@ -1193,7 +1282,8 @@ if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
     install_session_files
     install_prefix_desktops
     ensure_hyprcapture
-    configure_ly_source_session
+    relocate_prefix_user_units
+    remove_cutover_leftovers
     enable_source_session_units
     exit 0
 fi
@@ -1209,7 +1299,8 @@ build_stack
 install_session_files
 install_prefix_desktops
 ensure_hyprcapture
-configure_ly_source_session
+relocate_prefix_user_units
+remove_cutover_leftovers
 enable_source_session_units
 write_stamp
 
