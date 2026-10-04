@@ -98,7 +98,6 @@ repos:
   rev: v6.4.3
   hooks:
   - id: beautysh
-    types: [bash, shell]
     args:
     - --indent-size
     - '4'

@@ -20,7 +20,7 @@ compositor_exe() {
         [[ -n "$pid" ]] || continue
         if [[ -n "$sig" ]]; then
             tr '\0' '\n' <"/proc/${pid}/environ" 2>/dev/null |
-                grep -Fxq "HYPRLAND_INSTANCE_SIGNATURE=${sig}" || continue
+            grep -Fxq "HYPRLAND_INSTANCE_SIGNATURE=${sig}" || continue
         fi
         readlink -f "/proc/${pid}/exe" 2>/dev/null
         return 0

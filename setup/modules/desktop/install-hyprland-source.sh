@@ -183,7 +183,10 @@ use_hyprland_gcc() {
     strip_flag_from LDFLAGS -fuse-ld=lld
     strip_flag_from CFLAGS -fuse-ld=lld
     if command -v mold >/dev/null 2>&1; then
-        case " ${LDFLAGS:-} " in *" -fuse-ld=mold "*) ;; *) LDFLAGS="${LDFLAGS:+${LDFLAGS} }-fuse-ld=mold" ;; esac
+        case " ${LDFLAGS:-} " in
+            *" -fuse-ld=mold "*) ;;
+            *) LDFLAGS="${LDFLAGS:+${LDFLAGS} }-fuse-ld=mold" ;;
+        esac
         export LD=mold
     fi
     export CFLAGS CXXFLAGS LDFLAGS
@@ -471,7 +474,10 @@ cmake_config_flags=()
 fill_cmake_config_flags() {
     use_hyprland_gcc
     CMAKE_EXE_LINKER_FLAGS="${LDFLAGS:-}"
-    case " ${CMAKE_EXE_LINKER_FLAGS} " in *" --allow-shlib-undefined "*) ;; *) CMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS:+${CMAKE_EXE_LINKER_FLAGS} }-Wl,--allow-shlib-undefined" ;; esac
+    case " ${CMAKE_EXE_LINKER_FLAGS} " in
+        *" --allow-shlib-undefined "*) ;;
+        *) CMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS:+${CMAKE_EXE_LINKER_FLAGS} }-Wl,--allow-shlib-undefined" ;;
+    esac
     cmake_config_flags=(
         -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PREFIX" -DCMAKE_PREFIX_PATH="$PREFIX"
         -DCMAKE_LIBRARY_PATH="${PREFIX}/lib64;${PREFIX}/lib"
@@ -883,7 +889,7 @@ ensure_iniparser_pc() {
     [[ -n "$so" ]] || die "libiniparser.so missing; install lib64iniparser-devel"
     if [[ -f /usr/include/iniparser/iniparser.h ]]; then inc=/usr/include/iniparser
     elif [[ -f /usr/include/iniparser.h ]]; then inc=/usr/include
-    else die "iniparser.h missing; install lib64iniparser-devel"; fi
+else die "iniparser.h missing; install lib64iniparser-devel"; fi
     local pc="${PREFIX}/lib64/pkgconfig/iniparser.pc"
     log "write ${pc} (includedir=${inc})"
     [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
@@ -1086,8 +1092,8 @@ configure_ly_source_session() {
     if [[ -f /etc/ly/config.ini ]]; then set_ly_key /etc/ly/config.ini custom_sessions "$LY_CUSTOM_DIR"
     elif [[ -f /etc/ly/config.lua ]]; then
         if grep -qE "^[[:space:]]*custom_sessions[[:space:]]*=" /etc/ly/config.lua; then log "leave custom_sessions in /etc/ly/config.lua"
-        else warn "/etc/ly/config.lua has no custom_sessions"; fi
-    else warn "Ly config not present yet"; fi
+    else warn "/etc/ly/config.lua has no custom_sessions"; fi
+else warn "Ly config not present yet"; fi
 }
 
 build_stack() {

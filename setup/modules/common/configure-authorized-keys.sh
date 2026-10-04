@@ -24,6 +24,6 @@ enable_service sync-github-keys.timer
 run sudo systemctl start sync-github-keys.timer
 
 if ! sudo -u "${DOTFILES_USER}" GITHUB_KEYS_USER="${GITHUB_KEYS_USER:-DragonCrafted87}" \
-        /usr/local/bin/sync-github-authorized-keys.sh; then
+    /usr/local/bin/sync-github-authorized-keys.sh; then
     warn "GitHub key sync failed this run; timer will retry"
 fi
