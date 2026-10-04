@@ -3,6 +3,7 @@
 
 Numbered workspaces follow the cursor. code-1 through code-5 prefer the
 monitor that contains the middle of the layout, and otherwise the widest.
+Headless outputs are left out of that layout.
 """
 
 import json
@@ -111,9 +112,30 @@ def enabled_monitors(monitors):
     return enabled
 
 
+def is_headless_monitor(monitor) -> bool:
+    """A virtual output has no panel, or Hyprland named it HEADLESS-*.
+
+    prayers opens HEADLESS-3 past the desk. Counting that panel moves the
+    bounding-box center from DP-3 onto HDMI-A-1.
+    """
+    name = str(monitor.get("name") or "")
+    if name.startswith("HEADLESS"):
+        return True
+    if "physicalWidth" not in monitor and "physicalHeight" not in monitor:
+        return False
+    return (
+        int(monitor.get("physicalWidth") or 0) <= 0
+        and int(monitor.get("physicalHeight") or 0) <= 0
+    )
+
+
 def preferred_monitor(monitors):
     """Center monitor, otherwise the widest enabled output."""
-    enabled = enabled_monitors(monitors)
+    enabled = [
+        monitor
+        for monitor in enabled_monitors(monitors)
+        if not is_headless_monitor(monitor)
+    ]
     if not enabled:
         return None
     left = min(int(monitor["x"]) for monitor in enabled)

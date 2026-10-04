@@ -141,8 +141,10 @@ moves to the monitor under the cursor.
 `SUPER+D`, then `1` through `5`, focuses `code-1` through `code-5`.
 `SUPER+SHIFT+D`, then the same digit, sends the active window there.
 Those workspaces open on the monitor that contains the middle of the
-layout. When none does, they open on the widest. A new tiled Code
-window takes the first of the five that does not already have one.
+layout. Headless outputs are left out of that layout. When none of the
+remaining monitors contains the middle, they open on the widest. A new
+tiled Code window takes the first of the five that does not already
+have one.
 The chords are in `lua/keybinds.lua`. On the 0.48 tree,
 `SUPER+SHIFT+D` is still the desk profile.
 
