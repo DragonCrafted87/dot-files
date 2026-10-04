@@ -139,21 +139,21 @@ case "${SSH_MODE:-fail}" in
         exit 255
         ;;
     syncfail)
-        if [[ "$*" == *"/root/bin/sync-github-keys.sh"* ]]; then
+        if [[ "$*" == *"/mnt/overlay/dot-files/sync-github-keys.sh"* ]]; then
             printf '%s\n' 'failed to write sync script' >&2
             exit 1
         fi
         accept_rest "$*"
         ;;
     syncwarn)
-        if [[ "$*" == *"/root/bin/sync-github-keys.sh"* && "$*" != *"cat > "* ]]; then
+        if [[ "$*" == *"/mnt/overlay/dot-files/sync-github-keys.sh"* && "$*" != *"cat > "* ]]; then
             printf '%s\n' 'error: failed to fetch' >&2
             exit 1
         fi
         accept_rest "$*"
         ;;
     lockfail)
-        if [[ "$*" == *"ha-cli@tty1"* ]]; then
+        if [[ "$*" == *"haos-activate.sh"* && "$*" != *"cat > "* ]]; then
             printf '%s\n' 'Failed to mask ha-cli@tty1.service' >&2
             exit 1
         fi
@@ -318,52 +318,80 @@ grep -q 'installed SSH keys' <<<"$ha_out" || {
     printf 'key login did not report the host keys:\n%s\n' "$ha_out" >&2
     exit 1
 }
-grep -q 'systemctl enable --now sync-github-keys.timer' "$ssh_log" || {
-    printf 'key login did not enable the key timer:\n%s\n' "$(cat "$ssh_log")" >&2
+grep -q 'installed the HAOS updater' <<<"$ha_out" || {
+    printf 'key login did not report the updater:\n%s\n' "$ha_out" >&2
     exit 1
 }
-grep -q 'enabled GitHub key timer' <<<"$ha_out" || {
-    printf 'key login did not report the key timer:\n%s\n' "$ha_out" >&2
+grep -q '/mnt/overlay/dot-files/haos-activate.sh' "$ssh_log" || {
+    printf 'key login did not activate the supervisor:\n%s\n' "$(cat "$ssh_log")" >&2
     exit 1
 }
-grep -q 'mask --now ha-cli@tty1.service' "$ssh_log" || {
-    printf 'key login did not mask ha-cli:\n%s\n' "$(cat "$ssh_log")" >&2
+grep -q 'ForwardX11=no' "$ssh_log" || {
+    printf 'key login forwarded X11:\n%s\n' "$(cat "$ssh_log")" >&2
     exit 1
 }
-grep -q 'mask getty@tty1.service' "$ssh_log" || {
-    printf 'key login did not mask getty@tty1:\n%s\n' "$(cat "$ssh_log")" >&2
-    exit 1
-}
-if grep -q 'systemctl start getty' "$ssh_log"; then
-    printf 'key login started a getty:\n%s\n' "$(cat "$ssh_log")" >&2
+if grep -q '/root/bin\|/etc/systemd/system\|sync-github-keys.timer\|systemctl start getty' "$ssh_log"; then
+    printf 'key login used a read-only path or a getty:\n%s\n' "$(cat "$ssh_log")" >&2
     exit 1
 fi
 grep -q 'locked the console' <<<"$ha_out" || {
     printf 'key login did not report the console lock:\n%s\n' "$ha_out" >&2
     exit 1
 }
-[[ "$(cat "${ssh_capture}/sync-github-keys.service")" == *"Environment=DOTFILES_HOME=/root"* ]] || {
-    printf 'captured service is not the root updater:\n%s\n' "$(cat "${ssh_capture}/sync-github-keys.service")" >&2
-    exit 1
-}
-if grep -q '^User=' "${ssh_capture}/sync-github-keys.service"; then
-    printf 'captured service sets a user:\n%s\n' "$(cat "${ssh_capture}/sync-github-keys.service")" >&2
-    exit 1
-fi
-grep -q 'OnUnitActiveSec=12h' "${ssh_capture}/sync-github-keys.timer" || {
-    printf 'captured timer cadence:\n%s\n' "$(cat "${ssh_capture}/sync-github-keys.timer")" >&2
-    exit 1
-}
 grep -q '^#!/bin/sh' "${ssh_capture}/sync-github-keys.sh" || {
     printf 'captured updater is not a /bin/sh script\n' >&2
     exit 1
 }
-grep -q 'ExecStart=/root/bin/haos-console-lock.sh' "${ssh_capture}/haos-console-lock.service" || {
-    printf 'captured lock unit:\n%s\n' "$(cat "${ssh_capture}/haos-console-lock.service")" >&2
+grep -q 'DOTFILES_HOME:-/root' "${ssh_capture}/sync-github-keys.sh" || {
+    printf 'captured updater does not write /root:\n%s\n' "$(cat "${ssh_capture}/sync-github-keys.sh")" >&2
+    exit 1
+}
+grep -q '^keys_user=DragonCrafted87$' "${ssh_capture}/haos-supervise.sh" || {
+    printf 'captured supervisor lost the GitHub user:\n%s\n' "$(cat "${ssh_capture}/haos-supervise.sh")" >&2
+    exit 1
+}
+grep -q 'sleep 43200' "${ssh_capture}/haos-supervise.sh" || {
+    printf 'captured supervisor cadence:\n%s\n' "$(cat "${ssh_capture}/haos-supervise.sh")" >&2
+    exit 1
+}
+grep -q 'mask --runtime --now ha-cli@tty1.service getty@tty1.service' "${ssh_capture}/haos-supervise.sh" || {
+    printf 'captured supervisor does not mask tty1:\n%s\n' "$(cat "${ssh_capture}/haos-supervise.sh")" >&2
+    exit 1
+}
+if grep -q '^User=' "${ssh_capture}/haos-supervise.sh"; then
+    printf 'captured supervisor sets a user:\n%s\n' "$(cat "${ssh_capture}/haos-supervise.sh")" >&2
+    exit 1
+fi
+grep -q 'systemd.mask=ha-cli@tty1.service' "${ssh_capture}/haos-activate.sh" || {
+    printf 'captured activate script misses the ha-cli mask\n' >&2
+    exit 1
+}
+grep -q 'systemd.mask=getty@tty1.service' "${ssh_capture}/haos-activate.sh" || {
+    printf 'captured activate script misses the getty mask\n' >&2
+    exit 1
+}
+grep -q 'refusing to drop console=tty0' "${ssh_capture}/haos-activate.sh" || {
+    printf 'captured activate script can drop console=tty0\n' >&2
+    exit 1
+}
+grep -q 'systemd-run --unit=haos-dot-files.service' "${ssh_capture}/haos-activate.sh" || {
+    printf 'captured activate script does not start the supervisor\n' >&2
+    exit 1
+}
+if grep -q 'systemctl start getty' "${ssh_capture}/haos-activate.sh"; then
+    printf 'captured activate script starts a getty\n' >&2
+    exit 1
+fi
+grep -q 'RUN+="/mnt/overlay/dot-files/haos-udev.sh"' "${ssh_capture}/90-haos-dot-files.rules" || {
+    printf 'captured udev rule:\n%s\n' "$(cat "${ssh_capture}/90-haos-dot-files.rules")" >&2
     exit 1
 }
 grep -q 'console is locked' "${ssh_capture}/haos-console-lock.sh" || {
     printf 'captured lock script has no banner\n' >&2
+    exit 1
+}
+grep -q 'HAOS_CONSOLE_DEVICE' "${ssh_capture}/haos-console-lock.sh" || {
+    printf 'captured lock script always opens a tty\n' >&2
     exit 1
 }
 
@@ -486,7 +514,7 @@ set -e
     printf 'updater install failure should stop:\n%s\n' "$syncfail_out" >&2
     exit 1
 }
-grep -q 'failed to install /root/bin/sync-github-keys.sh' <<<"$syncfail_out" || {
+grep -q 'failed to install /mnt/overlay/dot-files/sync-github-keys.sh' <<<"$syncfail_out" || {
     printf 'updater install failure missing error:\n%s\n' "$syncfail_out" >&2
     exit 1
 }
@@ -514,7 +542,7 @@ set -e
     printf 'a failed key refresh should still finish:\n%s\n' "$syncwarn_out" >&2
     exit 1
 }
-grep -q 'timer will retry' <<<"$syncwarn_out" || {
+grep -q 'supervisor will retry' <<<"$syncwarn_out" || {
     printf 'failed key refresh missing the retry warning:\n%s\n' "$syncwarn_out" >&2
     exit 1
 }
@@ -627,6 +655,48 @@ grep -q 'port 22222' <<<"$lock_out" || {
     printf 'lock banner missing the SSH port:\n%s\n' "$lock_out" >&2
     exit 1
 }
+if grep -q $'\033' <<<"$lock_out"; then
+    printf 'lock banner cleared a tty when HAOS_CONSOLE_DEVICE was unset\n' >&2
+    exit 1
+fi
+fake_tty="${work}/fake-tty"
+: >"$fake_tty"
+fake_out="$(HAOS_CONSOLE_DEVICE="$fake_tty" timeout 1 /bin/sh "$lock_sh" 2>/dev/null || true)"
+[[ -z "$fake_out" ]] || {
+    printf 'lock wrote stdout when a device was set:\n%s\n' "$fake_out" >&2
+    exit 1
+}
+grep -q 'console is locked' "$fake_tty" || {
+    printf 'lock banner missing from the device:\n%s\n' "$(cat "$fake_tty")" >&2
+    exit 1
+}
+grep -q $'\033' "$fake_tty" || {
+    printf 'lock did not clear the device\n' >&2
+    exit 1
+}
+
+activate_sh="${repo}/setup/files/ssh/haos-activate.sh"
+expect_masks='console=tty0 systemd.mask=ha-cli@tty1.service systemd.mask=getty@tty1.service'
+rewritten="$(/bin/sh "$activate_sh" --rewrite-cmdline 'console=tty0')"
+[[ "$rewritten" == "$expect_masks" ]] || {
+    printf 'cmdline rewrite of console=tty0: %s\n' "$rewritten" >&2
+    exit 1
+}
+again="$(/bin/sh "$activate_sh" --rewrite-cmdline "$rewritten")"
+[[ "$again" == "$expect_masks" ]] || {
+    printf 'cmdline rewrite was not idempotent: %s\n' "$again" >&2
+    exit 1
+}
+kept="$(/bin/sh "$activate_sh" --rewrite-cmdline 'console=tty0 foo=1 systemd.mask=ha-cli@tty1.service')"
+[[ "$kept" == "console=tty0 foo=1 systemd.mask=ha-cli@tty1.service systemd.mask=getty@tty1.service" ]] || {
+    printf 'cmdline rewrite dropped a token: %s\n' "$kept" >&2
+    exit 1
+}
+cr="$(/bin/sh "$activate_sh" --rewrite-cmdline $'console=tty0\r')"
+[[ "$cr" == "$expect_masks" ]] || {
+    printf 'cmdline rewrite kept a CR: %s\n' "$cr" >&2
+    exit 1
+}
 
 printf 'haos module ok\n'
 
@@ -714,18 +784,18 @@ grep -q 'ha host options --hostname ward-drake' <<<"$dry_out" || {
     printf 'dry-run missing hostname command:\n%s\n' "$dry_out" >&2
     exit 1
 }
-grep -q 'sync-github-keys.timer' <<<"$dry_out" || {
-    printf 'dry-run missing the key timer:\n%s\n' "$dry_out" >&2
+grep -q '/mnt/overlay/dot-files/haos-activate.sh' <<<"$dry_out" || {
+    printf 'dry-run missing the activator:\n%s\n' "$dry_out" >&2
     exit 1
 }
-grep -q 'mask --now ha-cli@tty1.service' <<<"$dry_out" || {
-    printf 'dry-run missing the console lock:\n%s\n' "$dry_out" >&2
+grep -q 'ForwardX11=no' <<<"$dry_out" || {
+    printf 'dry-run forwarded X11:\n%s\n' "$dry_out" >&2
     exit 1
 }
-grep -q 'mask getty@tty1.service' <<<"$dry_out" || {
-    printf 'dry-run missing the getty mask:\n%s\n' "$dry_out" >&2
+if grep -q 'sync-github-keys.timer\|systemctl start getty\|/root/bin' <<<"$dry_out"; then
+    printf 'dry-run used a read-only path or a getty:\n%s\n' "$dry_out" >&2
     exit 1
-}
+fi
 if grep -q 'hostnamectl' <<<"$dry_out"; then
     printf 'dry-run mentioned hostnamectl:\n%s\n' "$dry_out" >&2
     exit 1

@@ -164,19 +164,25 @@ listening on the port, the command writes
 file onto a USB partition named `CONFIG`, import it (`ha os import`,
 or reboot with the stick attached), and run the command again.
 
-The same run installs `/root/bin/sync-github-keys.sh` and enables
-`sync-github-keys.timer`. The timer runs two minutes after boot and
-every twelve hours after that. A bad or empty fetch leaves the current
-`authorized_keys` in place. The host root filesystem is read-only and
-the shell is ash, so this copy is `/bin/sh` under `/root`, with the
-units in `/etc/systemd/system`. The workstation updater stays
+The same run installs the key updater and the console lock under
+`/mnt/overlay/dot-files`. The root filesystem is erofs, and
+`/etc/systemd/system` is on that filesystem, so the role does not
+install unit files there. A udev rule starts `haos-supervise.sh`
+after the overlay is mounted. The supervisor refreshes the GitHub
+keys two minutes after boot and every twelve hours after a successful
+fetch. A bad or empty fetch leaves the current `authorized_keys` in
+place and retries in two minutes. The script is `/bin/sh`. The
+workstation updater stays
 `/usr/local/bin/sync-github-authorized-keys.sh` and still runs as
 `dragon`.
 
 The HDMI console starts `ha-cli@tty1`, which accepts commands with no
-password. The run masks that unit and `getty@tty1`, then holds tty1
-with `haos-console-lock.service`. The screen says the console is
-locked and names SSH port 22222. Host SSH on that port stays up.
+password. The run adds `systemd.mask=ha-cli@tty1.service` and
+`systemd.mask=getty@tty1.service` to `/mnt/boot/cmdline.txt`, keeping
+`console=tty0`, and masks both units for the current boot. The
+supervisor holds tty1. The screen says the console is locked and
+names SSH port 22222. Host SSH on that port stays up. The cmdline
+change applies on the next boot.
 
 `init-remote.sh` rejects `haos` and prints that `role.sh --target`
 command. DNS for `ward-drake.stealthdragonland.net` stays on

@@ -4,9 +4,10 @@
 # HAOS_TARGET is user@host. Host SSH listens on HAOS_SSH_PORT (default
 # 22222). Key login writes /root/.ssh/authorized_keys. A closed port
 # writes authorized_keys for a CONFIG usb and stops. This does not use
-# the Terminal & SSH app. /usr is read-only and the host shell is ash,
-# so the updater lives in /root and /etc. The console lock masks
-# ha-cli@tty1 and getty@tty1 and holds tty1. It does not open a getty.
+# the Terminal & SSH app. The root filesystem and /etc/systemd/system
+# are erofs. Scripts live on /mnt/overlay, which is mounted before the
+# user-rules udev retrigger. The console lock masks ha-cli@tty1 and
+# getty@tty1 and holds tty1. It does not open a getty.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -35,6 +36,8 @@ ssh_common=(
     -p "$port"
     -o ConnectTimeout=10
     -o StrictHostKeyChecking=accept-new
+    -o ForwardX11=no
+    -o ForwardAgent=no
 )
 
 ssh_keys() {
@@ -73,12 +76,7 @@ if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
         -o BatchMode=yes \
         -o PreferredAuthentications=publickey \
         "$target" \
-        systemctl enable --now sync-github-keys.timer
-    run ssh "${ssh_common[@]}" \
-        -o BatchMode=yes \
-        -o PreferredAuthentications=publickey \
-        "$target" \
-        "systemctl mask --now ha-cli@tty1.service && systemctl mask getty@tty1.service && systemctl enable haos-console-lock.service && systemctl restart haos-console-lock.service"
+        /mnt/overlay/dot-files/haos-activate.sh
     exit 0
 fi
 
@@ -113,8 +111,8 @@ write_payload() {
 }
 
 keys_file="$(mktemp)"
-service_tmp=""
-trap 'rm -f "$keys_file"; if [[ -n "${service_tmp}" ]]; then rm -f "$service_tmp"; fi' EXIT
+supervise_tmp=""
+trap 'rm -f "$keys_file"; if [[ -n "${supervise_tmp}" ]]; then rm -f "$supervise_tmp"; fi' EXIT
 fetch_keys >"$keys_file"
 
 push_remote() {
@@ -178,34 +176,37 @@ fi
 ssh_keys 'systemctl start dropbear >/dev/null 2>&1 || true' || true
 log "installed SSH keys on ${target}"
 
-sync_bin="/root/bin/sync-github-keys.sh"
-lock_bin="/root/bin/haos-console-lock.sh"
+data_dir="/mnt/overlay/dot-files"
+sync_bin="${data_dir}/sync-github-keys.sh"
+lock_bin="${data_dir}/haos-console-lock.sh"
+supervise_bin="${data_dir}/haos-supervise.sh"
+udev_bin="${data_dir}/haos-udev.sh"
+activate_bin="${data_dir}/haos-activate.sh"
+rule_dest="/etc/udev/rules.d/90-haos-dot-files.rules"
 if ! push_remote 0755 "$sync_bin" "${haos_ssh_src}/haos-sync-github-keys.sh"; then
     die "failed to install ${sync_bin} on ${target}"
-fi
-service_tmp="$(mktemp)"
-sed "s/^Environment=GITHUB_KEYS_USER=.*/Environment=GITHUB_KEYS_USER=${keys_user}/" \
-    "${haos_ssh_src}/haos-sync-github-keys.service" >"$service_tmp"
-if ! push_remote 0644 /etc/systemd/system/sync-github-keys.service "$service_tmp"; then
-    die "failed to install sync-github-keys.service on ${target}"
-fi
-if ! push_remote 0644 /etc/systemd/system/sync-github-keys.timer \
-    "${haos_ssh_src}/haos-sync-github-keys.timer"; then
-    die "failed to install sync-github-keys.timer on ${target}"
 fi
 if ! push_remote 0755 "$lock_bin" "${haos_ssh_src}/haos-console-lock.sh"; then
     die "failed to install ${lock_bin} on ${target}"
 fi
-if ! push_remote 0644 /etc/systemd/system/haos-console-lock.service \
-    "${haos_ssh_src}/haos-console-lock.service"; then
-    die "failed to install haos-console-lock.service on ${target}"
+supervise_tmp="$(mktemp)"
+sed "s/^keys_user=.*/keys_user=${keys_user}/" \
+    "${haos_ssh_src}/haos-supervise.sh" >"$supervise_tmp"
+if ! push_remote 0755 "$supervise_bin" "$supervise_tmp"; then
+    die "failed to install ${supervise_bin} on ${target}"
 fi
-if ! ssh_keys 'systemctl daemon-reload && systemctl enable --now sync-github-keys.timer'; then
-    die "failed to enable sync-github-keys.timer on ${target}"
+if ! push_remote 0755 "$udev_bin" "${haos_ssh_src}/haos-udev.sh"; then
+    die "failed to install ${udev_bin} on ${target}"
 fi
-log "enabled GitHub key timer on ${target}"
+if ! push_remote 0755 "$activate_bin" "${haos_ssh_src}/haos-activate.sh"; then
+    die "failed to install ${activate_bin} on ${target}"
+fi
+if ! push_remote 0644 "$rule_dest" "${haos_ssh_src}/90-haos-dot-files.rules"; then
+    die "failed to install ${rule_dest} on ${target}"
+fi
+log "installed the HAOS updater on ${target}"
 if ! ssh_keys "GITHUB_KEYS_USER=${keys_user} DOTFILES_HOME=/root ${sync_bin}"; then
-    warn "GitHub key sync failed this run; timer will retry"
+    warn "GitHub key sync failed this run; the supervisor will retry"
 fi
 
 if ! ssh_keys ha host options --hostname "$hostname"; then
@@ -213,8 +214,7 @@ if ! ssh_keys ha host options --hostname "$hostname"; then
 fi
 log "hostname ${hostname} on ${target}"
 
-lock_remote='systemctl mask --now ha-cli@tty1.service && systemctl mask getty@tty1.service && systemctl enable haos-console-lock.service && systemctl restart haos-console-lock.service'
-if ! ssh_keys "$lock_remote"; then
+if ! ssh_keys "$activate_bin"; then
     die "failed to lock the console on ${target}"
 fi
 log "locked the console on ${target}"
