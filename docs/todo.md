@@ -15,13 +15,10 @@ Not scheduled.
 ## quickshell
 
 - move to real applications once the swap to the source hyprland build is done
+- the volume bar should have appropriate scroll stops set at the 2.5 interval as right now the mouse scroll jumps like a full 25%
 
 ## reset role
 
 - expand logging so we can figure out why something failed
 - figure out why the laptop reset failed
 - try installer changes in the [testbed](../setup/testbed/README.md) before a live reset
-
-## boinc
-
-- looks like we may have missed something in the build as it doesn't look like gpu tasks are running
