@@ -140,5 +140,9 @@ overlay (now playing, play/pause, skip) via Kodi JSON-RPC.
 
 - runewyrm theater using the htpc launcher
 - moving music off Jellyfin onto a Kodi-native source
-- dropping k3s/BOINC on hearthwyrm
+- taint the k3s agent `purpose=htpc:NoSchedule` for light jobs
+- when the role is htpc and the system is active,
+  `config/hypr/scripts/idle-display-on.sh` sets BOINC to no work and
+  cordons k3s. The blanked path is
+  `config/hypr/scripts/idle-display-off.sh`
 - redesigning the workstation startmenu
