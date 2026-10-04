@@ -20,6 +20,10 @@ fi
 
 case "$role" in
     workstation | htpc | server) ;;
+    haos)
+        printf 'error: apply haos with role.sh --target %s haos\n' "$target" >&2
+        exit 1
+        ;;
     *)
         printf 'error: unknown role %s\n' "$role" >&2
         exit 1

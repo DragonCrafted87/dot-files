@@ -26,8 +26,9 @@ usage() {
     cat >&2 <<EOF
 usage: $0 [options] [role]
 
-Roles: workstation, htpc, server
+Roles: workstation, htpc, server, haos
        laptop is a subrole: --enable-subrole laptop
+       haos is remote: --target user@host haos
 
 Subroles: $(known_subroles | paste -sd, -)
 
@@ -41,6 +42,7 @@ Options:
   --force                  error; --reset is the walk-away flow
   --dry-run                print actions without changing the system
   --hostname NAME          set the static hostname
+  --target USER@HOST       haos appliance to configure
   -h, --help               show this help
 EOF
     exit 1
@@ -323,6 +325,7 @@ do_abort=0
 force=0
 list_subroles=0
 hostname_arg=""
+target_arg=""
 enable_subroles=()
 disable_subroles=()
 
@@ -348,6 +351,14 @@ while [[ "$#" -gt 0 ]]; do
             ;;
         --hostname=*)
             hostname_arg="${1#--hostname=}"
+            ;;
+        --target)
+            [[ "$#" -ge 2 ]] || usage
+            target_arg="$2"
+            shift
+            ;;
+        --target=*)
+            target_arg="${1#--target=}"
             ;;
         --role)
             [[ "$#" -ge 2 ]] || usage
@@ -426,6 +437,29 @@ fi
 
 if [[ "$force" -eq 1 ]]; then
     die "--force does not strip packages; role.sh --reset is the walk-away flow"
+fi
+
+# haos configures another machine. It must not take this host's
+# hostname, saved role, package bootstrap, or reset plan.
+if [[ "$role" == haos ]]; then
+    if [[ "$do_reset" -eq 1 || "$do_abort" -eq 1 ]]; then
+        die "haos does not use --reset"
+    fi
+    if [[ ${#enable_subroles[@]} -gt 0 || ${#disable_subroles[@]} -gt 0 ]]; then
+        die "haos does not take subroles"
+    fi
+    [[ -n "$target_arg" ]] || die "haos requires --target user@host"
+    export HAOS_TARGET="$target_arg"
+    if [[ -n "$hostname_arg" ]]; then
+        export HAOS_HOSTNAME="$hostname_arg"
+    else
+        export HAOS_HOSTNAME="ward-drake"
+    fi
+    while IFS= read -r module; do
+        [[ -n "$module" ]] || continue
+        run_module "$module"
+    done < <(role_modules "$role")
+    exit 0
 fi
 
 if [[ "$do_abort" -eq 1 ]]; then
