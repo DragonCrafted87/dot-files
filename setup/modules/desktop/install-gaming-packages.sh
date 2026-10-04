@@ -160,6 +160,8 @@ configure_multimc() {
         return 0
     fi
     log "MultiMC root ${root}"
+    # The start script ldd's plugins only. bin/MultiMC still needs Qt XML.
+    ensure_packages lib64qt5xml5
     ensure_java_for_multimc
     ensure_dir "${root}/themes/custom"
     local src_json="${SETUP_FILES_DIR}/multimc/theme.json"
