@@ -68,6 +68,7 @@ hyprctl
 iconcache
 ignoredups
 ignorespace
+infocmp
 iocharset
 jsonpath
 keepalive
