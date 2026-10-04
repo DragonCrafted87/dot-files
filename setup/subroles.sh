@@ -120,7 +120,7 @@ read_saved_role() {
 
 valid_role() {
     case "${1:-}" in
-        workstation | htpc | server) return 0 ;;
+        workstation | htpc | server | haos) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -141,6 +141,13 @@ role_modules() {
 
     valid_role "$role" || die "unknown role ${role}"
     [[ -f "$conf" ]] || die "missing ${conf}"
+
+    # haos runs on Home Assistant OS. The OpenMandriva [common] list
+    # does not apply, and the operator's saved subroles stay local.
+    if [[ "$role" == haos ]]; then
+        _role_section "$conf" haos
+        return 0
+    fi
 
     _role_section "$conf" common
     _role_section "$conf" "$role"

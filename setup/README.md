@@ -11,6 +11,7 @@ upgrade path. What each role runs is listed in `roles.conf`.
 ~/dot-files/setup/role.sh workstation --enable-subrole laptop
 ~/dot-files/setup/role.sh htpc
 ~/dot-files/setup/role.sh server
+~/dot-files/setup/role.sh --target root@192.168.0.51 haos
 ```
 
 ```bash
@@ -38,7 +39,9 @@ and sshd:
 1. `git clone git@github.com:DragonCrafted87/dot-files.git ~/dot-files`
 
 Same role names as `role.sh`: `workstation`, `htpc`, `server`.
-Laptop is a subrole (`--enable-subrole laptop`), not a top-level role.
+`haos` is the Home Assistant OS appliance. Run that with
+`role.sh --target`, which is the section below. Laptop is a subrole
+(`--enable-subrole laptop`), not a top-level role.
 After the clone, SSH in and run the role:
 
 ```bash
@@ -96,14 +99,16 @@ Do not name folders after roles. Laptop is a workstation overlay.
 
 ## Roles
 
-Edit `roles.conf` to change the module lists. `[common]` runs for every
-role. `laptop` is `[subrole.laptop]` on top of `workstation`.
+Edit `roles.conf` to change the module lists. `[common]` runs for
+`workstation`, `htpc`, and `server`. `[haos]` does not run `[common]`.
+`laptop` is `[subrole.laptop]` on top of `workstation`.
 
 | Role          | Extra modules                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------------- |
 | `workstation` | Hyprland, desktop apps, Brave, VS Code, LibreOffice, CUPS, Steam, MakeMKV, KDE Connect, BOINC Manager |
 | `htpc`        | Hyprland, desktop apps, Brave, k3s, BOINC client. Couch build-out: `docs/htpc-role.md`                |
 | `server`      | CLI baseline, k3s, BOINC client; no GUI session                                                       |
+| `haos`        | SSH keys and the short hostname on a Home Assistant OS appliance                                      |
 
 `enable-subrole laptop` adds `configure-laptop` (power-profiles-daemon).
 
@@ -118,7 +123,8 @@ file are replaced. The other half is `config/hypr/conf.d/env.conf`
 (`XDG_CURRENT_DESKTOP=Hyprland:KDE`) so KIO treats LibreOffice and Okular
 as valid "Open with" targets.
 
-The chosen role is written to `~/.config/dot-files/role`.
+The chosen role is written to `~/.config/dot-files/role`. An `haos`
+run leaves that file alone.
 
 Rock extra / restricted / non-free are enabled on every role. Architecture
 is AMD family 23+ → `znver1`, otherwise `x86_64` (ISO `rpm %{_arch}` is
@@ -134,6 +140,55 @@ That copies `/etc/cups/printers.conf` and `/etc/cups/ppd/` into
 `setup/files/cups/`.
 Workstation and laptop replay those
 files.
+
+## Home Assistant OS (ward-drake)
+
+`ward-drake` is the Home Assistant OS image on the NUC that was
+`amd64node2.lan`. The disk image step is
+`setup/ventoy/ward-drake/install-haos.sh`. After that image boots, run
+this from a machine that already has the repo:
+
+```bash
+./setup/role.sh --target root@192.168.0.51 haos
+```
+
+That is the run. `[haos]` does not run `[common]`, and it does not
+change the saved role on the machine where you type it.
+
+The run uses Home Assistant OS host SSH on port 22222. Key login
+installs the GitHub keys into `/root/.ssh/authorized_keys` on the host
+and sets the short hostname to `ward-drake`. That file is the host
+login list. The Terminal & SSH app does not own it. When nothing is
+listening on the port, the command writes
+`~/.cache/dot-files/haos-config/authorized_keys` and stops. Copy that
+file onto a USB partition named `CONFIG`, import it (`ha os import`,
+or reboot with the stick attached), and run the command again.
+
+The same run installs the key updater and the console lock under
+`/mnt/overlay/dot-files`. The root filesystem is erofs, and
+`/etc/systemd/system` is on that filesystem, so the role does not
+install unit files there. A udev rule starts `haos-supervise.sh`
+after the overlay is mounted. The supervisor refreshes the GitHub
+keys two minutes after boot and every twelve hours after a successful
+fetch. A bad or empty fetch leaves the current `authorized_keys` in
+place and retries in two minutes. The script is `/bin/sh`. The
+workstation updater stays
+`/usr/local/bin/sync-github-authorized-keys.sh` and still runs as
+`dragon`.
+
+The HDMI console starts `ha-cli@tty1`, which accepts commands with no
+password. The run adds `systemd.mask=ha-cli@tty1.service` and
+`systemd.mask=getty@tty1.service` to `/mnt/boot/cmdline.txt`, keeping
+`console=tty0`, and masks both units for the current boot. The
+supervisor holds tty1. The screen says the console is locked and
+names SSH port 22222. Host SSH on that port stays up. The cmdline
+change applies on the next boot.
+
+`init-remote.sh` rejects `haos` and prints that `role.sh --target`
+command. DNS for `ward-drake.stealthdragonland.net` stays on
+`192.168.0.1`. Until that name resolves, pass the address to
+`--target`. `ssh ward-drake` uses `root` on port 22222 once the name
+resolves and `ssh-config` is the file the client is reading.
 
 Copy secrets onto a new box without going through `init-remote.sh`:
 

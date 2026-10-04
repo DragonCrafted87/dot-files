@@ -28,5 +28,10 @@ Host 192.168.2.56
 Host *.lan
     User dragon
 
+Host ward-drake
+    HostName ward-drake.stealthdragonland.net
+    User root
+    Port 22222
+
 Host *.stealthdragonland.net
     User dragon
