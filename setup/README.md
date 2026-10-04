@@ -15,9 +15,17 @@ upgrade path. What each role runs is listed in `roles.conf`.
 ```
 
 ```bash
-~/dot-files/setup/role.sh --hostname study.lan workstation --enable-subrole laptop
+~/dot-files/setup/role.sh --hostname study workstation --enable-subrole laptop
 ~/dot-files/setup/role.sh --dry-run server
 ```
+
+## Hostname
+
+The installer records a short name. A role run sets the static hostname
+to that name plus `stealthdragonland.net`, for example
+`runewyrm.stealthdragonland.net`. `--hostname` takes the short name, a
+`.lan` name, or that FQDN. `/etc/hosts` keeps `127.0.1.1` on the short
+name, and DNS keeps the FQDN on the machine's address.
 
 ## First boot
 
