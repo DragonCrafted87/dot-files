@@ -373,7 +373,12 @@ for w in data:
         continue
     name = str(w.get("name") or "")
     wid = w.get("id")
-    key = name if name.startswith("special") else (str(wid) if wid is not None else name)
+    if name.startswith("special") or (name and (wid is None or name != str(wid))):
+        key = name
+    elif wid is not None and not str(wid).startswith("-"):
+        key = str(wid)
+    else:
+        key = ""
     if not key:
         continue
     print(f"workspace={key}:{mon}")
@@ -481,8 +486,73 @@ raise SystemExit(1)
 ' "$ws" "$mon" 2>/dev/null
 }
 
+# Resolve a negative id left by an older map. Return 1 when that id is gone
+# so the restore check does not retry forever on a workspace that no longer exists.
+workspace_name_for_id() {
+    local id="$1"
+    hyprctl workspaces -j 2>/dev/null | python3 -c '
+import json, sys
+want = sys.argv[1]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for w in data:
+    wid = w.get("id")
+    if wid is None or str(wid) != want:
+        continue
+    name = str(w.get("name") or "")
+    if not name or name == want:
+        raise SystemExit(1)
+    print(name)
+    raise SystemExit(0)
+raise SystemExit(1)
+' "$id" 2>/dev/null
+}
+
+# Dispatch form for one saved key. A leading "-" must not be returned:
+# Hyprland adds that number to the focused workspace id and clamps at 1,
+# so "-1337" moves workspace 1 instead of code-1.
+workspace_selector() {
+    local key="$1" name
+    if [[ "$key" =~ ^[0-9]+$ || "$key" == special:* ]]; then
+        printf '%s\n' "$key"
+        return 0
+    fi
+    if [[ "$key" =~ ^-[0-9]+$ ]]; then
+        name="$(workspace_name_for_id "$key")" || return 1
+        printf 'name:%s\n' "$name"
+        return 0
+    fi
+    printf 'name:%s\n' "$key"
+}
+
+monitor_active_name() {
+    local mon="$1"
+    hyprctl monitors -j 2>/dev/null | python3 -c '
+import json, sys
+mon = sys.argv[1]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(1)
+for m in data:
+    if m.get("name") != mon:
+        continue
+    ws = m.get("activeWorkspace") or {}
+    name = ws.get("name")
+    if name is None or str(name) == "":
+        name = ws.get("id")
+    if name is None or str(name) == "":
+        raise SystemExit(1)
+    print(name)
+    raise SystemExit(0)
+raise SystemExit(1)
+' "$mon" 2>/dev/null
+}
+
 workspaces_restored() {
-    local line ws mon
+    local line ws mon token
     [[ -f "$SAVED_WS_FILE" ]] || return 0
     while IFS= read -r line; do
         [[ "$line" == workspace=* ]] || continue
@@ -490,22 +560,29 @@ workspaces_restored() {
         mon="${ws##*:}"
         ws="${ws%:*}"
         [[ -n "$ws" && -n "$mon" ]] || continue
-        workspace_on_monitor "$ws" "$mon" || return 1
+        token="$(workspace_selector "$ws")" || continue
+        token="${token#name:}"
+        workspace_on_monitor "$token" "$mon" || return 1
     done <"$SAVED_WS_FILE"
     return 0
 }
 
 restore_saved_workspaces_now() {
     [[ -f "$SAVED_WS_FILE" ]] || return 0
-    local line ws mon
+    local line ws mon sel token active
     while IFS= read -r line; do
         [[ "$line" == workspace=* ]] || continue
         ws="${line#workspace=}"
         mon="${ws##*:}"
         ws="${ws%:*}"
         [[ -n "$ws" && -n "$mon" ]] || continue
+        sel="$(workspace_selector "$ws")" || continue
+        token="${sel#name:}"
+        if workspace_on_monitor "$token" "$mon"; then
+            continue
+        fi
         wait_for_monitor "$mon" || return 1
-        hypr_dispatch "hl.dsp.workspace.move({ workspace = $(lua_str "$ws"), monitor = $(lua_str "$mon") })" moveworkspacetomonitor "$ws" "$mon"
+        hypr_dispatch "hl.dsp.workspace.move({ workspace = $(lua_str "$sel"), monitor = $(lua_str "$mon") })" moveworkspacetomonitor "$sel" "$mon"
     done <"$SAVED_WS_FILE"
     while IFS= read -r line; do
         [[ "$line" == active=* ]] || continue
@@ -513,8 +590,13 @@ restore_saved_workspaces_now() {
         ws="${mon##*:}"
         mon="${mon%:*}"
         [[ -n "$ws" && -n "$mon" ]] || continue
+        active="$(monitor_active_name "$mon" || true)"
+        if [[ "$active" == "$ws" ]]; then
+            continue
+        fi
+        sel="$(workspace_selector "$ws")" || continue
         hypr_dispatch "hl.dsp.focus({ monitor = $(lua_str "$mon") })" focusmonitor "$mon"
-        hypr_dispatch "hl.dsp.focus({ workspace = $(lua_str "$ws") })" workspace "$ws"
+        hypr_dispatch "hl.dsp.focus({ workspace = $(lua_str "$sel") })" workspace "$sel"
     done <"$SAVED_WS_FILE"
     if workspaces_restored; then
         rm -f "$SAVED_WS_FILE"
@@ -735,4 +817,6 @@ main() {
     esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi
