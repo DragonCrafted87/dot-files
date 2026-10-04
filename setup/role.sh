@@ -41,7 +41,7 @@ Options:
   --reset-abort            cancel a scheduled, running, or stopped reset
   --force                  error; --reset is the walk-away flow
   --dry-run                print actions without changing the system
-  --hostname NAME          set the static hostname
+  --hostname NAME          set the flight FQDN from NAME
   --target USER@HOST       haos appliance to configure
   -h, --help               show this help
 EOF

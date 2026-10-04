@@ -87,18 +87,122 @@ ensure_timezone() {
     run sudo timedatectl set-timezone "$tz"
 }
 
-ensure_hostname() {
-    local name="${1:-}"
+# The installer records a short name. The static hostname is the flight
+# FQDN. 127.0.1.1 keeps only that short name, so the FQDN still resolves
+# through DNS instead of loopback.
+DOTFILES_DOMAIN="${DOTFILES_DOMAIN:-stealthdragonland.net}"
+
+read_static_hostname() {
+    local name=""
+    if command -v hostnamectl >/dev/null 2>&1; then
+        name="$(hostnamectl --static 2>/dev/null || true)"
+    fi
     if [[ -z "$name" ]]; then
+        name="$(hostname 2>/dev/null || true)"
+    fi
+    printf '%s\n' "$name"
+}
+
+# Print NAME.DOTFILES_DOMAIN. NAME may be a short name, a .lan name, or
+# the flight FQDN. An installer default is an error.
+flight_fqdn() {
+    local raw="${1:-}"
+    local domain short fqdn
+    domain="${DOTFILES_DOMAIN:-stealthdragonland.net}"
+    domain="${domain,,}"
+    domain="${domain%.}"
+    raw="${raw,,}"
+    raw="${raw#"${raw%%[![:space:]]*}"}"
+    raw="${raw%"${raw##*[![:space:]]}"}"
+    raw="${raw%.}"
+    [[ -n "$raw" ]] || die "hostname is empty; pass --hostname NAME"
+    [[ "$raw" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || die "bad hostname ${raw}"
+    [[ "$domain" == *.* ]] || die "bad domain ${domain}"
+    [[ "$domain" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || die "bad domain ${domain}"
+    short="${raw%%.*}"
+    case "$short" in
+        localhost | openmandriva | omv | omv-live | livecd | live)
+            die "hostname ${raw} is an installer default; pass --hostname NAME"
+            ;;
+    esac
+    [[ "$short" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]] || die "bad hostname ${raw}"
+    fqdn="${short}.${domain}"
+    if ((${#fqdn} > 64)); then
+        die "hostname ${fqdn} is longer than 64 characters"
+    fi
+    printf '%s\n' "$fqdn"
+}
+
+hosts_with_short_name() {
+    local short="$1"
+    local file="$2"
+    local line found=0
+    local -a tokens=()
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ "$line" =~ ^127\.0\.1\.1[[:space:]] ]]; then
+            if [[ "$found" -eq 0 ]]; then
+                read -r -a tokens <<<"$line"
+                if [[ "${#tokens[@]}" -eq 2 && "${tokens[1]}" == "$short" ]]; then
+                    printf '%s\n' "$line"
+                else
+                    printf '127.0.1.1  %s\n' "$short"
+                fi
+                found=1
+            fi
+            continue
+        fi
+        printf '%s\n' "$line"
+    done <"$file"
+    if [[ "$found" -eq 0 ]]; then
+        printf '127.0.1.1  %s\n' "$short"
+    fi
+}
+
+ensure_hosts_short_name() {
+    local short="$1"
+    local file="${HOSTS_FILE:-/etc/hosts}"
+    local tmp staged
+    [[ -f "$file" ]] || die "missing ${file}"
+    tmp="$(mktemp)"
+    hosts_with_short_name "$short" "$file" >"$tmp"
+    if cmp -s "$file" "$tmp"; then
+        rm -f "$tmp"
         return 0
     fi
-    local current
-    current="$(hostnamectl --static 2>/dev/null || hostname)"
-    if [[ "$current" == "$name" ]]; then
+    log "hosts ${file} short name ${short}"
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]]; then
+        rm -f "$tmp"
         return 0
     fi
-    log "hostname ${name}"
-    run sudo hostnamectl set-hostname "$name"
+    staged="$(dirname "$file")/.$(basename "$file").dotfiles-tmp"
+    if [[ -w "$file" && -w "$(dirname "$file")" ]]; then
+        rm -f "$staged"
+        cp "$tmp" "$staged"
+        mv "$staged" "$file"
+    else
+        sudo rm -f "$staged"
+        sudo cp "$tmp" "$staged"
+        sudo mv "$staged" "$file"
+    fi
+    rm -f "$tmp"
+}
+
+ensure_hostname() {
+    local requested="${1:-}"
+    local source static short fqdn
+    static="$(read_static_hostname)"
+    if [[ -n "$requested" ]]; then
+        source="$requested"
+    else
+        source="$static"
+    fi
+    fqdn="$(flight_fqdn "$source")"
+    short="${fqdn%%.*}"
+    if [[ "$static" != "$fqdn" ]]; then
+        log "hostname ${fqdn}"
+        run sudo hostnamectl set-hostname "$fqdn"
+    fi
+    ensure_hosts_short_name "$short"
 }
 
 ensure_systemd_dropin() {
