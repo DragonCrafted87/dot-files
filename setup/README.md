@@ -155,11 +155,28 @@ this from a machine that already has the repo:
 That is the run. `[haos]` does not run `[common]`, and it does not
 change the saved role on the machine where you type it.
 
-The first run writes `~/.cache/dot-files/haos-config/authorized_keys`
-when port 22222 is closed. Copy that file onto a USB partition named
-`CONFIG`, import it on the appliance (`ha os import`, or reboot with
-the stick attached), and run the same command again. The second run
-sets the short hostname to `ward-drake`.
+The run uses Home Assistant OS host SSH on port 22222. Key login
+installs the GitHub keys into `/root/.ssh/authorized_keys` on the host
+and sets the short hostname to `ward-drake`. That file is the host
+login list. The Terminal & SSH app does not own it. When nothing is
+listening on the port, the command writes
+`~/.cache/dot-files/haos-config/authorized_keys` and stops. Copy that
+file onto a USB partition named `CONFIG`, import it (`ha os import`,
+or reboot with the stick attached), and run the command again.
+
+The same run installs `/root/bin/sync-github-keys.sh` and enables
+`sync-github-keys.timer`. The timer runs two minutes after boot and
+every twelve hours after that. A bad or empty fetch leaves the current
+`authorized_keys` in place. The host root filesystem is read-only and
+the shell is ash, so this copy is `/bin/sh` under `/root`, with the
+units in `/etc/systemd/system`. The workstation updater stays
+`/usr/local/bin/sync-github-authorized-keys.sh` and still runs as
+`dragon`.
+
+The HDMI console starts `ha-cli@tty1`, which accepts commands with no
+password. The run masks that unit and `getty@tty1`, then holds tty1
+with `haos-console-lock.service`. The screen says the console is
+locked and names SSH port 22222. Host SSH on that port stays up.
 
 `init-remote.sh` rejects `haos` and prints that `role.sh --target`
 command. DNS for `ward-drake.stealthdragonland.net` stays on

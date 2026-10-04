@@ -41,10 +41,13 @@ not need the rest of this repo. Put `haos_generic-x86-64-18.3.img.xz` in
 takes the highest version it finds, and it already has the checksum for
 18.3.
 
-Boot the OpenMandriva live image on the NUC and run:
+Boot the OpenMandriva live image on the NUC. The desktop mounts the
+stick at `/media/live/Ventoy`, and that mount is often `noexec`. Open
+a root shell and run bash on the script:
 
 ```bash
-sudo bash /path/on/ventoy/ward-drake/install-haos.sh
+sudo su
+bash /media/live/Ventoy/scripts/ward-drake/install-haos.sh
 ```
 
 That writes the image onto the internal WD SN550 (`WDS500G3X0C`). It

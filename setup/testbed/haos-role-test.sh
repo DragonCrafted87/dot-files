@@ -38,6 +38,8 @@ old_path="$PATH"
 bin="${work}/bin"
 mkdir -p "$bin"
 ssh_log="${work}/ssh.log"
+ssh_state="${work}/ssh.state"
+ssh_stdin="${work}/ssh.stdin"
 payload="${work}/payload"
 
 cat >"${bin}/curl" <<'EOF'
@@ -79,17 +81,92 @@ EOF
 cat >"${bin}/ssh" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"${SSH_LOG:?}"
-case "${SSH_MODE:-fail}" in
-    fail) exit 255 ;;
-    notha) printf '%s\n' NOT-HAOS ;;
-    ha)
+is_probe=0
+is_install=0
+[[ "$*" == *"command -v ha"* ]] && is_probe=1
+[[ "$*" == *"authorized_keys"* ]] && is_install=1
+
+accept_rest() {
+    local cmd="$1"
+    local dest base
+    if [[ "$is_probe" -eq 1 ]]; then
         printf '%s\n' HAOS
-        printf '%s\n' 'hostname: homeassistant'
+        exit 0
+    fi
+    if [[ "$cmd" == *"cat > "* ]]; then
+        dest="$(printf '%s\n' "$cmd" | sed -n 's/.*cat > \([^ ]*\).*/\1/p')"
+        base="$(basename "$dest")"
+        if [[ -n "${SSH_CAPTURE:-}" && -n "$base" ]]; then
+            mkdir -p "$SSH_CAPTURE"
+            cat >"${SSH_CAPTURE}/${base}"
+        else
+            cat >/dev/null
+        fi
+        exit 0
+    fi
+    if [[ "$is_install" -eq 1 ]]; then
+        cat >/dev/null
+    fi
+    exit 0
+}
+
+case "${SSH_MODE:-fail}" in
+    fail)
+        printf '%s\n' 'ssh: connect to host port 22222: Connection refused' >&2
+        exit 255
         ;;
+    remote)
+        printf '%s\n' 'remote command failed' >&2
+        exit 1
+        ;;
+    hostkey)
+        printf '%s\n' 'WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!' >&2
+        exit 255
+        ;;
+    installfail)
+        if [[ "$is_install" -eq 1 ]]; then
+            cat >/dev/null
+            exit 1
+        fi
+        if [[ "$is_probe" -eq 1 ]]; then
+            printf '%s\n' HAOS
+            exit 0
+        fi
+        exit 1
+        ;;
+    denied)
+        printf '%s\n' 'Permission denied (publickey).' >&2
+        exit 255
+        ;;
+    syncfail)
+        if [[ "$*" == *"/root/bin/sync-github-keys.sh"* ]]; then
+            printf '%s\n' 'failed to write sync script' >&2
+            exit 1
+        fi
+        accept_rest "$*"
+        ;;
+    syncwarn)
+        if [[ "$*" == *"/root/bin/sync-github-keys.sh"* && "$*" != *"cat > "* ]]; then
+            printf '%s\n' 'error: failed to fetch' >&2
+            exit 1
+        fi
+        accept_rest "$*"
+        ;;
+    lockfail)
+        if [[ "$*" == *"ha-cli@tty1"* ]]; then
+            printf '%s\n' 'Failed to mask ha-cli@tty1.service' >&2
+            exit 1
+        fi
+        accept_rest "$*"
+        ;;
+    notha) printf '%s\n' NOT-HAOS ;;
+    ha) accept_rest "$*" ;;
     *) printf 'bad SSH_MODE %s\n' "${SSH_MODE}" >&2; exit 1 ;;
 esac
 EOF
 chmod 0755 "${bin}/curl" "${bin}/ssh"
+
+ssh_capture="${work}/ssh-capture"
 
 run_haos() {
     env -u DOTFILES_DRY_RUN \
@@ -99,6 +176,9 @@ run_haos() {
         HAOS_HOSTNAME="ward-drake" \
         HAOS_CONFIG_DIR="$payload" \
         SSH_LOG="$ssh_log" \
+        SSH_STATE="$ssh_state" \
+        SSH_STDIN="$ssh_stdin" \
+        SSH_CAPTURE="$ssh_capture" \
         CURL_MODE="${CURL_MODE:-ok}" \
         SSH_MODE="${SSH_MODE:-fail}" \
         bash "${repo}/setup/modules/host/configure-haos.sh"
@@ -175,6 +255,10 @@ if grep -q 'host options' "$ssh_log"; then
     printf 'ssh failure sent a hostname command:\n%s\n' "$(cat "$ssh_log")" >&2
     exit 1
 fi
+if grep -q 'PreferredAuthentications=password' "$ssh_log"; then
+    printf 'closed port asked for a password:\n%s\n' "$(cat "$ssh_log")" >&2
+    exit 1
+fi
 
 : >"$ssh_log"
 rm -rf "$payload"
@@ -199,7 +283,7 @@ if grep -q 'host options' "$ssh_log"; then
 fi
 
 : >"$ssh_log"
-rm -rf "$payload"
+rm -rf "$payload" "$ssh_capture"
 SSH_MODE=ha
 set +e
 ha_out="$(run_haos 2>&1)"
@@ -220,6 +304,327 @@ first="$(head -n 1 "$ssh_log")"
 }
 grep -q 'ha host options --hostname ward-drake' "$ssh_log" || {
     printf 'hostname command missing:\n%s\n' "$(cat "$ssh_log")" >&2
+    exit 1
+}
+grep -q 'authorized_keys' "$ssh_log" || {
+    printf 'key login did not install authorized_keys:\n%s\n' "$(cat "$ssh_log")" >&2
+    exit 1
+}
+if grep -q 'addons/self' "$ssh_log"; then
+    printf 'key login talked to the SSH app:\n%s\n' "$(cat "$ssh_log")" >&2
+    exit 1
+fi
+grep -q 'installed SSH keys' <<<"$ha_out" || {
+    printf 'key login did not report the host keys:\n%s\n' "$ha_out" >&2
+    exit 1
+}
+grep -q 'systemctl enable --now sync-github-keys.timer' "$ssh_log" || {
+    printf 'key login did not enable the key timer:\n%s\n' "$(cat "$ssh_log")" >&2
+    exit 1
+}
+grep -q 'enabled GitHub key timer' <<<"$ha_out" || {
+    printf 'key login did not report the key timer:\n%s\n' "$ha_out" >&2
+    exit 1
+}
+grep -q 'mask --now ha-cli@tty1.service' "$ssh_log" || {
+    printf 'key login did not mask ha-cli:\n%s\n' "$(cat "$ssh_log")" >&2
+    exit 1
+}
+grep -q 'mask getty@tty1.service' "$ssh_log" || {
+    printf 'key login did not mask getty@tty1:\n%s\n' "$(cat "$ssh_log")" >&2
+    exit 1
+}
+if grep -q 'systemctl start getty' "$ssh_log"; then
+    printf 'key login started a getty:\n%s\n' "$(cat "$ssh_log")" >&2
+    exit 1
+fi
+grep -q 'locked the console' <<<"$ha_out" || {
+    printf 'key login did not report the console lock:\n%s\n' "$ha_out" >&2
+    exit 1
+}
+[[ "$(cat "${ssh_capture}/sync-github-keys.service")" == *"Environment=DOTFILES_HOME=/root"* ]] || {
+    printf 'captured service is not the root updater:\n%s\n' "$(cat "${ssh_capture}/sync-github-keys.service")" >&2
+    exit 1
+}
+if grep -q '^User=' "${ssh_capture}/sync-github-keys.service"; then
+    printf 'captured service sets a user:\n%s\n' "$(cat "${ssh_capture}/sync-github-keys.service")" >&2
+    exit 1
+fi
+grep -q 'OnUnitActiveSec=12h' "${ssh_capture}/sync-github-keys.timer" || {
+    printf 'captured timer cadence:\n%s\n' "$(cat "${ssh_capture}/sync-github-keys.timer")" >&2
+    exit 1
+}
+grep -q '^#!/bin/sh' "${ssh_capture}/sync-github-keys.sh" || {
+    printf 'captured updater is not a /bin/sh script\n' >&2
+    exit 1
+}
+grep -q 'ExecStart=/root/bin/haos-console-lock.sh' "${ssh_capture}/haos-console-lock.service" || {
+    printf 'captured lock unit:\n%s\n' "$(cat "${ssh_capture}/haos-console-lock.service")" >&2
+    exit 1
+}
+grep -q 'console is locked' "${ssh_capture}/haos-console-lock.sh" || {
+    printf 'captured lock script has no banner\n' >&2
+    exit 1
+}
+
+: >"$ssh_log"
+rm -rf "$payload"
+SSH_MODE=remote
+set +e
+remote_out="$(run_haos 2>&1)"
+remote_rc=$?
+set -e
+[[ "$remote_rc" -ne 0 ]] || {
+    printf 'remote command failure should stop:\n%s\n' "$remote_out" >&2
+    exit 1
+}
+[[ ! -e "${payload}/authorized_keys" ]] || {
+    printf 'remote command failure wrote a CONFIG payload\n' >&2
+    exit 1
+}
+if grep -q 'is not up' <<<"$remote_out"; then
+    printf 'remote command failure claimed the port was down:\n%s\n' "$remote_out" >&2
+    exit 1
+fi
+if grep -q 'host options' "$ssh_log"; then
+    printf 'remote command failure sent a hostname command\n' >&2
+    exit 1
+fi
+grep -q 'remote command failed' <<<"$remote_out" || {
+    printf 'remote command failure hid ssh stderr:\n%s\n' "$remote_out" >&2
+    exit 1
+}
+
+: >"$ssh_log"
+rm -rf "$payload"
+SSH_MODE=hostkey
+set +e
+hostkey_out="$(run_haos 2>&1)"
+hostkey_rc=$?
+set -e
+[[ "$hostkey_rc" -ne 0 ]] || {
+    printf 'host key failure should stop:\n%s\n' "$hostkey_out" >&2
+    exit 1
+}
+[[ ! -e "${payload}/authorized_keys" ]] || {
+    printf 'host key failure wrote a CONFIG payload\n' >&2
+    exit 1
+}
+if grep -q 'is not up' <<<"$hostkey_out"; then
+    printf 'host key failure claimed the port was down:\n%s\n' "$hostkey_out" >&2
+    exit 1
+fi
+grep -q 'REMOTE HOST IDENTIFICATION HAS CHANGED' <<<"$hostkey_out" || {
+    printf 'host key failure hid ssh stderr:\n%s\n' "$hostkey_out" >&2
+    exit 1
+}
+
+: >"$ssh_log"
+rm -rf "$payload"
+SSH_MODE=installfail
+set +e
+install_out="$(run_haos 2>&1)"
+install_rc=$?
+set -e
+[[ "$install_rc" -ne 0 ]] || {
+    printf 'failed key install should stop:\n%s\n' "$install_out" >&2
+    exit 1
+}
+if grep -q 'installed SSH keys' <<<"$install_out"; then
+    printf 'failed key install reported success:\n%s\n' "$install_out" >&2
+    exit 1
+fi
+if grep -q 'host options' "$ssh_log"; then
+    printf 'failed key install sent a hostname command\n' >&2
+    exit 1
+fi
+grep -q 'failed to install authorized_keys' <<<"$install_out" || {
+    printf 'failed key install missing error:\n%s\n' "$install_out" >&2
+    exit 1
+}
+
+: >"$ssh_log"
+rm -rf "$payload"
+SSH_MODE=denied
+set +e
+denied_out="$(run_haos 2>&1)"
+denied_rc=$?
+set -e
+[[ "$denied_rc" -ne 0 ]] || {
+    printf 'refused key login should stop:\n%s\n' "$denied_out" >&2
+    exit 1
+}
+[[ ! -e "${payload}/authorized_keys" ]] || {
+    printf 'refused key login wrote a CONFIG payload\n' >&2
+    exit 1
+}
+if grep -q 'is not up' <<<"$denied_out"; then
+    printf 'refused key login claimed the port was down:\n%s\n' "$denied_out" >&2
+    exit 1
+fi
+if grep -q 'host options' "$ssh_log"; then
+    printf 'refused key login sent a hostname command\n' >&2
+    exit 1
+fi
+grep -q 'was refused' <<<"$denied_out" || {
+    printf 'refused key login missing error:\n%s\n' "$denied_out" >&2
+    exit 1
+}
+grep -q 'Permission denied' <<<"$denied_out" || {
+    printf 'refused key login hid ssh stderr:\n%s\n' "$denied_out" >&2
+    exit 1
+}
+
+: >"$ssh_log"
+rm -rf "$payload" "$ssh_capture"
+SSH_MODE=syncfail
+set +e
+syncfail_out="$(run_haos 2>&1)"
+syncfail_rc=$?
+set -e
+[[ "$syncfail_rc" -ne 0 ]] || {
+    printf 'updater install failure should stop:\n%s\n' "$syncfail_out" >&2
+    exit 1
+}
+grep -q 'failed to install /root/bin/sync-github-keys.sh' <<<"$syncfail_out" || {
+    printf 'updater install failure missing error:\n%s\n' "$syncfail_out" >&2
+    exit 1
+}
+if grep -q 'host options' "$ssh_log"; then
+    printf 'updater install failure sent a hostname command\n' >&2
+    exit 1
+fi
+if grep -q 'ha-cli@tty1' "$ssh_log"; then
+    printf 'updater install failure locked the console\n' >&2
+    exit 1
+fi
+[[ ! -e "${payload}/authorized_keys" ]] || {
+    printf 'updater install failure wrote a CONFIG payload\n' >&2
+    exit 1
+}
+
+: >"$ssh_log"
+rm -rf "$payload" "$ssh_capture"
+SSH_MODE=syncwarn
+set +e
+syncwarn_out="$(run_haos 2>&1)"
+syncwarn_rc=$?
+set -e
+[[ "$syncwarn_rc" -eq 0 ]] || {
+    printf 'a failed key refresh should still finish:\n%s\n' "$syncwarn_out" >&2
+    exit 1
+}
+grep -q 'timer will retry' <<<"$syncwarn_out" || {
+    printf 'failed key refresh missing the retry warning:\n%s\n' "$syncwarn_out" >&2
+    exit 1
+}
+grep -q 'ha host options --hostname ward-drake' "$ssh_log" || {
+    printf 'failed key refresh skipped the hostname:\n%s\n' "$(cat "$ssh_log")" >&2
+    exit 1
+}
+grep -q 'locked the console' <<<"$syncwarn_out" || {
+    printf 'failed key refresh skipped the console lock:\n%s\n' "$syncwarn_out" >&2
+    exit 1
+}
+
+: >"$ssh_log"
+rm -rf "$payload" "$ssh_capture"
+SSH_MODE=lockfail
+set +e
+lockfail_out="$(run_haos 2>&1)"
+lockfail_rc=$?
+set -e
+[[ "$lockfail_rc" -ne 0 ]] || {
+    printf 'console lock failure should stop:\n%s\n' "$lockfail_out" >&2
+    exit 1
+}
+grep -q 'failed to lock the console' <<<"$lockfail_out" || {
+    printf 'console lock failure missing error:\n%s\n' "$lockfail_out" >&2
+    exit 1
+}
+grep -q 'Failed to mask ha-cli@tty1.service' <<<"$lockfail_out" || {
+    printf 'console lock failure hid ssh stderr:\n%s\n' "$lockfail_out" >&2
+    exit 1
+}
+grep -q 'ha host options --hostname ward-drake' "$ssh_log" || {
+    printf 'console lock failure skipped the hostname\n' >&2
+    exit 1
+}
+if grep -q 'locked the console' <<<"$lockfail_out"; then
+    printf 'console lock failure reported success:\n%s\n' "$lockfail_out" >&2
+    exit 1
+fi
+
+sync_sh="${repo}/setup/files/ssh/haos-sync-github-keys.sh"
+lock_sh="${repo}/setup/files/ssh/haos-console-lock.sh"
+home_sync="${work}/sync-home"
+mkdir -p "${home_sync}/.ssh"
+printf 'OLD\n' >"${home_sync}/.ssh/authorized_keys"
+chmod 0600 "${home_sync}/.ssh/authorized_keys"
+
+run_sync() {
+    env PATH="${bin}:${old_path}" \
+        GITHUB_KEYS_USER=DragonCrafted87 \
+        DOTFILES_HOME="$home_sync" \
+        CURL_MODE="$1" \
+        /bin/sh "$sync_sh"
+}
+
+set +e
+sync_fetch_out="$(run_sync fail 2>&1)"
+sync_fetch_rc=$?
+set -e
+[[ "$sync_fetch_rc" -ne 0 ]] || {
+    printf 'updater fetch failure should stop:\n%s\n' "$sync_fetch_out" >&2
+    exit 1
+}
+[[ "$(cat "${home_sync}/.ssh/authorized_keys")" == "OLD" ]] || {
+    printf 'updater fetch failure replaced authorized_keys\n' >&2
+    exit 1
+}
+
+set +e
+sync_bad_out="$(run_sync bad 2>&1)"
+sync_bad_rc=$?
+set -e
+[[ "$sync_bad_rc" -ne 0 ]]
+[[ "$(cat "${home_sync}/.ssh/authorized_keys")" == "OLD" ]] || {
+    printf 'updater non-key body replaced authorized_keys:\n%s\n' "$sync_bad_out" >&2
+    exit 1
+}
+
+set +e
+sync_empty_out="$(run_sync empty 2>&1)"
+sync_empty_rc=$?
+set -e
+[[ "$sync_empty_rc" -ne 0 ]]
+[[ "$(cat "${home_sync}/.ssh/authorized_keys")" == "OLD" ]] || {
+    printf 'updater empty body replaced authorized_keys:\n%s\n' "$sync_empty_out" >&2
+    exit 1
+}
+
+sync_ok_out="$(run_sync ok 2>&1)"
+grep -q "$expect_keys" "${home_sync}/.ssh/authorized_keys" || {
+    printf 'updater did not write the key:\n%s\n' "$(cat "${home_sync}/.ssh/authorized_keys")" >&2
+    exit 1
+}
+grep -q '^# synced from https://github.com/DragonCrafted87.keys at ' \
+    "${home_sync}/.ssh/authorized_keys" || {
+    printf 'updater missing the sync comment:\n%s\n' "$sync_ok_out" >&2
+    exit 1
+}
+[[ "$(stat -c %a "${home_sync}/.ssh/authorized_keys")" == "600" ]] || {
+    printf 'updater mode is %s\n' "$(stat -c %a "${home_sync}/.ssh/authorized_keys")" >&2
+    exit 1
+}
+
+lock_out="$(printf '\n' | timeout 1 /bin/sh "$lock_sh" 2>/dev/null || true)"
+grep -q 'console is locked' <<<"$lock_out" || {
+    printf 'lock banner missing:\n%s\n' "$lock_out" >&2
+    exit 1
+}
+grep -q 'port 22222' <<<"$lock_out" || {
+    printf 'lock banner missing the SSH port:\n%s\n' "$lock_out" >&2
     exit 1
 }
 
@@ -301,12 +706,24 @@ set -e
     printf 'haos dry-run failed:\n%s\n' "$dry_out" >&2
     exit 1
 }
-grep -q '22222' <<<"$dry_out" || {
+grep -q -- '-p 22222 ' <<<"$dry_out" || {
     printf 'dry-run missing port 22222:\n%s\n' "$dry_out" >&2
     exit 1
 }
 grep -q 'ha host options --hostname ward-drake' <<<"$dry_out" || {
     printf 'dry-run missing hostname command:\n%s\n' "$dry_out" >&2
+    exit 1
+}
+grep -q 'sync-github-keys.timer' <<<"$dry_out" || {
+    printf 'dry-run missing the key timer:\n%s\n' "$dry_out" >&2
+    exit 1
+}
+grep -q 'mask --now ha-cli@tty1.service' <<<"$dry_out" || {
+    printf 'dry-run missing the console lock:\n%s\n' "$dry_out" >&2
+    exit 1
+}
+grep -q 'mask getty@tty1.service' <<<"$dry_out" || {
+    printf 'dry-run missing the getty mask:\n%s\n' "$dry_out" >&2
     exit 1
 }
 if grep -q 'hostnamectl' <<<"$dry_out"; then

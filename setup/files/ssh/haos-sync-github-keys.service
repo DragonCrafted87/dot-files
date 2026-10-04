@@ -1,0 +1,10 @@
+[Unit]
+Description=Sync authorized_keys from GitHub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=GITHUB_KEYS_USER=DragonCrafted87
+Environment=DOTFILES_HOME=/root
+ExecStart=/root/bin/sync-github-keys.sh
