@@ -10,6 +10,19 @@ set -euo pipefail
 
 require_user
 
+# hypr-session-exec.sh picked /opt vs /usr/local. The units exec /usr/local.
+remove_session_bin_dropins() {
+    local stale dir
+    shopt -s nullglob
+    for stale in "${DOTFILES_HOME}/.config/systemd/user/"*.service.d/session-bin.conf; do
+        dir="$(dirname "$stale")"
+        log "remove ${stale}"
+        run rm -f "$stale"
+        rmdir "$dir" 2>/dev/null || true
+    done
+    shopt -u nullglob
+}
+
 ensure_packages \
     ly \
     quickshell \
@@ -51,6 +64,7 @@ for src in "${SETUP_FILES_DIR}/hypr/"*.service.d/*.conf; do
     install_user_dropin "${unit%.d}" "$src"
 done
 shopt -u nullglob
+remove_session_bin_dropins
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
     systemctl --user daemon-reload
 fi

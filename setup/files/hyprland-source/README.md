@@ -31,13 +31,13 @@ dual-session.
 
 ### Host
 
-- [ ] Confirm `/usr/bin/Hyprland` and `/usr/bin/hyprctl` are gone.
-- [ ] Delete `/opt/hyprland` after the `/usr/local` install works.
+- [x] Confirm `/usr/bin/Hyprland` and `/usr/bin/hyprctl` are gone.
+- [x] Delete `/opt/hyprland` after the `/usr/local` install works.
 - [ ] Delete `~/.cache/hyprland-source` if you do not need a rebuild
   cache.
-- [ ] Remove `/usr/share/wayland-sessions/hyprland-source.desktop` and
+- [x] Remove `/usr/share/wayland-sessions/hyprland-source.desktop` and
   `/etc/ly/custom-sessions/hyprland-source.desktop`.
-- [ ] Remove `/usr/lib/systemd/user/hyprsunset.service` if it still
+- [x] Remove `/usr/lib/systemd/user/hyprsunset.service` if it still
   points at `/opt/hyprland/bin/hyprsunset` (cmake wrote that during
   the prefix build).
 
@@ -51,22 +51,22 @@ dual-session.
 - [x] Stop installing `start-hyprland-source` and
   `hyprland-source.desktop`. Stock `hyprland.desktop` `Exec` is
   `/usr/local/bin/start-hyprland`.
-- [ ] Stop calling `configure_ly_source_session` / writing
+- [x] Stop calling `configure_ly_source_session` / writing
   `custom_sessions`.
 - [x] Drop `pin_prefix_hypr_link` (that rewrite exists to beat Rock
   `/usr/lib64/libhyprutils.so`).
-- [ ] `CMAKE_PREFIX_PATH` / `CMAKE_LIBRARY_PATH` stay `/usr/local`.
-- [ ] Leave hypr\* cmake systemd units out of `/usr`. The rpm can
+- [x] `CMAKE_PREFIX_PATH` / `CMAKE_LIBRARY_PATH` stay `/usr/local`.
+- [x] Leave hypr\* cmake systemd units out of `/usr`. The rpm can
   install them under `/usr/lib/systemd/user/`.
 
 ### Dual-session machinery (delete)
 
-- [ ] `config/hypr/scripts/hypr-session-exec.sh`
-- [ ] `setup/files/hypr/hypridle.service.d/session-bin.conf`
-- [ ] `setup/files/hypr/hyprpolkitagent.service.d/session-bin.conf`
-- [ ] `setup/files/hypr/xdg-desktop-portal-hyprland.service.d/session-bin.conf`
-- [ ] `setup/files/hypr/hyprsunset.service.d/session-bin.conf`
-- [ ] Matching drop-ins under `~/.config/systemd/user/*.service.d/`
+- [x] `config/hypr/scripts/hypr-session-exec.sh`
+- [x] `setup/files/hypr/hypridle.service.d/session-bin.conf`
+- [x] `setup/files/hypr/hyprpolkitagent.service.d/session-bin.conf`
+- [x] `setup/files/hypr/xdg-desktop-portal-hyprland.service.d/session-bin.conf`
+- [x] `setup/files/hypr/hyprsunset.service.d/session-bin.conf`
+- [x] Matching drop-ins under `~/.config/systemd/user/*.service.d/`
   (`session-bin.conf` only; keep
   `xdg-document-portal.service.d/timeout-stop.conf`)
 - [x] `setup/files/hyprland-source/start-hyprland-source.sh`
@@ -76,7 +76,7 @@ dual-session.
   `HYPRLAND_INSTANCE_SIGNATURE`. `PATH` / `LD_LIBRARY_PATH` /
   `XDG_DATA_DIRS` import is optional once everything is `/usr/local`
   (and `/usr` after the rpm).
-- [ ] `ensure_dropins` can stay for other drop-ins.
+- [x] `ensure_dropins` can stay for other drop-ins.
 
 ### `install-hyprland-session.sh` / roles
 
@@ -85,7 +85,7 @@ dual-session.
   `hyprland-qtutils`, `xdg-desktop-portal-hyprland`. Keep `ly`,
   `uwsm` only if still used, pipewire, mako, grim/slurp.
   Drop `pavucontrol-qt` (`hyprpwcenter` is the volume UI).
-- [ ] `config/hypr/scripts/session-control.sh`: drop the fallback that
+- [x] `config/hypr/scripts/session-control.sh`: drop the fallback that
   runs when `hyprshutdown` is not on `PATH`.
 - [ ] If hyprsunset accepts `time = sunrise`, delete
   `hyprsunset-times.py`, `hyprsunset-times.service`,
@@ -100,9 +100,9 @@ dual-session.
 - [x] `AGENTS.md` Hyprland-from-source bullet (no `/opt`, no extra Ly
   session, install prefix `/usr/local`).
 - [x] `setup/README.md` "Hyprland from source" section.
-- [ ] `config/hypr/README.md` graphical-session paragraph about
+- [x] `config/hypr/README.md` graphical-session paragraph about
   `hypr-session-exec.sh`.
-- [ ] This file.
+- [x] This file.
 
 ### Config (Lua only)
 
@@ -124,13 +124,13 @@ this cutover. After distro Hyprland is gone:
 
 ### Check after the cutover
 
-- [ ] `command -v Hyprland hyprctl hypridle hyprlock hyprpaper` →
+- [x] `command -v Hyprland hyprctl hypridle hyprlock hyprpaper` →
   `/usr/local/bin/...` (`/usr/bin/...` after the rpm).
-- [ ] `ldd $(command -v Hyprland)` NEEDED `libhyprutils` from
+- [x] `ldd $(command -v Hyprland)` NEEDED `libhyprutils` from
   `/usr/local/lib64` with the source SONAME (currently `.so.13`), not
   Rock `.so.5`.
-- [ ] `systemctl --user cat hypridle.service` `ExecStart` uses
+- [x] `systemctl --user cat hypridle.service` `ExecStart` uses
   `/usr/local/bin/hypridle` (`/usr/bin/hypridle` after the rpm), with
   no session-bin drop-in.
-- [ ] Ly shows one **Hyprland** entry.
-- [ ] `astro-wallpaper.sh apply` talks to this `hyprctl` / `hyprpaper`.
+- [x] Ly shows one **Hyprland** entry.
+- [x] `astro-wallpaper.sh apply` talks to this `hyprctl` / `hyprpaper`.

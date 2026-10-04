@@ -48,9 +48,7 @@ drop-in keeps logout behavior if a package update drops the line).
 binds (kitty, dolphin) stay children of Hyprland.
 
 `hypridle`, `hyprpolkitagent`, `xdg-desktop-portal-hyprland`, and
-`hyprsunset` use `scripts/hypr-session-exec.sh`. It runs `/usr/local/bin`
-for a `/usr/local` compositor, `/opt/hyprland` for a leftover prefix,
-and `/usr` for a distro session. `hyprsunset-times.py` rewrites
+`hyprsunset` exec `/usr/local`. `hyprsunset-times.py` rewrites
 `hyprsunset.conf` from the built-in coordinates, or from `SUN_LAT` /
 `SUN_LON` when the host file sets both. A weekly
 user timer runs it, and session start runs it when that file is older
@@ -197,8 +195,8 @@ planets, comets, and clusters, then gives each enabled monitor its own
 image through `hyprpaper`. Login runs `apply` (reuse today's cache).
 A user timer at 06:30 refreshes the set. `display-switch.sh` waits for
 the new layout, then re-applies so theater / workshare / desk each get
-wallpapers. `hyprpaper.service` runs the daemon (`Restart=on-failure`)
-through `hypr-session-exec.sh`. The timer is a oneshot and only restarts
+wallpapers. `hyprpaper.service` runs `/usr/local/bin/hyprpaper`
+(`Restart=on-failure`). The timer is a oneshot and only restarts
 that unit. Waking from idle runs `apply` again so a monitor that was
 disabled at 06:30 gets a still. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
 `.jpg`) are dropped; hyprpaper exits if it is asked to preload one.

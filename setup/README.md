@@ -220,10 +220,7 @@ Ly session name is **Hyprland**, with
 `Exec=/usr/local/bin/start-hyprland`. The desktop file is
 `/usr/share/wayland-sessions/hyprland.desktop`.
 `hypridle`, `hyprpolkitagent`, the Hyprland portal, `hyprsunset`, and
-`hyprpaper` go through `hypr-session-exec.sh`. That runs
-`/usr/local/bin` when the compositor is `/usr/local/bin/Hyprland`,
-`/opt/hyprland` for a leftover prefix, and `/usr` for a distro session.
-hyprpwcenter is the volume UI.
+`hyprpaper` exec `/usr/local`. hyprpwcenter is the volume UI.
 
 OpenMandriva has no single published dep list. The module translates the
 Fedora set from [Hyprland discussion #284](https://github.com/hyprwm/Hyprland/discussions/284)
