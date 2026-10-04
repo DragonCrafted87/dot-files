@@ -12,12 +12,11 @@ These scripts implement workstation monitor and sink switching:
 | Script                                               | Owns                                                                           |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `scripts/display-switch.sh`                          | Saved profile name, HDMI-switch watch lifecycle, calling the other two scripts |
-| `scripts/display-profile.sh`                         | `hyprctl keyword monitor`, idle DPMS, workspace map restore                    |
+| `scripts/display-profile.sh`                         | `hyprctl eval` monitor rules, idle DPMS, workspace map restore                 |
 | `scripts/display-audio.sh`                           | PipeWire/Pulse default sink and card profile                                   |
 | `scripts/idle-display-off.sh` / `idle-display-on.sh` | Lock/sleep wrappers around `display-profile.sh` idle commands                  |
 
-`conf.d/monitors.conf` MUST contain only startup `exec-once`. It MUST NOT
-contain a `monitor =` rule. Host layouts MUST live in `conf.d/monitors.d/`.
+Host layouts MUST live in `conf.d/monitors.d/`.
 Audio policy MUST live in `conf.d/audio.d/`. Port and switch metadata
 MUST live in `conf.d/hosts.d/<hostname>.conf`.
 
@@ -90,8 +89,7 @@ MUST still start or stop watch according to `SINGLE_PROFILES`.
 
 MUST:
 
-- Apply only `monitor=` lines from `monitors.d` via `hyprctl keyword`
-  monitor (0.48) or `hyprctl eval hl.monitor({...})` (0.56 lua).
+- Apply only `monitor=` lines from `monitors.d` with `hyprctl eval`.
 - Implement `idle-off` / `idle-on` / `restore-ws` for hypridle.
 - Read the saved profile name to choose which conf idle reapplies.
 - Serialize apply/idle with `apply.lock`.
@@ -101,7 +99,7 @@ MUST NOT:
 - Change the default audio sink or card profile.
 - Start or stop the HDMI-switch watcher.
 - Write the saved profile name.
-- Put host `monitor=` rules into `conf.d/monitors.conf`.
+- Put host `monitor=` rules anywhere except `conf.d/monitors.d/`.
 
 ### display-audio.sh
 
@@ -146,12 +144,13 @@ Applies only when `hosts.d/<host>.conf` defines `SWITCH_PORT` and
 
 ## Startup and reload
 
-1. `monitors.conf` MUST `exec-once` only
-   `display-switch.sh restore`.
-1. `monitors.conf` MUST NOT contain any `monitor =` rule. A wildcard
-   `monitor = , highrr, auto, 1` is re-parsed on `hyprctl reload` and
-   re-autoplaces outputs, which shuffles order and positions.
-1. Hyprland reload MUST NOT re-run restore or apply. `keyword monitor`
+1. `lua/autostart.lua` MUST run `display-switch.sh restore` once, on
+   `hyprland.start`.
+1. Host `monitor=` lines MUST live in `conf.d/monitors.d/`. A reload
+   MUST re-apply `monitors.runtime.conf` from `lua/monitors.lua`. A
+   wildcard `monitor = , highrr, auto, 1` re-autoplaces outputs, which
+   shuffles order and positions.
+1. Hyprland reload MUST NOT re-run restore or apply. Applying monitors
    during reload can disable DP outputs and loop the compositor.
 1. `display-profile.sh apply` as `exec-once` MUST NOT exist.
 1. A delayed second `exec-once` for audio MUST NOT exist; `restore`
@@ -160,8 +159,8 @@ Applies only when `hosts.d/<host>.conf` defines `SWITCH_PORT` and
 
 ## Keybinds
 
-1. Desk MUST be its own bind (`SUPER+SHIFT+D` → `display-switch.sh desk`).
-1. Single-output MUST be one bind (`SUPER+SHIFT+S` →
+1. Desk MUST be its own bind (`SUPER+ALT+D` → `display-switch.sh desk`).
+1. Single-output MUST be one bind (`SUPER+ALT+S` →
    `display-switch.sh single`), not separate theater and workshare binds.
 1. Binds MUST call `display-switch.sh`, not `display-profile.sh` or
    `display-audio.sh` directly.
@@ -198,17 +197,17 @@ Applies only when `hosts.d/<host>.conf` defines `SWITCH_PORT` and
 ## Safety
 
 1. Scripts MUST be host-safe: a laptop MUST NOT inherit runewyrm
-   `DP-2` / `DP-3` / `HDMI-A-1` modes from a shared `monitors.conf`.
+   `DP-2` / `DP-3` / `HDMI-A-1` modes from `monitors.d/default.conf`.
 1. Unknown Hyprland connector names are ignored; explicit modes on
    shared names are not. Keep those modes out of the shared file.
-1. `hyprctl keyword monitor` specs MUST strip a trailing `Hz` on the
-   refresh field (`2560x1440@143.91`, not `@143.91Hz`).
+1. Monitor specs MUST strip a trailing `Hz` on the refresh field
+   (`2560x1440@143.91`, not `@143.91Hz`).
 1. Apply and idle MUST take `apply.lock` so overlapping binds and
-   hypridle cannot interleave `keyword monitor`.
+   hypridle cannot interleave monitor applies.
 1. Watch stop MUST kill the process group of the PID file, then remove
    the PID file.
-1. `monitors.d/default.conf` MAY keep a wildcard rule because it is only
-   applied through `keyword monitor`, not sourced on reload.
+1. `monitors.d/default.conf` MAY keep a wildcard rule. `lua/monitors.lua`
+   reads it only when `monitors.runtime.conf` is missing.
 
 ## Commands
 

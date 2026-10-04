@@ -1,5 +1,3 @@
--- Mirrors conf.d/keybinds.conf for Hyprland 0.56+.
-
 local mainMod = "SUPER"
 local terminal = "kitty"
 local fileManager = "dolphin"

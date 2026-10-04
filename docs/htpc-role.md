@@ -43,7 +43,7 @@ MC1 path as runewyrm theater.
 
 ## Done
 
-- Desk GUI apps left `programs-autostart.conf`.
+- Desk GUI apps are user units on `workstation-session.target`, not Hyprland autostart.
 - `workstation-session.target` starts one unit per app. Steam `-silent`,
   Discord `--start-minimized`, `qs-startmenu.service` `Restart=always`.
 - `htpc-session.target` exists as an empty placeholder.

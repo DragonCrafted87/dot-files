@@ -127,7 +127,7 @@ Dolphin is the Hyprland file manager (`SUPER+E`). After
 `kbuildsycoca6`. Text and Markdown go to the installed VS Code entry.
 An existing list keeps handlers whose desktop file is still on disk;
 missing ones are filled in, and handlers that name a removed desktop
-file are replaced. The other half is `config/hypr/conf.d/env.conf`
+file are replaced. The other half is `config/hypr/lua/env.lua`
 (`XDG_CURRENT_DESKTOP=Hyprland:KDE`) so KIO treats LibreOffice and Okular
 as valid "Open with" targets.
 

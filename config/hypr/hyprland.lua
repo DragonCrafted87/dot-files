@@ -1,5 +1,4 @@
--- Hyprland 0.56+ entrypoint. Distro 0.48.1 ignores this file and reads
--- hyprland.conf. Do not require() the old .conf modules from here.
+-- Hyprland entrypoint.
 -- https://wiki.hypr.land/Configuring/Start/
 
 require("lua/env")

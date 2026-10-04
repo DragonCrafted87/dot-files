@@ -13,8 +13,8 @@ SAVED_WS_FILE="${STATE_DIR}/saved-monitor-workspaces"
 RESTORE_WS_PID_FILE="${STATE_DIR}/restore-ws.pid"
 APPLY_LOCK_FILE="${STATE_DIR}/apply.lock"
 IDLE_DISABLED_FILE="${STATE_DIR}/idle-monitor-disabled"
-# Sourced by monitors.conf on every reload. keyword rules vanish on
-# resetHLConfig(); this file is how the last layout survives hyprctl reload.
+# lua/monitors.lua re-reads this on reload. Eval'd monitor rules are
+# cleared, and this file is how the last layout survives.
 RUNTIME_MONITORS_FILE="${STATE_DIR}/monitors.runtime.conf"
 IDLE_MONITOR=""
 DESK_PORTS=""

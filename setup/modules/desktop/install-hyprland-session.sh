@@ -23,6 +23,26 @@ remove_session_bin_dropins() {
     shopt -u nullglob
 }
 
+# 0.56 draws the border from lua borderangle loop.
+remove_spin_border_unit() {
+    local unit link
+    [[ "${DOTFILES_DRY_RUN:-0}" == "1" ]] && return 0
+    unit="${DOTFILES_HOME}/.config/systemd/user/workstation-spin-border.service"
+    if systemctl --user is-active --quiet workstation-spin-border.service 2>/dev/null; then
+        systemctl --user stop workstation-spin-border.service || true
+    fi
+    if [[ -e "$unit" ]]; then
+        log "remove ${unit}"
+        rm -f "$unit"
+    fi
+    shopt -s nullglob
+    for link in "${DOTFILES_HOME}/.config/systemd/user/"*.wants/workstation-spin-border.service; do
+        log "remove ${link}"
+        rm -f "$link"
+    done
+    shopt -u nullglob
+}
+
 ensure_packages \
     ly \
     quickshell \
@@ -65,6 +85,7 @@ for src in "${SETUP_FILES_DIR}/hypr/"*.service.d/*.conf; do
 done
 shopt -u nullglob
 remove_session_bin_dropins
+remove_spin_border_unit
 if [[ "${DOTFILES_DRY_RUN:-0}" != "1" ]]; then
     systemctl --user daemon-reload
 fi

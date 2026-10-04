@@ -5,18 +5,16 @@ This file is the host map and operator cheat sheet.
 
 The linked `~/.config/hypr` tree is shared across machines. Host-specific
 layouts live in `conf.d/monitors.d/` and are the source of truth.
-`display-profile.sh` applies `hyprctl keyword monitor` from those files.
+`display-profile.sh` applies those `monitor=` lines with `hyprctl eval`.
 `display-switch.sh` owns the saved profile and calls `display-audio.sh`.
 
-Distro Hyprland 0.48.1 reads `hyprland.conf` and `conf.d/*.conf`. Source
-0.56.2 reads `hyprland.lua` and `lua/*.lua` instead (it never opens the
-`.conf` tree when the lua entry exists). Scripts, `hypridle.conf`, and
-`hyprlock.conf` are shared.
+Hyprland reads `hyprland.lua` and `lua/*.lua`. `hypridle.conf` and
+`hyprlock.conf` stay hyprlang. `conf.d/monitors.d/`, `conf.d/hosts.d/`,
+and `conf.d/audio.d/` are script files.
 
-Startup runs `display-switch.sh restore` once (`exec-once` /
-`hyprland.start`). Reloads re-read `~/.local/state/hypr/monitors.runtime.conf`
-from `lua/monitors.lua` (0.56) or `conf.d/monitors.conf` (0.48) so outputs
-keep their last layout.
+Startup runs `display-switch.sh restore` once (`hyprland.start`). Reloads
+re-read `~/.local/state/hypr/monitors.runtime.conf` from `lua/monitors.lua`
+so outputs keep their last layout.
 
 ## Graphical session (systemd)
 
@@ -57,8 +55,8 @@ than seven days. Hyprsunset 0.4.0 only stores clock times.
 Desk GUI apps are not Hyprland `exec-once` lines. They are child units of
 `workstation-session.target` (WantedBy `graphical-session.target`): kitty,
 Brave, Steam (`-silent` tray), Discord (`--start-minimized`),
-`qs-startmenu` (`Restart=always`), spin-border (0.48 only; 0.56 uses
-`borderangle` loop), Litra, KDE Connect.
+`qs-startmenu` (`Restart=always`), Litra, KDE Connect.
+The active border is the `borderangle` loop in `lua/look-and-feel.lua`.
 HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
 the target that matches `~/.config/dot-files/role`.
 
@@ -143,8 +141,7 @@ layout. Headless outputs are left out of that layout. When none of the
 remaining monitors contains the middle, they open on the widest. A new
 tiled Code window takes the first of the five that does not already
 have one.
-The chords are in `lua/keybinds.lua`. On the 0.48 tree,
-`SUPER+SHIFT+D` is still the desk profile.
+The chords are in `lua/keybinds.lua`.
 
 ## Litra Glow
 

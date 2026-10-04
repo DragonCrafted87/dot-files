@@ -106,19 +106,20 @@ dual-session.
 
 ### Config (Lua only)
 
-The 0.48 `.conf` tree and 0.56 `hyprland.lua` tree are side by side until
-this cutover. After distro Hyprland is gone:
+Hyprland reads `hyprland.lua`. Host layouts stay script-owned files.
+`hypridle.conf` and `hyprlock.conf` stay hyprlang until those tools grow
+a Lua provider.
 
-- [ ] Delete `config/hypr/hyprland.conf` and `config/hypr/conf.d/*.conf`
+- [x] Delete `config/hypr/hyprland.conf` and `config/hypr/conf.d/*.conf`
   that Hyprland 0.48 parsed (`env.conf`, `monitors.conf`,
   `programs-autostart.conf`, `look-and-feel.conf`, `input.conf`,
   `keybinds.conf`, `window-rules.conf`).
-- [ ] Keep `conf.d/monitors.d/`, `conf.d/hosts.d/`, and `conf.d/audio.d/`
+- [x] Keep `conf.d/monitors.d/`, `conf.d/hosts.d/`, and `conf.d/audio.d/`
   until those layouts are expressed in Lua (or stay as script-owned
   `KEY=value` / `monitor=` files that `display-profile.sh` reads).
 - [ ] Convert `hypridle.conf` / `hyprlock.conf` only if those tools grow
   a Lua provider. They still use hyprlang on 0.56.
-- [ ] Delete `scripts/spin-border.sh` and
+- [x] Delete `scripts/spin-border.sh` and
   `setup/files/hypr/workstation-spin-border.service`. Source 0.56
   uses `borderangle` `loop` in `lua/look-and-feel.lua`.
 
