@@ -43,5 +43,9 @@ the hyprpaper unit instead of spawning hyprpaper.
 `docs/todo.md` is future work, so it is not the state of the machine.
 Secrets stay out of commits.
 
+`docs/plans` and `docs/specs` point at the parent repository when this
+checkout is a submodule. Those files stay out of this repository's
+history.
+
 This repository uses Kobold Codex. Skills for this repo are in
 `.agents/skills/`.
