@@ -506,4 +506,19 @@
     "security.promptForLocalFileProtocolHandling": false,
     "githubPullRequests.hideViewedFiles": true,
     "git.detectWorktrees": true,
+    "scm.defaultViewMode": "tree",
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": {
+            "when": "$(basename).py"
+        }
+    },
+    "docker.extension.enableComposeLanguageServer": false,
+    "githubPullRequests.defaultDeletionMethod.selectWorktree": true,
+    "githubPullRequests.defaultMergeMethod": "squash",
+    "githubPullRequests.deleteBranchAfterMerge": true,
+    "githubPullRequests.codingAgent.uiIntegration": false,
+    "githubPullRequests.codingAgent.promptForConfirmation": false,
+    "githubPullRequests.codingAgent.enabled": false,
+    "githubPullRequests.codingAgent.autoCommitAndPush": false
 }
