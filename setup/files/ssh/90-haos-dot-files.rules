@@ -1,1 +1,0 @@
-ACTION=="add", SUBSYSTEM=="net", KERNEL!="lo", RUN+="/mnt/overlay/dot-files/haos-udev.sh"
