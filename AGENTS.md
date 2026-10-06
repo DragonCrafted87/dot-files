@@ -5,16 +5,18 @@ linker and the role read it, so a second clone path is a fiction.
 
 `main` is protected, so a change lands on a feature branch.
 
-`setup/role.sh` is the only upgrade path. A second installer would
-fork a machine off the role.
+`setup/role.sh` is a temporary helper. It checks out machine-setup
+for this machine's role and execs that checkout's `setup/role.sh`.
+The modules live in machine-setup. A second installer would fork a
+machine off the role.
 
 The linker publishes directories and skips a real `~/.config/<name>`
 that is already there. A loose file is not a config, and replacing a
 directory the linker skipped would destroy a config it refused to own.
 `config/Code` stays unlinked because VS Code rewrites that tree.
-`bashrc.d/` stays at the repo root because `DOTFILES_ROOT` is its
-parent. `scripts/` and `setup/files/` stay apart because a role
-installs one and does not install the other.
+`bashrc.d/` stays at the repo root because the shell records that
+parent while it is sourcing the file. `scripts/` stays here. Role
+modules and `setup/files/` live in machine-setup.
 
 A shebang in the repo keeps an interpreter extension because the hook
 pairs a shebang with the executable bit. The installed command name is
