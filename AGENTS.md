@@ -42,7 +42,9 @@ ALSA card is not the default source.
 The astronomy timer tears down processes it started, so it restarts
 the hyprpaper unit instead of spawning hyprpaper.
 
-`docs/todo.md` is future work, so it is not the state of the machine.
+Open work is the homelab parent's `docs/todo.md`
+(`../docs/todo.md` from this checkout). It is future work, so it is
+not the state of the machine.
 Secrets stay out of commits.
 
 `docs/plans` and `docs/specs` point at the parent repository when this

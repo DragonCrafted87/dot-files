@@ -520,5 +520,11 @@
     "githubPullRequests.codingAgent.uiIntegration": false,
     "githubPullRequests.codingAgent.promptForConfirmation": false,
     "githubPullRequests.codingAgent.enabled": false,
-    "githubPullRequests.codingAgent.autoCommitAndPush": false
+    "githubPullRequests.codingAgent.autoCommitAndPush": false,
+    "githubPullRequests.queries": [
+        {
+            "label": "All Open",
+            "query": "default"
+        }
+    ]
 }
