@@ -4,7 +4,8 @@ Personal Linux (OpenMandriva Rock) and Windows developer setup. One git
 clone under `~/dot-files` is the source of truth. Role scripts install
 packages and link configs. Re-running a role is the intended upgrade path.
 
-Layout ideas that are **not done yet** live in `docs/todo.md`.
+Open work lives in the homelab parent at `docs/todo.md`
+(`../docs/todo.md` from this checkout).
 
 ## Layout
 
