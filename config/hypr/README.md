@@ -60,6 +60,17 @@ The active border is the `borderangle` loop in `lua/look-and-feel.lua`.
 HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
 the target that matches `~/.config/dot-files/role`.
 
+`conf.d/shell.conf` sets `DESK_SHELL`. The git value is `quickshell`.
+Super+Space runs `scripts/desk-shell.sh toggle`, which reads that file
+when the key is pressed. `hyprtoolkit` starts `hyprlauncher` on the next
+Hyprland login and leaves the Quickshell start menu stopped.
+`enable-session-units.sh` enables `hyprlauncher.service` only for that
+value, and enables `qs-startmenu.service` only for `quickshell`.
+The start menu unit is `WantedBy=workstation-session.target`. The target
+file does not list `Wants=qs-startmenu.service`. Colors for toolkit apps
+are `hyprtoolkit.conf`. The launcher blur rule matches the namespace
+`^hyprlauncher$`.
+
 `xdg-document-portal.service` gets a user drop-in
 (`TimeoutStopSec=5`, `TimeoutStopFailureMode=kill`) so logout does not
 wait the default 90s on a stuck FUSE unmount of `/run/user/$UID/doc`.
