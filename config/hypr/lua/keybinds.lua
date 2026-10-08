@@ -3,7 +3,7 @@ local terminal = "kitty"
 local fileManager = "dolphin"
 local scripts = os.getenv("HOME") .. "/.config/hypr/scripts"
 
-hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("qs -c startmenu ipc call startmenu toggle"))
+hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(scripts .. "/desk-shell.sh toggle"))
 hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + F4", hl.dsp.exec_cmd(scripts .. "/session-control.sh logout"))
