@@ -9,16 +9,15 @@ Open work lives in the homelab parent at `docs/todo.md`
 
 ## Layout
 
-| Path        | What it is                                                                          |
-| ----------- | ----------------------------------------------------------------------------------- |
-| `shell/`    | Linux and Git Bash entrypoints plus Oh My Posh theme.                               |
-| `bashrc.d/` | Function and alias snippets sourced by those entries.                               |
-| `config/`   | Trees linked into `~/.config/<name>` by the role.                                   |
-| `setup/`    | Temporary helper. `role.sh` checks out machine-setup and execs its `setup/role.sh`. |
-| `windows/`  | Winget lists and work/personal PowerShell. See `windows/README.md`.                 |
-| `scripts/`  | One-off Python helpers (ffmpeg, dictation, Minecraft mods).                         |
-| `docs/`     | Notes that are not run by a role.                                                   |
-| `.pylintrc` | Pylint config (`pre-commit` passes `--rcfile=.pylintrc`).                           |
+| Path        | What it is                                                          |
+| ----------- | ------------------------------------------------------------------- |
+| `shell/`    | Linux and Git Bash entrypoints plus Oh My Posh theme.               |
+| `bashrc.d/` | Function and alias snippets sourced by those entries.               |
+| `config/`   | Trees linked into `~/.config/<name>` by the role.                   |
+| `windows/`  | Winget lists and work/personal PowerShell. See `windows/README.md`. |
+| `scripts/`  | One-off Python helpers (ffmpeg, dictation, Minecraft mods).         |
+| `docs/`     | Notes that are not run by a role.                                   |
+| `.pylintrc` | Pylint config (`pre-commit` passes `--rcfile=.pylintrc`).           |
 
 ## Linux machine
 
@@ -27,14 +26,17 @@ that has the machine-setup checkout:
 
 ```bash
 ~/machine-setup/setup/init-remote.sh dragon@newbox.lan workstation
-# then on the new box:
-~/dot-files/setup/role.sh
+# then on the new box, from the machine-setup path in
+# ~/.config/dot-files/checkouts. init-remote.sh already wrote the role.
+~/git-workspace/homelab/machine-setup/setup/role.sh
 ```
 
-`init-remote.sh` writes the role file, so the helper takes no role
-argument. On a workstation, machine-setup is
-`~/git-workspace/homelab/machine-setup`. On an htpc or server it is
-`~/machine-setup`. Later role commands use that checkout:
+`init-remote.sh` writes the role file and the checkouts file, so
+that command takes no role argument. On a workstation, machine-setup
+is `~/git-workspace/homelab/machine-setup`. On an htpc or server it
+is `~/machine-setup`, and the second command is
+`~/machine-setup/setup/role.sh`. Later role commands use that
+checkout:
 
 ```bash
 ~/machine-setup/setup/role.sh
@@ -44,8 +46,8 @@ argument. On a workstation, machine-setup is
 Roles: `workstation`, `htpc`, `server`. Optional subroles (`laptop`,
 `gaming`, `artifact-repo`, `nfs-server`) are saved on the box and
 re-applied by `update-role`. Lists live in machine-setup
-`setup/roles.conf`. The helper forwards `update-role` until it is
-removed.
+`setup/roles.conf`. `update-role` reads the checkouts file and runs
+that machine-setup `setup/role.sh`.
 
 Later, on the machine itself:
 

@@ -2,7 +2,9 @@
 # Role shorthand and repo helpers.
 # Saved role: ~/.config/dot-files/role
 # Saved subroles: ~/.config/dot-files/subroles
-# Repo location: $DOTFILES_ROOT, else ~/.config/dot-files/root, else ~/dot-files
+# update-role reads machine-setup from ~/.config/dot-files/checkouts.
+# update-dot-files finds this repo from $DOTFILES_ROOT, else
+# ~/.config/dot-files/root, else ~/dot-files.
 
 dotfiles-root() {
     local recorded="${HOME}/.config/dot-files/root"
@@ -50,15 +52,49 @@ update-dot-files() {
     return "$rc"
 }
 
+machine-setup-root() {
+    local file="${HOME}/.config/dot-files/checkouts"
+    local line value
+    if [[ ! -f "$file" ]]; then
+        printf 'missing %s\n' "$file" >&2
+        return 1
+    fi
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        case "$line" in
+            '' | \#*)
+                continue
+                ;;
+            machine-setup=*)
+                value="${line#machine-setup=}"
+                value="${value#"${value%%[![:space:]]*}"}"
+                value="${value%"${value##*[![:space:]]}"}"
+                if [[ -z "$value" || ! -d "$value" ]]; then
+                    printf 'machine-setup in %s is not a directory: %s\n' "$file" "$value" >&2
+                    return 1
+                fi
+                printf '%s\n' "$value"
+                return 0
+                ;;
+        esac
+    done <"$file"
+    printf 'missing machine-setup in %s\n' "$file" >&2
+    return 1
+}
+
 update-role() {
     local role_file="${HOME}/.config/dot-files/role"
-    local repo role setup cwd
-    repo="$(dotfiles-root)" || {
-        printf 'cannot find the dot-files repo\n' >&2
-        printf 'source bashrc from inside the clone once, or clone to ~/dot-files\n' >&2
+    local setup_root setup role
+    setup_root="$(machine-setup-root)" || return 1
+    setup="${setup_root}/setup/role.sh"
+    if [[ ! -f "$setup" ]]; then
+        printf 'missing %s\n' "$setup" >&2
         return 1
-    }
-    setup="${repo}/setup/role.sh"
+    fi
+
+    if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "${1:-}" == "--list-subroles" ]]; then
+        bash "$setup" "$@"
+        return $?
+    fi
 
     if [[ "${1:-}" == workstation || "${1:-}" == htpc || "${1:-}" == server ]]; then
         role="$1"
@@ -67,26 +103,15 @@ update-role() {
         role="$(tr -d '[:space:]' <"$role_file")"
     fi
 
-    if [[ -z "$role" ]]; then
+    if [[ -z "${role:-}" ]]; then
         printf 'no role saved at %s\n' "$role_file" >&2
         printf 'pass workstation, htpc, or server once\n' >&2
         return 1
     fi
-    if [[ ! -f "$setup" ]]; then
-        printf 'missing %s\n' "$setup" >&2
-        return 1
-    fi
 
-    cwd="$PWD"
-    if ! cd "$repo"; then
-        printf 'cannot cd to %s\n' "$repo" >&2
-        return 1
-    fi
-    printf 'update-role: %s (%s)\n' "$role" "$repo"
-    bash ./setup/role.sh "$role" "$@"
-    local rc=$?
-    cd "$cwd" || true
-    return "$rc"
+    printf 'update-role: %s (%s)\n' "$role" "$setup_root"
+    bash "$setup" "$role" "$@"
+    return $?
 }
 
 enable-subrole() {
@@ -106,9 +131,9 @@ disable-subrole() {
 }
 
 list-subroles() {
-    local repo setup
-    repo="$(dotfiles-root)" || return 1
-    setup="${repo}/setup/role.sh"
+    local setup_root setup
+    setup_root="$(machine-setup-root)" || return 1
+    setup="${setup_root}/setup/role.sh"
     if [[ ! -f "$setup" ]]; then
         printf 'missing %s\n' "$setup" >&2
         return 1

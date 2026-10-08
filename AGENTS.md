@@ -5,8 +5,8 @@ linker and the role read it, so a second clone path is a fiction.
 
 `main` is protected, so a change lands on a feature branch.
 
-`setup/role.sh` is a temporary helper. It checks out machine-setup
-for this machine's role and execs that checkout's `setup/role.sh`.
+`update-role` reads `~/.config/dot-files/checkouts` and runs
+`setup/role.sh` from the machine-setup path that file records.
 The modules live in machine-setup. A second installer would fork a
 machine off the role.
 
