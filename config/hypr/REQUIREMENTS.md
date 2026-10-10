@@ -176,7 +176,7 @@ Applies only when `hosts.d/<host>.conf` defines `SWITCH_PORT` and
    output, so HDMI cannot wake itself. It MUST NOT disable
    `IDLE_MONITOR` when that connector is the only enabled output
    (theater / workshare): dropping the last `wl_output` kills Wayland
-   clients (Brave, Quickshell, portals).
+   clients (Brave, hyprdesk, portals).
 1. Idle-on MUST DPMS remaining outputs on. If idle-off disabled
    `IDLE_MONITOR`, idle-on MUST re-enable that connector from the
    active conf and restore workspaces. It MUST NOT re-keyword every

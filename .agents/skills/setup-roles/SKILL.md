@@ -32,8 +32,8 @@ unless the same key is already in the environment.
 
 Each module runs as `bash module.sh`. Environment variables do not
 survive back to `role.sh`. A cross-module flag is a file under `/tmp`,
-for example `/tmp/dot-files-<uid>-need-qs-restart`. `request_qs_restart`
-sets that flag. `role.sh` calls `restart_qs_if_needed` at the end of an
+for example `/tmp/dot-files-<uid>-need-desk-restart`. `request_desk_restart`
+sets that flag. `role.sh` calls `restart_desk_if_needed` at the end of an
 `update-role` or role run.
 
 ## Installed behavior

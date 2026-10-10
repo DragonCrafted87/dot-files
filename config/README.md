@@ -21,7 +21,6 @@ Palette source of truth: `kitty/kitty.conf` (Tango Dark).
 | `hypr/`         | `~/.config/hypr` — Hyprland, hypridle, hyprlock, display profiles. See `hypr/README.md`. |
 | `kitty/`        | `~/.config/kitty` — personal terminal look (source of truth vs Windows Terminal).        |
 | `mako/`         | `~/.config/mako` — notification daemon style, timeout, voicemail filter.                 |
-| `quickshell/`   | `~/.config/quickshell` — start menu / taskbar QML.                                       |
 | `gtk-3.0/`      | `~/.config/gtk-3.0` — Adwaita dark + Tango CSS for Thunar / GTK3 / portal.               |
 | `gtk-4.0/`      | `~/.config/gtk-4.0` — same for GTK4.                                                     |
 | `remmina/`      | `~/.config/remmina` — VTE / SSH colors match Kitty.                                      |

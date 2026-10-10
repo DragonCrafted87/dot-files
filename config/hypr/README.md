@@ -56,22 +56,21 @@ than seven days. Hyprsunset 0.4.0 only stores clock times.
 
 Desk GUI apps are not Hyprland `exec-once` lines. They are child units of
 `workstation-session.target` (WantedBy `graphical-session.target`): kitty,
-Brave, Steam (`-silent` tray), Discord (`--start-minimized`),
-`qs-startmenu` (`Restart=always`), Litra, KDE Connect.
+Brave, Steam (`-silent` tray), Discord (`--start-minimized`), Litra, and
+KDE Connect. hyprdesk draws the start menu and the volume overlay.
+`hyprdesk.service` is `WantedBy=graphical-session.target`,
+`After=hyprland-session.service`, and `Restart=on-failure`.
 The active border is the `borderangle` loop in `lua/look-and-feel.lua`.
 HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
-the target that matches `~/.config/dot-files/role`.
+the target that matches `~/.config/dot-files/role`, enables
+`hyprdesk.service`, and disables `qs-startmenu.service`.
 
-`conf.d/shell.conf` sets `DESK_SHELL`. The git value is `quickshell`.
-Super+Space runs `scripts/desk-shell.sh toggle`, which reads that file
-when the key is pressed. `hyprtoolkit` starts `hyprdesk` on the next
-Hyprland login. That process draws the start menu and the volume OSD.
-`enable-session-units.sh` enables `hyprdesk.service` only for that value,
-and enables `qs-startmenu.service` only for `quickshell`.
-The start menu unit is `WantedBy=workstation-session.target`. The target
-file does not list `Wants=qs-startmenu.service`. Colors for toolkit apps
-are `hyprtoolkit.conf`. Layer blur matches `^hyprdesk$`,
-`^hyprdesk-flyout$`, and `^hyprdesk-osd$`.
+Super+Space runs `/usr/local/bin/hyprdesk --toggle`. Login does not start
+hyprdesk from Hyprland autostart. `graphical-session.sh` imports the
+compositor environment, then disables `qs-startmenu.service` and enables
+`hyprdesk.service` when `/usr/local/bin/hyprdesk` exists, before it starts
+`hyprland-session.service`. Colors for toolkit apps are `hyprtoolkit.conf`.
+Layer blur matches `^hyprdesk$`, `^hyprdesk-flyout$`, and `^hyprdesk-osd$`.
 
 `xdg-document-portal.service` gets a user drop-in
 (`TimeoutStopSec=5`, `TimeoutStopFailureMode=kill`) so logout does not
@@ -79,7 +78,7 @@ wait the default 90s on a stuck FUSE unmount of `/run/user/$UID/doc`.
 
 ```bash
 systemctl --user status workstation-session.target
-systemctl --user status qs-startmenu.service
+systemctl --user status hyprdesk.service
 ```
 
 ```bash
@@ -269,7 +268,7 @@ when those outputs are not `disable` in the active conf. It then disables
 the idle monitor only if another output stays enabled (desk), so the TV
 drops the link without leaving the compositor with zero `wl_output`s.
 theater and workshare keep HDMI and only DPMS it: disabling the last
-output crashes Brave, Quickshell, and the desktop portals. idle-on
+output crashes Brave, hyprdesk, and the desktop portals. idle-on
 `dpms on` the remaining ports, re-enables the idle monitor when it was
 disabled, and restores those workspaces.
 
