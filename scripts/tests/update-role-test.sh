@@ -157,4 +157,21 @@ rc="$(run_update "$home_help" --help)"
 grep -F -- '--help' "${home_help}/role.log" >/dev/null \
     || fail "help did not reach role.sh: $(cat "${home_help}/role.log")"
 
+# A directory that is not a git checkout stops before the role.
+plain="${work}/plain-setup"
+mkdir -p "${plain}/setup"
+cat >"${plain}/setup/role.sh" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >>"${ROLE_LOG:?}"
+exit 0
+EOF
+chmod 755 "${plain}/setup/role.sh"
+home_plain="${work}/home-plain"
+prepare_home "$home_plain" "$plain"
+rc="$(run_update "$home_plain")"
+[[ "$rc" -ne 0 ]] || fail "non-git machine-setup was accepted"
+[[ ! -s "${home_plain}/role.log" ]] || fail "role ran for a non-git machine-setup"
+grep -F 'not a git work tree' "${home_plain}/err" >/dev/null \
+    || fail "non-git error: $(cat "${home_plain}/err") $(cat "${home_plain}/out")"
+
 printf 'update-role pull ok\n'
