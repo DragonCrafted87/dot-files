@@ -3,7 +3,7 @@ local terminal = "kitty"
 local fileManager = "dolphin"
 local scripts = os.getenv("HOME") .. "/.config/hypr/scripts"
 
-hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd("qs -c startmenu ipc call startmenu toggle"))
+hl.bind(mainMod .. " + Space", hl.dsp.exec_cmd(scripts .. "/desk-shell.sh toggle"))
 hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
 hl.bind(mainMod .. " + F4", hl.dsp.exec_cmd(scripts .. "/session-control.sh logout"))
@@ -57,7 +57,19 @@ code_submap("code-ws", "")
 hl.bind(mainMod .. " + SHIFT + d", hl.dsp.submap("code-send"))
 code_submap("code-send", " --send")
 
-hl.bind(mainMod .. " + S", hl.dsp.window.move({ workspace = "special:minimized" }))
+hl.bind(mainMod .. " + S", hl.dsp.window.move({ workspace = "special:minimized", follow = false }))
+
+-- special:minimized is a holding area. Showing it steals the monitor.
+hl.on("workspace.special_active", function(ws)
+    if not ws or not ws.special then
+        return
+    end
+    local name = ws.name or ""
+    if name ~= "special:minimized" and name ~= "minimized" then
+        return
+    end
+    hl.dispatch(hl.dsp.workspace.toggle_special("minimized"))
+end)
 
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }))

@@ -1,6 +1,8 @@
 # Hostname display profiles for Hyprland
 
 Behavioral rules for the scripts live in [`REQUIREMENTS.md`](REQUIREMENTS.md).
+The volume overlay and start menu requirements live with the hyprdesk
+sources, in `setup/files/hyprdesk/docs/` of the machine-setup tree.
 This file is the host map and operator cheat sheet.
 
 The linked `~/.config/hypr` tree is shared across machines. Host-specific
@@ -59,6 +61,17 @@ Brave, Steam (`-silent` tray), Discord (`--start-minimized`),
 The active border is the `borderangle` loop in `lua/look-and-feel.lua`.
 HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
 the target that matches `~/.config/dot-files/role`.
+
+`conf.d/shell.conf` sets `DESK_SHELL`. The git value is `quickshell`.
+Super+Space runs `scripts/desk-shell.sh toggle`, which reads that file
+when the key is pressed. `hyprtoolkit` starts `hyprdesk` on the next
+Hyprland login. That process draws the start menu and the volume OSD.
+`enable-session-units.sh` enables `hyprdesk.service` only for that value,
+and enables `qs-startmenu.service` only for `quickshell`.
+The start menu unit is `WantedBy=workstation-session.target`. The target
+file does not list `Wants=qs-startmenu.service`. Colors for toolkit apps
+are `hyprtoolkit.conf`. Layer blur matches `^hyprdesk$`,
+`^hyprdesk-flyout$`, and `^hyprdesk-osd$`.
 
 `xdg-document-portal.service` gets a user drop-in
 (`TimeoutStopSec=5`, `TimeoutStopFailureMode=kill`) so logout does not
