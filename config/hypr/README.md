@@ -1,8 +1,8 @@
 # Hostname display profiles for Hyprland
 
 Behavioral rules for the scripts live in [`REQUIREMENTS.md`](REQUIREMENTS.md).
-The volume overlay is [`VOLUME-OSD-REQUIREMENTS.md`](VOLUME-OSD-REQUIREMENTS.md).
-The start menu is [`START-MENU-REQUIREMENTS.md`](START-MENU-REQUIREMENTS.md).
+The volume overlay and start menu requirements live with the hyprdesk
+sources, in `setup/files/hyprdesk/docs/` of the machine-setup tree.
 This file is the host map and operator cheat sheet.
 
 The linked `~/.config/hypr` tree is shared across machines. Host-specific
