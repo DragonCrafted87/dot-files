@@ -26,17 +26,15 @@ that has the machine-setup checkout:
 
 ```bash
 ~/machine-setup/setup/init-remote.sh dragon@newbox.lan workstation
-# then on the new box, from the machine-setup path in
-# ~/.config/dot-files/checkouts. init-remote.sh already wrote the role.
-~/git-workspace/homelab/machine-setup/setup/role.sh
+# then on the new box. init-remote.sh already wrote the role.
+~/machine-setup/setup/role.sh
 ```
 
 `init-remote.sh` writes the role file and the checkouts file, so
-that command takes no role argument. On a workstation, machine-setup
-is `~/git-workspace/homelab/machine-setup`. On an htpc or server it
-is `~/machine-setup`, and the second command is
-`~/machine-setup/setup/role.sh`. Later role commands use that
-checkout:
+that command takes no role argument. On a workstation, `~/machine-setup`
+is a symlink to `~/git-workspace/homelab/machine-setup`. On an htpc or
+server, `~/machine-setup` is that machine's own clone. Later role
+commands use that path:
 
 ```bash
 ~/machine-setup/setup/role.sh
@@ -46,14 +44,15 @@ checkout:
 Roles: `workstation`, `htpc`, `server`. Optional subroles (`laptop`,
 `gaming`, `artifact-repo`, `nfs-server`) are saved on the box and
 re-applied by `update-role`. Lists live in machine-setup
-`setup/roles.conf`. `update-role` reads the checkouts file and runs
-that machine-setup `setup/role.sh`.
+`setup/roles.conf`. `update-role` reads the checkouts file, fast-forwards
+that machine-setup checkout when `git status` is clean, and runs
+`setup/role.sh`. A dirty tree or a detached HEAD is left in place.
 
 Later, on the machine itself:
 
 ```bash
 update-dot-files          # git pull this repo, re-source bashrc
-update-role               # re-run the saved role plus saved subroles
+update-role               # fast-forward a clean machine-setup checkout, then re-run the saved role
 update-role workstation   # set/save a role once if none is recorded
 enable-subrole laptop     # apply once; later update-role keeps it
 ```
