@@ -114,6 +114,13 @@ cmd_start() {
     if [[ -f "${HOME}/.config/hypr/scripts/hyprsunset-times.py" ]]; then
         python3 "${HOME}/.config/hypr/scripts/hyprsunset-times.py" refresh || true
     fi
+    # An old qs-startmenu enable would start with the session target.
+    # Disable it before that target comes up. hyprdesk itself starts
+    # from the unit After= relationship, not from a parallel start here.
+    if [[ -x /usr/local/bin/hyprdesk ]]; then
+        systemctl --user disable --now qs-startmenu.service >/dev/null 2>&1 || true
+        systemctl --user enable hyprdesk.service >/dev/null 2>&1 || true
+    fi
     if systemctl --user is-active --quiet "$UNIT"; then
         # Linger can leave the bind up after a crash without exec-shutdown.
         # Restart so WantedBy=graphical-session.target units run again.

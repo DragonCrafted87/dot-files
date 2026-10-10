@@ -28,9 +28,11 @@ is not in git. The exec-once restore runs once at login.
 
 Graphical desk apps start from `workstation-session.target`, one user
 unit per app, on `graphical-session.target`. They do not start from
-Hyprland autostart. `qs-startmenu.service` uses `Restart=always`.
-Steam starts with `-silent`. Discord starts with `--start-minimized`.
-HTPC extras use `htpc-session.target`.
+Hyprland autostart. hyprdesk starts from `hyprdesk.service`
+(`After=hyprland-session.service`, `Restart=on-failure`). Super+Space
+runs `/usr/local/bin/hyprdesk --toggle`. Steam starts with `-silent`.
+Discord starts with `--start-minimized`. HTPC extras use
+`htpc-session.target`.
 
 ## runewyrm profiles
 

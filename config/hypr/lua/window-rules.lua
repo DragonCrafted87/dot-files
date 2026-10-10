@@ -38,6 +38,27 @@ hl.window_rule({
     suppress_event = "maximize fullscreen",
 })
 
+hl.layer_rule({
+    name = "hyprdesk-blur",
+    match = { namespace = "^hyprdesk$" },
+    blur = true,
+    ignore_alpha = 0.1,
+})
+
+hl.layer_rule({
+    name = "hyprdesk-flyout-blur",
+    match = { namespace = "^hyprdesk-flyout$" },
+    blur = true,
+    ignore_alpha = 0.1,
+})
+
+hl.layer_rule({
+    name = "hyprdesk-osd-blur",
+    match = { namespace = "^hyprdesk-osd$" },
+    blur = true,
+    ignore_alpha = 0.1,
+})
+
 -- One tiled Code window per code-1..code-5. The script also chooses the monitor.
 -- hl.on callbacks die after 50ms, and os.execute blocks the compositor
 -- thread, so hyprctl cannot answer until the callback returns. Spawn and
