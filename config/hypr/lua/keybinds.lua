@@ -57,7 +57,7 @@ code_submap("code-ws", "")
 hl.bind(mainMod .. " + SHIFT + d", hl.dsp.submap("code-send"))
 code_submap("code-send", " --send")
 
-hl.bind(mainMod .. " + S", hl.dsp.window.move({ workspace = "special:minimized" }))
+hl.bind(mainMod .. " + S", hl.dsp.window.move({ workspace = "special:minimized", follow = false }))
 
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
