@@ -59,6 +59,18 @@ code_submap("code-send", " --send")
 
 hl.bind(mainMod .. " + S", hl.dsp.window.move({ workspace = "special:minimized", follow = false }))
 
+-- special:minimized is a holding area. Showing it steals the monitor.
+hl.on("workspace.special_active", function(ws)
+    if not ws or not ws.special then
+        return
+    end
+    local name = ws.name or ""
+    if name ~= "special:minimized" and name ~= "minimized" then
+        return
+    end
+    hl.dsp.workspace.toggle_special("minimized")()
+end)
+
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
 
