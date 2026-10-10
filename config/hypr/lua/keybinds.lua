@@ -68,7 +68,7 @@ hl.on("workspace.special_active", function(ws)
     if name ~= "special:minimized" and name ~= "minimized" then
         return
     end
-    hl.dsp.workspace.toggle_special("minimized")()
+    hl.dispatch(hl.dsp.workspace.toggle_special("minimized"))
 end)
 
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
