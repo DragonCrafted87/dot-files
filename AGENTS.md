@@ -5,8 +5,10 @@ linker and the role read it, so a second clone path is a fiction.
 
 `main` is protected, so a change lands on a feature branch.
 
-`update-role` reads `~/.config/dot-files/checkouts` and runs
-`setup/role.sh` from the machine-setup path that file records.
+`update-role` reads `~/.config/dot-files/checkouts`, fast-forwards
+that machine-setup checkout when `git status` is clean, and runs
+`setup/role.sh` from the path that file records. A dirty tree or a
+detached HEAD is left in place.
 The modules live in machine-setup. A second installer would fork a
 machine off the role.
 

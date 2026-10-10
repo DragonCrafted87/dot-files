@@ -81,9 +81,39 @@ machine-setup-root() {
     return 1
 }
 
+# Fast-forward a branch whose git status is empty. A dirty tree or a
+# detached HEAD stays as it is. dry=1 prints the pull and does not run it.
+pull-clean-machine-setup() {
+    local root="$1"
+    local dry="$2"
+    local status_text
+    if ! git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        printf 'update-role: %s is not a git work tree\n' "$root" >&2
+        return 1
+    fi
+    if ! git -C "$root" symbolic-ref -q HEAD >/dev/null 2>&1; then
+        printf 'update-role: detached HEAD %s; leaving it\n' "$root"
+        return 0
+    fi
+    if ! status_text="$(git -C "$root" status --porcelain)"; then
+        printf 'update-role: cannot read %s\n' "$root" >&2
+        return 1
+    fi
+    if [[ -n "$status_text" ]]; then
+        printf 'update-role: dirty %s; leaving it\n' "$root"
+        return 0
+    fi
+    if [[ "$dry" == "1" ]]; then
+        printf 'update-role: would git pull --ff-only %s\n' "$root"
+        return 0
+    fi
+    printf 'update-role: git pull --ff-only %s\n' "$root"
+    git -C "$root" pull --ff-only
+}
+
 update-role() {
     local role_file="${HOME}/.config/dot-files/role"
-    local setup_root setup role
+    local setup_root setup role arg dry=0
     setup_root="$(machine-setup-root)" || return 1
     setup="${setup_root}/setup/role.sh"
     if [[ ! -f "$setup" ]]; then
@@ -109,7 +139,18 @@ update-role() {
         return 1
     fi
 
+    for arg in "$@"; do
+        case "$arg" in
+            -h | --help | --list-subroles | --dry-run)
+                dry=1
+                ;;
+        esac
+    done
+
     printf 'update-role: %s (%s)\n' "$role" "$setup_root"
+    if ! pull-clean-machine-setup "$setup_root" "$dry"; then
+        return 1
+    fi
     bash "$setup" "$role" "$@"
     return $?
 }
