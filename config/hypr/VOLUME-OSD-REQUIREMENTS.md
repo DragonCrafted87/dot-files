@@ -38,7 +38,8 @@ the same step and the same percent text.
 
 ## Level bar
 
-1. The track MUST be the same width as the label.
+1. The track MUST be the width of the `100%` label. That width MUST stay
+   fixed while the level changes.
 1. The colored fill MUST sit inside the track with a visible margin on
    every side. That margin MUST remain when the level is `150%`.
 1. Fill height MUST follow the snapped level divided by `1.5`. Mute MUST
