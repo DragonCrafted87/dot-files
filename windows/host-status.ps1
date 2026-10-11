@@ -219,6 +219,24 @@ function Send-HostStatusMqtt([string]$Broker, [string]$Topic, [string]$Payload) 
     $tcp.Close()
 }
 
+function Get-HostStatusName {
+    if ($env:HOST_STATUS_HOST) {
+        return $env:HOST_STATUS_HOST
+    }
+    # COMPUTERNAME is the NetBIOS name and stops at 15 characters, so
+    # this host reports calligraphy-wyr. The dashboard topic is the
+    # DNS name.
+    $name = $env:COMPUTERNAME
+    if (-not $name) {
+        return "calligraphy-wyrm"
+    }
+    $name = $name.ToLower()
+    if ($name -eq "calligraphy-wyr") {
+        return "calligraphy-wyrm"
+    }
+    return $name
+}
+
 function Get-DiskInfoText {
     if ($env:HOST_STATUS_DISKINFO) {
         return [System.IO.File]::ReadAllText($env:HOST_STATUS_DISKINFO)
@@ -278,10 +296,7 @@ function Get-HostStatusSample {
         $temperature = $null
     }
     $disks = ConvertFrom-DiskInfoText (Get-DiskInfoText)
-    $hostName = $env:HOST_STATUS_HOST
-    if (-not $hostName) {
-        $hostName = $env:COMPUTERNAME.ToLower()
-    }
+    $hostName = Get-HostStatusName
     $payload = ConvertTo-HostStatusJson $cpu $memory $temperature $primary $rx $tx $net $disks
     return [ordered]@{ host = $hostName; payload = $payload; temperature = $temperature }
 }

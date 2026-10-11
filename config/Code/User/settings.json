@@ -526,5 +526,6 @@
             "label": "All Open",
             "query": "default"
         }
-    ]
+    ],
+    "githubPullRequests.pushBranch": "always"
 }
