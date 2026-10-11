@@ -59,6 +59,18 @@ $text = [System.Text.Encoding]::UTF8.GetString($packet)
 if ($text -notmatch "homelab/status/calligraphy-wyrm") { throw "topic" }
 if ($text.Contains($serialA)) { throw "serial in packet" }
 
+$chosen = Select-LhmTemperature @(
+    [ordered]@{ name = "CPU"; value = 30 }
+    [ordered]@{ name = "Core (Tctl/Tdie)"; value = 31.5 }
+    [ordered]@{ name = "CPU Package"; value = 40 }
+)
+if ($chosen -ne 40) { throw "package rank" }
+$chosen = Select-LhmTemperature @(
+    [ordered]@{ name = "CPU"; value = 30 }
+    [ordered]@{ name = "Core (Tctl/Tdie)"; value = 31.5 }
+)
+if ($chosen -ne 31.5) { throw "tctl rank" }
+
 $savedHost = $env:HOST_STATUS_HOST
 $savedComputer = $env:COMPUTERNAME
 $env:HOST_STATUS_HOST = ""

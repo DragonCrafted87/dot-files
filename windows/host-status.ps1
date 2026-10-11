@@ -114,8 +114,28 @@ function ConvertTo-HostStatusJson($Cpu, $Memory, $Temperature, $Primary, $Rx, $T
         "}")
 }
 
+function Select-LhmTemperature($Sensors) {
+    $rank = @{
+        "CPU Package"       = 0
+        "Core (Tctl/Tdie)"  = 1
+        "CPU (Tctl/Tdie)"   = 2
+    }
+    $best = $null
+    $bestRank = 99
+    foreach ($sensor in $Sensors) {
+        if (-not $rank.ContainsKey([string]$sensor.name)) { continue }
+        if ($null -eq $sensor.value) { continue }
+        $place = $rank[[string]$sensor.name]
+        if ($place -lt $bestRank) {
+            $best = [double]$sensor.value
+            $bestRank = $place
+        }
+    }
+    return $best
+}
+
 function Get-LhmTemperature($Node) {
-    $found = $null
+    $sensors = @()
     $pending = @($Node)
     while ($pending.Count -gt 0) {
         $item = $pending[0]
@@ -128,14 +148,40 @@ function Get-LhmTemperature($Node) {
         if ($null -eq $item) { continue }
         $text = [string]$item.Text
         $value = [string]$item.Value
-        if ($text -eq "CPU Package" -and $value -match "(-?\d+(?:\.\d+)?)") {
-            $found = [double]$Matches[1]
+        $type = [string]$item.Type
+        if (($type -eq "" -or $type -eq "Temperature") -and $value -match "(-?\d+(?:\.\d+)?)") {
+            $sensors += [ordered]@{ name = $text; value = [double]$Matches[1] }
         }
         if ($item.Children) {
             $pending += @($item.Children)
         }
     }
-    return $found
+    return Select-LhmTemperature $sensors
+}
+
+function Get-LhmLibraryTemperature {
+    if (-not $script:LhmComputer) {
+        $dll = Get-ChildItem -Path @(
+            "C:\Program Files\LibreHardwareMonitor\LibreHardwareMonitorLib.dll"
+            "C:\Users\*\AppData\Local\Microsoft\WinGet\Packages\LibreHardwareMonitor.LibreHardwareMonitor_*\LibreHardwareMonitorLib.dll"
+        ) -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $dll) { return $null }
+        [void][Reflection.Assembly]::LoadFrom($dll.FullName)
+        $computer = New-Object LibreHardwareMonitor.Hardware.Computer
+        $computer.IsCpuEnabled = $true
+        $computer.Open()
+        $script:LhmComputer = $computer
+    }
+    $sensors = @()
+    foreach ($hardware in $script:LhmComputer.Hardware) {
+        $hardware.Update()
+        foreach ($sensor in $hardware.Sensors) {
+            if ([string]$sensor.SensorType -ne "Temperature") { continue }
+            if ($null -eq $sensor.Value) { continue }
+            $sensors += [ordered]@{ name = [string]$sensor.Name; value = [double]$sensor.Value }
+        }
+    }
+    return Select-LhmTemperature $sensors
 }
 
 function Get-LhmSensorNames($Node) {
@@ -287,13 +333,17 @@ function Get-HostStatusSample {
     try {
         $lhm = Invoke-RestMethod -Uri "http://127.0.0.1:8085/data.json" -TimeoutSec 3
         $temperature = Get-LhmTemperature $lhm
-        if ($null -eq $temperature) {
-            $names = Get-LhmSensorNames $lhm
-            Write-Warning ("no CPU Package temperature. Sensors: " + ($names -join ", "))
-        }
     }
     catch {
         $temperature = $null
+    }
+    if ($null -eq $temperature) {
+        try {
+            $temperature = Get-LhmLibraryTemperature
+        }
+        catch {
+            $temperature = $null
+        }
     }
     $disks = ConvertFrom-DiskInfoText (Get-DiskInfoText)
     $hostName = Get-HostStatusName
