@@ -59,6 +59,19 @@ $text = [System.Text.Encoding]::UTF8.GetString($packet)
 if ($text -notmatch "homelab/status/calligraphy-wyrm") { throw "topic" }
 if ($text.Contains($serialA)) { throw "serial in packet" }
 
+$savedHost = $env:HOST_STATUS_HOST
+$savedComputer = $env:COMPUTERNAME
+$env:HOST_STATUS_HOST = ""
+$env:COMPUTERNAME = "CALLIGRAPHY-WYR"
+if ((Get-HostStatusName) -ne "calligraphy-wyrm") { throw "netbios name" }
+$env:COMPUTERNAME = "ROOST-DRAKE"
+if ((Get-HostStatusName) -ne "roost-drake") { throw "short name" }
+$env:HOST_STATUS_HOST = "override"
+if ((Get-HostStatusName) -ne "override") { throw "override" }
+$env:HOST_STATUS_HOST = $savedHost
+$env:COMPUTERNAME = $savedComputer
+
+Write-Output "netbios topic"
 Write-Output "disk model"
 Write-Output "disk health"
 Write-Output "disk temperature"
