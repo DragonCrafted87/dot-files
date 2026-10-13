@@ -27,6 +27,13 @@ that pair.
 
 `.scratch/` is outside the hooks.
 
+## Secrets in a staged file
+
+A config file that holds a secret, such as a saved password in an
+app's preferences, is still committed. Blank the secret value,
+commit the rest of the file, and name the blanked key by its kind
+in the reply. Leaving the whole file unstaged is not the fix.
+
 ## Run
 
 ```bash
