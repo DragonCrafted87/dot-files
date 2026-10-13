@@ -68,3 +68,24 @@ rclone parent from `install-network-mounts`.
 `/etc/locale.conf`, with byte-order `LC_COLLATE=C` and ISO
 `LC_TIME=en_DK`, plus the matching KDE Formats file. `en_DK` needs the
 `locales-en` package.
+
+## Proving a fix
+
+A fix to `init-remote.sh` is proven by running the step it fixed and
+every step after it, including the secrets copy, against the testbed
+(`setup/testbed/init-remote-*-test.sh`) before saying it is fixed. A
+step that failed once and is not re-run is not fixed.
+
+## Icons and assets
+
+A desktop entry uses the icon the role installs from
+`setup/files/<app>/`. A placeholder icon is never shipped. When the
+role has no real icon for an app, fetch the official one and add it
+under `setup/files/<app>/`.
+
+## Proving a reset
+
+A change to the reset or role flow is proven by a full reset in the
+testbed VM (`setup/testbed/vm.sh`), source builds included, before
+it reaches a real host. A real host that fails partway is fixed in
+the scripts, not only by hand on that host.
