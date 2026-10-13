@@ -82,3 +82,10 @@ A desktop entry uses the icon the role installs from
 `setup/files/<app>/`. A placeholder icon is never shipped. When the
 role has no real icon for an app, fetch the official one and add it
 under `setup/files/<app>/`.
+
+## Proving a reset
+
+A change to the reset or role flow is proven by a full reset in the
+testbed VM (`setup/testbed/vm.sh`), source builds included, before
+it reaches a real host. A real host that fails partway is fixed in
+the scripts, not only by hand on that host.
