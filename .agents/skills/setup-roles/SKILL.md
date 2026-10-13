@@ -75,3 +75,10 @@ A fix to `init-remote.sh` is proven by running the step it fixed and
 every step after it, including the secrets copy, against the testbed
 (`setup/testbed/init-remote-*-test.sh`) before saying it is fixed. A
 step that failed once and is not re-run is not fixed.
+
+## Icons and assets
+
+A desktop entry uses the icon the role installs from
+`setup/files/<app>/`. A placeholder icon is never shipped. When the
+role has no real icon for an app, fetch the official one and add it
+under `setup/files/<app>/`.
