@@ -86,6 +86,13 @@ export PATH
 export KUBECONFIG=~/.kube/config
 
 if ! is_windows; then
+    # SSH forwards TERM. Kitty's value is xterm-kitty, and that terminfo
+    # file ships in the kitty package. A server role does not install
+    # kitty, so ncurses refuses to start programs such as htop.
+    if [[ "${TERM:-}" == "xterm-kitty" ]] && ! infocmp xterm-kitty >/dev/null 2>&1; then
+        export TERM=xterm-256color
+    fi
+
     # set variable identifying the chroot you work in (used in the prompt below)
     if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
         debian_chroot=$(cat /etc/debian_chroot)

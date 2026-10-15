@@ -1,6 +1,6 @@
 -- Re-apply the last layout on every lua parse/reload.
--- 0.48 sourced monitors.runtime.conf; 0.56 clears eval'd hl.monitor rules
--- on reload and would otherwise autoplace every output.
+-- A reload clears eval'd hl.monitor rules and would otherwise autoplace
+-- every output.
 
 local function config_hypr()
     local xdg = os.getenv("XDG_CONFIG_HOME")

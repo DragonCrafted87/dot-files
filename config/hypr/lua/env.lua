@@ -1,5 +1,3 @@
--- Mirrors conf.d/env.conf for Hyprland 0.56+.
-
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("XCURSOR_THEME", "breeze_cursors")

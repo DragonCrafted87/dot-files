@@ -21,7 +21,6 @@ SESSION_VARS=(
     XDG_STATE_HOME
     XDG_CACHE_HOME
     PATH
-    HYPRLAND_SOURCE_PREFIX
     QT_QPA_PLATFORM
     QT_QPA_PLATFORMTHEME
     GDK_BACKEND
@@ -115,6 +114,13 @@ cmd_start() {
     if [[ -f "${HOME}/.config/hypr/scripts/hyprsunset-times.py" ]]; then
         python3 "${HOME}/.config/hypr/scripts/hyprsunset-times.py" refresh || true
     fi
+    # An old qs-startmenu enable would start with the session target.
+    # Disable it before that target comes up. hyprdesk itself starts
+    # from the unit After= relationship, not from a parallel start here.
+    if [[ -x /usr/local/bin/hyprdesk ]]; then
+        systemctl --user disable --now qs-startmenu.service >/dev/null 2>&1 || true
+        systemctl --user enable hyprdesk.service >/dev/null 2>&1 || true
+    fi
     if systemctl --user is-active --quiet "$UNIT"; then
         # Linger can leave the bind up after a crash without exec-shutdown.
         # Restart so WantedBy=graphical-session.target units run again.
@@ -124,9 +130,49 @@ cmd_start() {
         systemctl --user start "$UNIT"
         log "started ${UNIT}"
     fi
+    # Source install can leave these disabled if the role rebooted before
+    # enable-session-units. Start them once the session target is up.
+    systemctl --user start hypridle.service hyprpolkitagent.service || true
+    boinc_gpu_at_login
+}
+
+boinc_gpu_bin() {
+    local root cmd
+    if [[ -x /usr/local/bin/boinc-gpu ]]; then
+        printf '%s\n' /usr/local/bin/boinc-gpu
+        return 0
+    fi
+    root="$(repo_root)"
+    cmd="${root}/setup/files/boinc/boinc-gpu.sh"
+    if [[ -n "$root" && -x "$cmd" ]]; then
+        printf '%s\n' "$cmd"
+        return 0
+    fi
+    cmd="${HOME}/dot-files/setup/files/boinc/boinc-gpu.sh"
+    if [[ -x "$cmd" ]]; then
+        printf '%s\n' "$cmd"
+        return 0
+    fi
+    return 1
+}
+
+# Login means the desk is in use. Retry because the client may still be
+# opening its RPC port. Logout is the idle case and turns the GPU back on.
+boinc_gpu_at_login() {
+    local bin
+    bin="$(boinc_gpu_bin)" || return 0
+    systemd-run --user --collect --quiet \
+        /bin/bash -c "bin=$(printf '%q' "$bin"); for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do \"\$bin\" active && exit 0; sleep 5; done" \
+        >/dev/null 2>&1 || true
 }
 
 cmd_stop() {
+    local bin
+    # The seat is going away. BOINC keeps running under linger, and the
+    # GPU should follow the dark displays.
+    if bin="$(boinc_gpu_bin)"; then
+        "$bin" idle >/dev/null 2>&1 || true
+    fi
     if ! systemctl --user is-active --quiet "$UNIT"; then
         return 0
     fi

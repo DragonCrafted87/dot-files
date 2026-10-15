@@ -33,16 +33,16 @@ help() {
 }
 
 while getopts ":hd:" option; do
-   case $option in
-      h)
-         help
-         exit;;
-      d)
-         install_dir=$OPTARG;;
-     \?)
-         echo "Invalid option command line option. Use -h for help."
-         exit 1
-   esac
+    case $option in
+        h)
+            help
+            exit ;;
+        d)
+            install_dir=$OPTARG ;;
+        \?)
+            echo "Invalid option command line option. Use -h for help."
+            exit 1
+    esac
 done
 
 SUPPORTED_TARGETS="linux-386 linux-amd64 linux-arm linux-arm64 darwin-amd64 darwin-arm64 windows-386.exe windows-amd64.exe windows-arm64.exe"
@@ -93,10 +93,10 @@ validate_install_directory() {
     good=$(
         IFS=:
         for path in $PATH; do
-        if [ "${path%/}" = "${install_dir}" ]; then
-            printf 1
-            break
-        fi
+            if [ "${path%/}" = "${install_dir}" ]; then
+                printf 1
+                break
+            fi
         done
     )
 
@@ -153,10 +153,10 @@ install() {
     good=$(
         IFS=" "
         for t in $SUPPORTED_TARGETS; do
-        if [ "${t}" = "${target}" ]; then
-            printf 1
-            break
-        fi
+            if [ "${t}" = "${target}" ]; then
+                printf 1
+                break
+            fi
         done
     )
 
@@ -210,46 +210,46 @@ install() {
 }
 
 detect_arch() {
-  arch="$(uname -m | tr '[:upper:]' '[:lower:]')"
+    arch="$(uname -m | tr '[:upper:]' '[:lower:]')"
 
-  case "${arch}" in
-    x86_64) arch="amd64" ;;
-    armv*) arch="arm" ;;
-    arm64) arch="arm64" ;;
-    aarch64) arch="arm64" ;;
-    i686) arch="386" ;;
-  esac
+    case "${arch}" in
+        x86_64) arch="amd64" ;;
+        armv*) arch="arm" ;;
+        arm64) arch="arm64" ;;
+        aarch64) arch="arm64" ;;
+        i686) arch="386" ;;
+    esac
 
-  if [ "${arch}" = "arm64" ] && [ "$(getconf LONG_BIT)" -eq 32 ]; then
-    arch=arm
-  fi
+    if [ "${arch}" = "arm64" ] && [ "$(getconf LONG_BIT)" -eq 32 ]; then
+        arch=arm
+    fi
 
-  printf '%s' "${arch}"
+    printf '%s' "${arch}"
 }
 
 detect_platform() {
-  platform="$(uname -s | awk '{print tolower($0)}')"
+    platform="$(uname -s | awk '{print tolower($0)}')"
 
-  case "${platform}" in
-    linux) platform="linux" ;;
-    darwin) platform="darwin" ;;
-    win*|msys*|cygwin*|mingw*) platform="windows" ;;
-  esac
+    case "${platform}" in
+        linux) platform="linux" ;;
+        darwin) platform="darwin" ;;
+        win*|msys*|cygwin*|mingw*) platform="windows" ;;
+    esac
 
-  printf '%s' "${platform}"
+    printf '%s' "${platform}"
 }
 
 detect_extension() {
-  platform=$(detect_platform)
-  extension=""
+    platform=$(detect_platform)
+    extension=""
 
-  case "${platform}" in
-    linux) extension="" ;;
-    darwin) extension="" ;;
-    windows) extension=".exe" ;;
-  esac
+    case "${platform}" in
+        linux) extension="" ;;
+        darwin) extension="" ;;
+        windows) extension=".exe" ;;
+    esac
 
-  printf '%s' "${extension}"
+    printf '%s' "${extension}"
 }
 
 validate_dependencies

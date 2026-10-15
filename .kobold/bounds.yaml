@@ -1,0 +1,7 @@
+commit: auto
+commit-plans: never
+commit-specs: never
+push: auto
+pull-request: auto
+merge: never
+force-push: never

@@ -1,5 +1,3 @@
--- Mirrors conf.d/look-and-feel.conf for Hyprland 0.56+.
-
 hl.config({
     general = {
         gaps_in = 0,
@@ -53,8 +51,7 @@ hl.curve("quick", { type = "bezier", points = { { 0.15, 0 }, { 0.1, 1 } } })
 
 hl.animation({ leaf = "global", enabled = true, speed = 10, bezier = "default" })
 hl.animation({ leaf = "border", enabled = true, speed = 5.39, bezier = "easeOutQuint" })
--- SPEED is in deciseconds. 80 = 8s per turn. loop is fixed in 0.56;
--- 0.48 still needs scripts/spin-border.sh.
+-- SPEED is in deciseconds. 80 = 8s per turn.
 hl.animation({ leaf = "borderangle", enabled = true, speed = 80, bezier = "linear", style = "loop" })
 hl.animation({ leaf = "windows", enabled = true, speed = 4.79, bezier = "easeOutQuint" })
 hl.animation({ leaf = "windowsIn", enabled = true, speed = 4.1, bezier = "easeOutQuint", style = "popin 87%" })

@@ -1,5 +1,3 @@
--- Mirrors conf.d/input.conf for Hyprland 0.56+.
-
 hl.config({
     input = {
         kb_layout = "us",

@@ -1,14 +1,14 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json
 # Colors follow config/kitty/kitty.conf Tango Dark.
 
-console_title_template: '{{if .Root}} :: root{{end}} {{.HostName}} {{.Folder}}'
+console_title_template: '{{if .Root}} :: root{{end}} {{ first (splitList "." .HostName) }} {{.Folder}}'
 blocks:
     - type: prompt
       alignment: left
       segments:
         - properties:
             cache_duration: none
-          template: '<#C4A000>{{ .UserName }}</><#D3D7CF>@</><#C4A000>{{ .HostName }}</>:'
+          template: '<#C4A000>{{ .UserName }}</><#D3D7CF>@</><#C4A000>{{ first (splitList "." .HostName) }}</>:'
           type: session
           style: plain
         - properties:

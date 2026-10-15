@@ -1,26 +1,27 @@
 # Hostname display profiles for Hyprland
 
 Behavioral rules for the scripts live in [`REQUIREMENTS.md`](REQUIREMENTS.md).
+The volume overlay and start menu requirements live with the hyprdesk
+sources, in `setup/files/hyprdesk/docs/` of the machine-setup tree.
 This file is the host map and operator cheat sheet.
 
 The linked `~/.config/hypr` tree is shared across machines. Host-specific
 layouts live in `conf.d/monitors.d/` and are the source of truth.
-`display-profile.sh` applies `hyprctl keyword monitor` from those files.
+`display-profile.sh` applies those `monitor=` lines with `hyprctl eval`.
 `display-switch.sh` owns the saved profile and calls `display-audio.sh`.
 
-Distro Hyprland 0.48.1 reads `hyprland.conf` and `conf.d/*.conf`. Source
-0.56.2 reads `hyprland.lua` and `lua/*.lua` instead (it never opens the
-`.conf` tree when the lua entry exists). Scripts, `hypridle.conf`, and
-`hyprlock.conf` are shared.
+Hyprland reads `hyprland.lua` and `lua/*.lua`. `hypridle.conf` and
+`hyprlock.conf` stay hyprlang. `conf.d/monitors.d/`, `conf.d/hosts.d/`,
+and `conf.d/audio.d/` are script files.
 
-Startup runs `display-switch.sh restore` once (`exec-once` /
-`hyprland.start`). Reloads re-read `~/.local/state/hypr/monitors.runtime.conf`
-from `lua/monitors.lua` (0.56) or `conf.d/monitors.conf` (0.48) so outputs
-keep their last layout.
+Startup runs `display-switch.sh restore` once (`hyprland.start`). Reloads
+re-read `~/.local/state/hypr/monitors.runtime.conf` from `lua/monitors.lua`
+so outputs keep their last layout.
 
 ## Graphical session (systemd)
 
-ly launches `Hyprland.desktop` (`Exec=Hyprland`), not the UWSM session.
+ly launches `Hyprland.desktop` (`Exec=/usr/local/bin/start-hyprland`
+after the source install), not a UWSM session.
 `graphical-session.target` has `RefuseManualStart=yes`, so a raw compositor
 never reaches it and `WantedBy=graphical-session.target` units stay dead
 (hypridle, hyprpolkitagent, mako, network-mounts).
@@ -34,7 +35,7 @@ runs `stop` so session units go away with the compositor. Linger still
 starts `default.target` at boot; that path must not claim a graphical
 session.
 
-`uwsm` is installed and unused. The source build passes `-DNO_UWSM=true`.
+uwsm is not installed. The source build passes `-DNO_UWSM=true`.
 Its env preloader and `uwsm app` slices are more session manager than
 this login needs. What we keep from that idea: graphical units stop
 with the compositor, and linger services do not. `hyprland-session.service`
@@ -47,9 +48,7 @@ drop-in keeps logout behavior if a package update drops the line).
 binds (kitty, dolphin) stay children of Hyprland.
 
 `hypridle`, `hyprpolkitagent`, `xdg-desktop-portal-hyprland`, and
-`hyprsunset` use `scripts/hypr-session-exec.sh` so they follow the
-running compositor: `/opt/hyprland` for **Hyprland (source)**, `/usr`
-for the distro session. `hyprsunset-times.py` rewrites
+`hyprsunset` exec `/usr/local`. `hyprsunset-times.py` rewrites
 `hyprsunset.conf` from the built-in coordinates, or from `SUN_LAT` /
 `SUN_LON` when the host file sets both. A weekly
 user timer runs it, and session start runs it when that file is older
@@ -57,11 +56,21 @@ than seven days. Hyprsunset 0.4.0 only stores clock times.
 
 Desk GUI apps are not Hyprland `exec-once` lines. They are child units of
 `workstation-session.target` (WantedBy `graphical-session.target`): kitty,
-Brave, Steam (`-silent` tray), Discord (`--start-minimized`),
-`qs-startmenu` (`Restart=always`), spin-border (0.48 only; 0.56 uses
-`borderangle` loop), Litra, KDE Connect.
+Brave, Steam (`-silent` tray), Discord (`--start-minimized`), Litra, and
+KDE Connect. hyprdesk draws the start menu and the volume overlay.
+`hyprdesk.service` is `WantedBy=graphical-session.target`,
+`After=hyprland-session.service`, and `Restart=on-failure`.
+The active border is the `borderangle` loop in `lua/look-and-feel.lua`.
 HTPC extras use `htpc-session.target`. `enable-session-units.sh` enables
-the target that matches `~/.config/dot-files/role`.
+the target that matches `~/.config/dot-files/role`, enables
+`hyprdesk.service`, and disables `qs-startmenu.service`.
+
+Super+Space runs `/usr/local/bin/hyprdesk --toggle`. Login does not start
+hyprdesk from Hyprland autostart. `graphical-session.sh` imports the
+compositor environment, then disables `qs-startmenu.service` and enables
+`hyprdesk.service` when `/usr/local/bin/hyprdesk` exists, before it starts
+`hyprland-session.service`. Colors for toolkit apps are `hyprtoolkit.conf`.
+Layer blur matches `^hyprdesk$`, `^hyprdesk-flyout$`, and `^hyprdesk-osd$`.
 
 `xdg-document-portal.service` gets a user drop-in
 (`TimeoutStopSec=5`, `TimeoutStopFailureMode=kill`) so logout does not
@@ -69,7 +78,7 @@ wait the default 90s on a stuck FUSE unmount of `/run/user/$UID/doc`.
 
 ```bash
 systemctl --user status workstation-session.target
-systemctl --user status qs-startmenu.service
+systemctl --user status hyprdesk.service
 ```
 
 ```bash
@@ -137,6 +146,15 @@ workshare from the HDMI-switch EDID).
 already on a monitor, focus moves there. If it is hidden, the workspace
 moves to the monitor under the cursor.
 
+`SUPER+D`, then `1` through `5`, focuses `code-1` through `code-5`.
+`SUPER+SHIFT+D`, then the same digit, sends the active window there.
+Those workspaces open on the monitor that contains the middle of the
+layout. Headless outputs are left out of that layout. When none of the
+remaining monitors contains the middle, they open on the widest. A new
+tiled Code window takes the first of the five that does not already
+have one.
+The chords are in `lua/keybinds.lua`.
+
 ## Litra Glow
 
 `scripts/litra-camera-lights.py` watches the Insta360 Link (`2e1a:*`)
@@ -186,11 +204,18 @@ planets, comets, and clusters, then gives each enabled monitor its own
 image through `hyprpaper`. Login runs `apply` (reuse today's cache).
 A user timer at 06:30 refreshes the set. `display-switch.sh` waits for
 the new layout, then re-applies so theater / workshare / desk each get
-wallpapers. `hyprpaper.service` runs the daemon (`Restart=on-failure`)
-through `hypr-session-exec.sh`. The timer is a oneshot and only restarts
+wallpapers. `hyprpaper.service` runs `/usr/local/bin/hyprpaper`
+(`Restart=on-failure`). The timer is a oneshot and only restarts
 that unit. Waking from idle runs `apply` again so a monitor that was
 disabled at 06:30 gets a still. Files that are not JPEG/PNG/WebP (Wikimedia GIFs saved as
 `.jpg`) are dropped; hyprpaper exits if it is asked to preload one.
+A still whose border median luminance is at least
+`ASTRO_WALLPAPER_MAX_BORDER` (default 200, on a 0–255 scale) is dropped.
+That removes charts, diagrams, and scans on a near-white field. A bright
+object on a dark field stays. `ffmpeg` reads the border. When `ffmpeg`
+is not installed, the check is skipped and the still is kept.
+hyprpaper 0.8 and newer gets `wallpaper { }` blocks. The 0.7
+`wallpaper = MONITOR,path` lines leave every output with no target.
 
 ```bash
 ~/.config/hypr/scripts/astro-wallpaper.sh apply
@@ -227,12 +252,15 @@ launch. The wrap script will see HDMI-only and use the live TV mode.
 
 `hypridle` calls the wrappers, which call the profile script:
 
-- `idle-display-off.sh` → `display-profile.sh idle-off`
-- `idle-display-on.sh` → `dpms on`, `display-profile.sh idle-on`
+- `idle-display-off.sh` → `display-profile.sh idle-off`, then `boinc-gpu idle`
+- `idle-display-on.sh` → `display-profile.sh idle-on`, then `boinc-gpu active`
 
-BOINC idle/GPU policy lives in `setup/files/boinc/prefs/<role>.xml`
-(`run_gpu_if_user_active`, `idle_time_to_run`). Hyprland no longer swaps
-those files.
+`boinc-gpu idle` sets BOINC GPU mode to `always`. `boinc-gpu active` sets
+it to `never`. Login retries `active` until the client answers; logout
+sets `idle`. Desktop prefs still say the GPU stays off while BOINC thinks
+someone is at the machine. That idle timer does not move on Wayland, so
+the display scripts are what actually start and stop GPU work. Role XML
+is not swapped.
 
 When `hosts.d/<host>.conf` sets `IDLE_MONITOR`, idle-off records
 workspaces on that output and `dpms off` that output **and** `DESK_PORTS`
@@ -240,7 +268,7 @@ when those outputs are not `disable` in the active conf. It then disables
 the idle monitor only if another output stays enabled (desk), so the TV
 drops the link without leaving the compositor with zero `wl_output`s.
 theater and workshare keep HDMI and only DPMS it: disabling the last
-output crashes Brave, Quickshell, and the desktop portals. idle-on
+output crashes Brave, hyprdesk, and the desktop portals. idle-on
 `dpms on` the remaining ports, re-enables the idle monitor when it was
 disabled, and restores those workspaces.
 

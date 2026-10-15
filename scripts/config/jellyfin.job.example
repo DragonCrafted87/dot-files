@@ -1,10 +1,14 @@
 # Copy to the rip directory as jellyfin.job, fill in titles, then:
 #   ffmpeg-jellyfin-sort
 #
-# TV
+# TV. title: may be the full tag, or title / year / id on separate lines.
+# id is tvdb-123, tmdb-123, or imdb-tt123.
 kind: tv
 root: /home/dragon/network/storage/Media/tv
 title: ReBoot (1994) {tvdb-73025}
+# title: ReBoot
+# year: 1994
+# id: tvdb-73025
 
 season: 0
 REBOOT_BF_D9-C1-t00 | Fast Forward - The Making of ReBoot
@@ -12,6 +16,7 @@ REBOOT_BF_D9-C2-t01 | Alphanumeric - Looking Back at ReBoot
 
 season: 1
 REBOOT_S1_D1-B1-t00 | The Tearing
+#  | Missing Episode Title
 REBOOT_S1_D1-B1-t01 | Racing the Clock
 
 # Movie

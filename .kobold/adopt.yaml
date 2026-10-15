@@ -1,0 +1,7 @@
+mode: full
+skill-root: .agents/skills
+playbooks: .agents/playbooks
+plans: docs/plans
+specs: docs/specs
+plans-tracked: false
+specs-tracked: false
