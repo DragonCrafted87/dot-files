@@ -31,7 +31,10 @@ alias replacecpp='find ${PWD} -name "*.cpp" | xargs perl -pi -e '
 alias replaceh='find ${PWD} -name "*.h" | xargs perl -pi -e '
 
 alias ps-parents='ps axo stat,ppid,pid,comm | grep -w defunct'
-if command -v powershell.exe >/dev/null 2>&1; then
+# Prefer PowerShell 7 (pwsh.exe); fall back to Windows PowerShell 5.1.
+if command -v pwsh.exe >/dev/null 2>&1; then
+    alias pwsh='pwsh.exe'
+elif command -v powershell.exe >/dev/null 2>&1; then
     alias pwsh='powershell.exe'
 elif command -v powershell >/dev/null 2>&1; then
     alias pwsh='powershell'
