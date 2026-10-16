@@ -8,5 +8,6 @@ function vk-list ()
 
 function vk-done ()
 {
-    python -I ~/dot-files/scripts/vikunja.py done "$@"
+    # Quoted so beautysh does not read the subcommand as a loop keyword.
+    python -I ~/dot-files/scripts/vikunja.py 'done' "$@"
 }

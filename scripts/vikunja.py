@@ -67,13 +67,17 @@ def cmd_list(args):
         query["s"] = args.search
     path = "/tasks?" + urllib.parse.urlencode(query)
     if args.project:
-        pid = next((i for i, n in names.items() if n.lower() == args.project.lower()), None)
+        pid = next(
+            (i for i, n in names.items() if n.lower() == args.project.lower()), None
+        )
         if pid is None:
             sys.exit(f"No project named {args.project!r}.")
         path = f"/projects/{pid}/views"
         views = call("GET", path)
         view = next(v for v in views if v.get("view_kind") in ("list", 0))
-        path = f"/projects/{pid}/views/{view['id']}/tasks?" + urllib.parse.urlencode(query)
+        path = f"/projects/{pid}/views/{view['id']}/tasks?" + urllib.parse.urlencode(
+            query
+        )
     for task in call("GET", path) or []:
         project = names.get(task.get("project_id"), "?")
         print(f"{task['id']:>5}  {project:<28}  {task['title']}")
