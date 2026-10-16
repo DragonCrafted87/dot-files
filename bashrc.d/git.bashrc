@@ -78,7 +78,7 @@ function git-convert-master-to-main ()
 
 function git-update-pre-commit-hook ()
 {
-    local root_dir template hook
+    local root_dir template hook dest
     root_dir="$(git rev-parse --show-toplevel)" || return 1
     template="$(git config --get init.templatedir 2>/dev/null || true)"
     template="${template/#\~/$HOME}"
@@ -88,7 +88,15 @@ function git-update-pre-commit-hook ()
         printf 'missing template hook: %s\n' "$hook" >&2
         return 1
     fi
-    install -m 0755 "$hook" "${root_dir}/.git/hooks/pre-commit"
+    # A submodule stores hooks beside its git dir, not at
+    # <work-tree>/.git/hooks. Another checkout of that repo reports
+    # the same hooks directory, which is the one git runs.
+    dest="$(git -C "$root_dir" rev-parse --git-path hooks)/pre-commit"
+    if [[ "$dest" != /* ]]; then
+        dest="${root_dir}/${dest}"
+    fi
+    mkdir -p -- "$(dirname "$dest")"
+    install -m 0755 "$hook" "$dest"
 }
 
 function git-clean-branches() {
