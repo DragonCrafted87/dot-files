@@ -9,6 +9,7 @@ Helpers called from `bashrc.d`, not part of the role installer.
 | `dictation.py`                             | `bashrc.d/ai.bashrc` (`ai-dictate`)          |
 | `mc_mod_downloader.py` + `mc_modlist.conf` | `bashrc.d/minecraft.bashrc`                  |
 | `config/podcast-downloader.json`           | `bashrc.d/podcast.bashrc`                    |
+| `vikunja.py`                               | `bashrc.d/vikunja.bashrc` (`vk-list`, `vk-done`) |
 | `install-omp.sh`                           | `setup/modules/common/install-oh-my-posh.sh` |
 
 `ffmpeg.py` is the CLI. Implementation is under `ffmpeg_tools/`.
