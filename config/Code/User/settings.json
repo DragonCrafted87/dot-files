@@ -95,7 +95,6 @@
     "shellcheck.customArgs": [
         "-x"
     ],
-    "diffEditor.renderSideBySide": true,
     "diffEditor.ignoreTrimWhitespace": true,
     "diffEditor.maxComputationTime": 0,
     "workbench.editor.enablePreview": false,
@@ -133,9 +132,6 @@
     },
     "editor.minimap.enabled": false,
     "workbench.editor.revealIfOpen": true,
-    "[markdown]": {
-        "diffEditor.ignoreTrimWhitespace": false,
-    },
     "taskExplorer.clickAction": "Execute",
     "taskExplorer.enableSideBar": true,
     "taskExplorer.enableExplorerView": false,
@@ -527,5 +523,21 @@
             "query": "default"
         }
     ],
-    "githubPullRequests.pushBranch": "always"
+    "githubPullRequests.pushBranch": "always",
+    "workbench.diffEditorAssociations": {
+        "*.md": "vscode.markdown.preview.editor"
+    },
+    "markdown.preview.breaks": false,
+    "markdown.preview.markEditorSelection": false,
+    "markdown.preview.typographer": true,
+    "markdown.styles": [
+        "https://vscode-md.stealthdragonland.net/vscode-markdown.css"
+    ],
+    "markdown.validate.enabled": true,
+    "[markdown]": {
+        "editor.fontSize": 18,
+        "editor.wordWrap": "wordWrapColumn",
+        "editor.wordWrapColumn": 110,
+        "diffEditor.ignoreTrimWhitespace": false,
+    },
 }
