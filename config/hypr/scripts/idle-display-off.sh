@@ -60,3 +60,6 @@ fi
 
 run_boinc_gpu idle
 run_workload_priority idle
+if [ -x /usr/local/sbin/htpc-cordon ]; then
+    /usr/local/sbin/htpc-cordon idle >/dev/null 2>&1 || true
+fi
