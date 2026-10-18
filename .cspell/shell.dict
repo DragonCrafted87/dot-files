@@ -64,6 +64,7 @@ getconf
 goom
 greyhole
 histappend
+hyperv
 hyprctl
 iconcache
 ignoredups

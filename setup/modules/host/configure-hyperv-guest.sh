@@ -27,7 +27,8 @@
 #
 # /etc/dracut.conf.d/hyperv-guest.conf forces hv_vmbus, hv_storvsc,
 # hv_netvsc, and hv_utils into the initramfs. dracut -f runs only when
-# that file changes.
+# that file changes. A dry run may point HYPERV_DRACUT_CONF at a file
+# under /tmp. A real role run always writes the path above.
 
 set -euo pipefail
 # shellcheck disable=SC1091
@@ -163,6 +164,12 @@ install_hyperv_dracut() {
     local dest="/etc/dracut.conf.d/hyperv-guest.conf"
     local backup=""
 
+    if [[ "${DOTFILES_DRY_RUN:-0}" == "1" && -n "${HYPERV_DRACUT_CONF:-}" ]]; then
+        case "$HYPERV_DRACUT_CONF" in
+            /tmp/*) dest="$HYPERV_DRACUT_CONF" ;;
+            *) die "HYPERV_DRACUT_CONF must sit under /tmp" ;;
+        esac
+    fi
     [[ -f "$src" ]] || die "missing ${src}"
     if [[ -f "$dest" ]] && cmp -s "$src" "$dest"; then
         return 0

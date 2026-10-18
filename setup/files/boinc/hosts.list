@@ -1,0 +1,18 @@
+# Hosts that run BOINC or the BOINC Manager.
+# Short hostname only; search-domain DNS fills in the rest.
+# One name per line. Copied to remote_hosts.cfg on every client.
+# install-boinc adds this machine under the matching role section
+# when it is missing.
+
+# workstation
+runewyrm
+forgewyrm
+
+# htpcs
+grotto-wyrm
+hearthwyrm
+
+# servers
+brood-drake
+hoard-drake
+roost-drake

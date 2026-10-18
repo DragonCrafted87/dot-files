@@ -42,11 +42,18 @@ commands use that path:
 ```
 
 Roles: `workstation`, `htpc`, `server`. Optional subroles (`laptop`,
-`gaming`, `artifact-repo`, `nfs-server`) are saved on the box and
-re-applied by `update-role`. Lists live in machine-setup
-`setup/roles.conf`. `update-role` reads the checkouts file, fast-forwards
-that machine-setup checkout when `git status` is clean, and runs
-`setup/role.sh`. A dirty tree or a detached HEAD is left in place.
+`gaming`, `artifact-repo`, `nfs-server`, `hyperv-guest`) are saved on
+the box and re-applied by `update-role`. `[server]` also includes
+`@subrole.hyperv-guest`, so a server runs
+`setup/modules/host/configure-hyperv-guest.sh` without saving that
+subrole. The module returns before it installs packages unless
+`systemd-detect-virt` prints `microsoft`. `update-role` reads the
+checkouts file, fast-forwards that machine-setup checkout when
+`git status` is clean, and runs `setup/role.sh` there. A dirty tree or
+a detached HEAD is left in place. `update-role` does not read this
+repo's `setup/roles.conf` or `setup/files/boinc/hosts.list`. Those files
+are the lists to copy onto the machine-setup checkout. `brood-drake` is
+the short hostname under `# servers`.
 
 Later, on the machine itself:
 
