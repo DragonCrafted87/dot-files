@@ -188,7 +188,7 @@ copied="${tree}/setup/modules/host/configure-hyperv-guest.sh"
 run_user="$(id -un)"
 run_module() {
     PATH="${1}" DOTFILES_HOME="${work}/home" DOTFILES_USER="$run_user" \
-        /usr/bin/bash "$copied"
+        /usr/bin/bash "$copied" 2>&1
 }
 
 skip_out="$(VIRT_NAME=kvm run_module "${work}/bin:${PATH}")"
@@ -237,7 +237,7 @@ grep -q 'dry-run: dracut -f' <<<"$changed_out" \
     || fail "changed dracut drop-in did not rebuild: ${changed_out}"
 
 bad_out="$(VIRT_NAME=microsoft DOTFILES_DRY_RUN=1 HYPERV_DRACUT_CONF=/etc/dracut.conf.d/hyperv-guest.conf \
-    run_module "${work}/bin:${PATH}" 2>&1 || true)"
+    run_module "${work}/bin:${PATH}" || true)"
 grep -q 'HYPERV_DRACUT_CONF must sit under /tmp' <<<"$bad_out" \
     || fail "override outside /tmp was accepted: ${bad_out}"
 
