@@ -37,6 +37,20 @@ run_boinc_gpu() {
     fi
 }
 
+run_workload_priority() {
+    mode="$1"
+    cmd=""
+    if [ -n "${WORKLOAD_PRIORITY_BIN:-}" ] && [ -x "$WORKLOAD_PRIORITY_BIN" ]; then
+        cmd="$WORKLOAD_PRIORITY_BIN"
+    fi
+    if [ -z "$cmd" ] && [ -x /usr/local/sbin/workload-priority ]; then
+        cmd=/usr/local/sbin/workload-priority
+    fi
+    if [ -n "$cmd" ]; then
+        "$cmd" "$mode" >/dev/null 2>&1 || true
+    fi
+}
+
 if [ -x "$PROFILE" ]; then
     "$PROFILE" idle-off
 else
@@ -45,3 +59,4 @@ else
 fi
 
 run_boinc_gpu idle
+run_workload_priority idle

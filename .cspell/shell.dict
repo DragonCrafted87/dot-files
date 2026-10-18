@@ -49,6 +49,7 @@ dnf
 dpkg
 dragondata
 dragonmaster
+endpointslice
 env
 erasedups
 execdir

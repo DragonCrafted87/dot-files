@@ -13,7 +13,7 @@ function k8s-show-all ()
     kubectl get job --all-namespaces | (read -r; printf "%s\n" "$REPLY"; sort) && echo ''
     kubectl get cronjob --all-namespaces | (read -r; printf "%s\n" "$REPLY"; sort) && echo ''
     kubectl get services --all-namespaces | (read -r; printf "%s\n" "$REPLY"; sort) && echo ''
-    kubectl get endpoints --all-namespaces | (read -r; printf "%s\n" "$REPLY"; sort) && echo ''
+    kubectl get endpointslice --all-namespaces | (read -r; printf "%s\n" "$REPLY"; sort) && echo ''
 }
 
 function k8s-copy-cifs-secret-to-namespace ()
