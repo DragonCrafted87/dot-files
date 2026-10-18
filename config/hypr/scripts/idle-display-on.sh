@@ -69,3 +69,6 @@ fi
 
 run_boinc_gpu active
 run_workload_priority active
+if [ -x /usr/local/sbin/htpc-cordon ]; then
+    /usr/local/sbin/htpc-cordon active >/dev/null 2>&1 || true
+fi
