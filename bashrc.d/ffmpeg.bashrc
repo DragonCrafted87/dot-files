@@ -94,18 +94,6 @@ function ffmpeg-video-make-dvd ()
     fi
 }
 
-# Unfinished Audible AAX scrape. Encode path is not implemented yet.
-#   ffmpeg-audio-split-encode
-#   ffmpeg-audio-split-encode book_B002V0Q3T4.aax
-function ffmpeg-audio-split-encode ()
-{
-    if [[ -z "${1:-}" ]]; then
-        _ffmpeg_py audio-split-encode
-    else
-        _ffmpeg_py audio-split-encode --input_filenames "$@"
-    fi
-}
-
 # Convert mp3/wav/aac/m4a/ogg under DIR (default .) to flac, archive sources.
 #   ffmpeg-audio-convert
 #   ffmpeg-audio-convert ./incoming

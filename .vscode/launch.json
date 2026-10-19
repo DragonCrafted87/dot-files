@@ -2,18 +2,6 @@
     "configurations": [
         {
             "args": [
-                "audio-split-encode",
-                "--input_filename=E:/audible/export/Tin Man A Galaxy's E_1774242834_LC_128_44100_Stereo.aax"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "name": "Python: ffmpeg audiobooks",
-            "program": "${workspaceFolder}/scripts/ffmpeg.py",
-            "request": "launch",
-            "type": "python"
-        },
-        {
-            "args": [
                 "video-merge",
                 "-i",
                 "The_Return_of_the_King_PT_1_t04.mkv",
