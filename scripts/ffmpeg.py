@@ -4,8 +4,6 @@
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 
-from ffmpeg_tools.audio_audible import audio_split_encode
-from ffmpeg_tools.audio_audible import encode_all_audio_files
 from ffmpeg_tools.audio_convert import convert_audio_tree
 from ffmpeg_tools.dvd import create_all_dvds
 from ffmpeg_tools.dvd import create_dvd
@@ -32,7 +30,6 @@ examples:
   %(prog)s video-merge-chapters --base show --chapters-per-episode 5 --total-chapters 20
   %(prog)s make-dvd -i show.mkv
   %(prog)s audio-convert --search-dir .
-  %(prog)s audio-split-encode -i book_B002V0Q3T4.aax
   %(prog)s jellyfin-init --kind tv
   %(prog)s jellyfin-sort --job jellyfin.job
 """
@@ -54,15 +51,6 @@ def cmd_video_crop_encode(args):
     for input_file in names:
         output_filename = input_file.rsplit(".", 1)[0] + ".mkv"
         video_crop_encode(input_file, output_filename)
-
-
-def cmd_audio_split_encode(args):
-    names = _as_list(args.input_filenames)
-    if not names:
-        encode_all_audio_files()
-        return
-    for input_file in names:
-        audio_split_encode(input_file)
 
 
 def cmd_video_merge_crop_encode(args):
@@ -136,7 +124,6 @@ def cmd_jellyfin_sort(args):
 
 COMMANDS = {
     "video-crop-encode": cmd_video_crop_encode,
-    "audio-split-encode": cmd_audio_split_encode,
     "video-merge-crop-encode": cmd_video_merge_crop_encode,
     "make-dvd": cmd_make_dvd,
     "video-concatenate": cmd_video_concatenate,

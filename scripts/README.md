@@ -13,9 +13,8 @@ Helpers called from `bashrc.d`, not part of the role installer.
 | `install-omp.sh`                           | `setup/modules/common/install-oh-my-posh.sh`     |
 
 `ffmpeg.py` is the CLI. Implementation is under `ffmpeg_tools/`.
-`audio_audible.py` is unfinished on purpose. The bash functions are
-wrappers; `ffmpeg.py --help` and the comments above each function in
-`bashrc.d/ffmpeg.bashrc` have examples.
+The bash functions are wrappers; `ffmpeg.py --help` and the comments
+above each function in `bashrc.d/ffmpeg.bashrc` have examples.
 
 Jellyfin sorting uses a `jellyfin.job` text file next to the rip. Init
 lists sources. The library tag is `Title (YEAR) {tvdb-…|tmdb-…|imdb-tt…}`,
