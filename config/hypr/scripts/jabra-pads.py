@@ -21,7 +21,6 @@ from evdev import ecodes
 VOLUME_UP = ecodes.KEY_VOLUMEUP
 VOLUME_DOWN = ecodes.KEY_VOLUMEDOWN
 KEY_UNRELATED = ecodes.KEY_ESC
-DEBOUNCE_SECONDS = 0.45
 PHONE_MUTE_BIT = 0x04
 VENDOR = 0x0B0E
 PRODUCT = 0x2475
@@ -30,41 +29,23 @@ RETRY_SECONDS = 1.0
 HID_RETRY_SECONDS = 2.0
 
 
-def volume_step(code, value, now, last):
-    """Return (action, last). action is "up", "down", or None.
-
-    A press is value 1. The Speak 710 sends two press/release pairs about
-    300 ms apart for one tap, so a second press inside the debounce window
-    is ignored. Release and kernel repeat do not step.
-    """
+def volume_step(code, value):
+    """Return "up", "down", or None. A press is value 1."""
     if value != 1:
-        return None, last
-    if code not in (VOLUME_UP, VOLUME_DOWN):
-        return None, last
-    previous = last.get(code)
-    if previous is not None and now - previous < DEBOUNCE_SECONDS:
-        return None, last
-    updated = dict(last)
-    updated[code] = now
+        return None
     if code == VOLUME_UP:
-        return "up", updated
-    return "down", updated
+        return "up"
+    if code == VOLUME_DOWN:
+        return "down"
+    return None
 
 
-def mute_edge(report, held, now, last_toggle):
-    """Return (toggle, held, last_toggle) for a hidraw report.
-
-    Toggle on the rising edge of the phone-mute bit, and ignore a second
-    rising edge inside the debounce window.
-    """
+def mute_edge(report, held):
+    """Return (toggle, held). Toggle on the rising edge of phone-mute."""
     if len(report) < 2 or report[0] != 2:
-        return False, held, last_toggle
+        return False, held
     pressed = bool(report[1] & PHONE_MUTE_BIT)
-    if not pressed or held:
-        return False, pressed, last_toggle
-    if last_toggle is not None and now - last_toggle < DEBOUNCE_SECONDS:
-        return False, pressed, last_toggle
-    return True, pressed, now
+    return (pressed and not held), pressed
 
 
 def node_id_from_dump(data, media_class):
@@ -239,9 +220,7 @@ def watch_device(event_path, nodes):
             print(f"grabbed {event_path}", file=sys.stderr)
         hid = open_hidraw()
         next_hid = time.monotonic() + HID_RETRY_SECONDS
-        last_volume = {}
         mute_held = False
-        last_mute = None
         poller = select.poll()
         poller.register(dev.fd, select.POLLIN)
         if hid is not None:
@@ -254,7 +233,6 @@ def watch_device(event_path, nodes):
                     poller.register(hid, select.POLLIN)
                     print("opened hidraw", file=sys.stderr)
             ready = poller.poll(500)
-            now = time.monotonic()
             for fd, _mask in ready:
                 if fd == dev.fd:
                     try:
@@ -264,9 +242,7 @@ def watch_device(event_path, nodes):
                     for event in events:
                         if event.type != ecodes.EV_KEY:
                             continue
-                        action, last_volume = volume_step(
-                            event.code, event.value, now, last_volume
-                        )
+                        action = volume_step(event.code, event.value)
                         if action is not None:
                             apply_volume(nodes, action)
                 elif hid is not None and fd == hid:
@@ -274,9 +250,7 @@ def watch_device(event_path, nodes):
                         report = os.read(hid, 64)
                     except BlockingIOError:
                         continue
-                    toggle, mute_held, last_mute = mute_edge(
-                        report, mute_held, now, last_mute
-                    )
+                    toggle, mute_held = mute_edge(report, mute_held)
                     if toggle:
                         apply_mute(nodes)
     finally:
@@ -306,36 +280,22 @@ def self_test():
         if got != want:
             failures.append(f"{name}: got {got!r} want {want!r}")
 
-    action, last = volume_step(VOLUME_UP, 0, 10.0, {})
-    check("release", action, None)
-    action, last = volume_step(VOLUME_UP, 1, 10.0, {})
-    check("up", action, "up")
-    action, last = volume_step(VOLUME_DOWN, 1, 10.1, last)
-    check("other key inside window", action, "down")
-    action, last = volume_step(KEY_UNRELATED, 1, 10.2, last)
-    check("unrelated", action, None)
-    action, last = volume_step(VOLUME_UP, 1, 10.3, last)
-    check("debounce", action, None)
-    action, last = volume_step(VOLUME_UP, 2, 11.0, last)
-    check("repeat", action, None)
-    action, _last = volume_step(VOLUME_UP, 1, 10.5, last)
-    check("after window", action, "up")
+    check("release", volume_step(VOLUME_UP, 0), None)
+    check("up", volume_step(VOLUME_UP, 1), "up")
+    check("up again", volume_step(VOLUME_UP, 1), "up")
+    check("down", volume_step(VOLUME_DOWN, 1), "down")
+    check("unrelated", volume_step(KEY_UNRELATED, 1), None)
+    check("repeat", volume_step(VOLUME_UP, 2), None)
 
-    toggle, held, stamp = mute_edge(b"\x02\x04\x00", False, 1.0, None)
+    toggle, held = mute_edge(b"\x02\x04\x00", False)
     check("mute press", (toggle, held), (True, True))
-    toggle, held, stamp = mute_edge(b"\x02\x04\x00", held, 1.1, stamp)
-    check("mute held", (toggle, held), (False, True))
-    toggle, held, stamp = mute_edge(b"\x02\x00\x00", held, 1.2, stamp)
+    toggle, held = mute_edge(b"\x02\x00\x00", held)
     check("mute release", (toggle, held), (False, False))
-    toggle, held, stamp = mute_edge(b"\x02\x04\x00", held, 1.3, stamp)
-    check("mute bounce", toggle, False)
-    toggle, held, _stamp = mute_edge(
-        b"\x02\x04\x00", False, 1.3 + DEBOUNCE_SECONDS, stamp
-    )
-    check("mute later", toggle, True)
-    toggle, _held, _stamp = mute_edge(b"\x01\x04", False, 5.0, None)
+    toggle, held = mute_edge(b"\x02\x04\x00", held)
+    check("mute again", (toggle, held), (True, True))
+    toggle, _held = mute_edge(b"\x01\x04", False)
     check("consumer report", toggle, False)
-    toggle, held, _stamp = mute_edge(b"\x02", False, 5.0, None)
+    toggle, held = mute_edge(b"\x02", False)
     check("short report", (toggle, held), (False, False))
 
     dump = [
