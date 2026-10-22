@@ -171,6 +171,18 @@ python3 ~/.config/hypr/scripts/litra-camera-lights.py off
 hidraw access needs `setup/modules/desktop/configure-litra-glow.sh` (udev
 rule plus the `video` group).
 
+## Jabra Speak 710 pads
+
+`scripts/jabra-pads.py` grabs the Speak 710 event node and steps that
+sink by 2.5%, capped at 100%. The keyboard volume keys stay on the
+soundbar. The mute pad sends telephony report `02 04 00`, which does
+not become a key, so the watcher toggles the Jabra source mute from
+hidraw. `workstation-jabra-pads.service` starts it. hidraw access needs
+`configure-jabra-pads`.
+
+While Discord holds the Insta360 Link on the same hub, the pads send
+no reports.
+
 ## Logitech G603 / G604
 
 Windows G HUB on the work PC overwrites onboard ratbag profiles. A udev

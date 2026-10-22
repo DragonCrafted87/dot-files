@@ -36,10 +36,11 @@ machines. The display profile is restored once at login, so a reload
 is not a layout change.
 
 Desk media and the keyboard volume keys stay on the onboard soundbar.
-Pointing the default sink at the Jabra, or grabbing its evdev node,
-would move those keys. The Jabra pads have no evdev or hidraw report,
-so a HID watcher stays out until new evidence appears. The Insta360
-ALSA card is not the default source.
+Those keys come from the keyboard event node. `jabra-pads.py` grabs
+only the Speak 710 event node and steps the Jabra sink. The mute pad
+is a hidraw bit, not a key. While the Insta360 streams on the same
+hub, the pads send no reports. The Insta360 ALSA card is not the
+default source.
 
 The astronomy timer tears down processes it started, so it restarts
 the hyprpaper unit instead of spawning hyprpaper.

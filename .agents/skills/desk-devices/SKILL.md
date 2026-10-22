@@ -26,17 +26,20 @@ WebRTC call audio plays to this sink. Desk media stays on the soundbar.
 
 `bashrc.d/jabra.bashrc` defines `jabra-volume`, `jabra-mute`, and
 `jabra-unmute`. `jabra-volume` takes a level such as `50` or `100`.
-Those functions target the Jabra PipeWire sink and source. Jabra
-buttons stay off the default sink.
+Those functions target the Jabra PipeWire sink and source.
 
-The desk default sink is the soundbar, and the keyboard volume keys
-stay there. Grabbing the Jabra evdev node (`EVIOCGRAB`) would take
-those keys off the soundbar.
+The desk default sink is the soundbar. Keyboard volume keys come from
+the keyboard event node and stay on that sink. `jabra-pads.py` grabs
+only the Speak 710 event node and steps the Jabra sink 2.5% per tap,
+capped at 100%. The mute pad is hidraw report `02 04 00` (telephony
+phone-mute, bit 0x04). The descriptor marks that bit constant, so it
+never becomes a key. The watcher toggles the Jabra source mute.
+`workstation-jabra-pads.service` starts it. hidraw reads need
+`configure-jabra-pads`.
 
 While Discord streams the Insta360 Link at `5-2.2` on the same Realtek
-hub, the 710 hardware pads often stop affecting volume on Linux. The
-same dock still works on Windows. Those pads have no evdev or hidraw
-report. The Insta360 also exposes an ALSA card. That card is not the
+hub, the pads send no USB reports. The same dock still works on
+Windows. The Insta360 also exposes an ALSA card. That card is not the
 default audio source.
 
 ## Litra Glow and the Insta360 Link
