@@ -277,6 +277,16 @@ Hosts without `IDLE_MONITOR` just `dpms off` / `dpms on`.
 Unlock and after-sleep run `idle-display-on.sh` so the desk comes back.
 The 420s listener is what blanks HDMI.
 
+A panel power button turns the backlight on without telling hypridle.
+Hyprland can reattach that output with DPMS still off, so the panel
+stays black. `idle-display-watch.sh` watches DRM status for
+`IDLE_MONITOR` and `DESK_PORTS`. When one of those becomes `connected`
+and `~/.local/state/hypr/idle-blanked` is absent, it runs
+`display-profile.sh wake-dpms` for that port. idle-off writes
+`idle-blanked` before it blanks, and idle-on removes it only after it
+holds `apply.lock`, so a reconnect during idle does not light HDMI.
+The session start and `idle-display-on.sh` both ensure the watcher.
+
 If the DP panels are dark after a bad profile, `display-switch.sh desk`
 brings them back.
 

@@ -60,6 +60,7 @@ moveworkspacetomonitor
 nmcli
 nohup
 omp
+opencode
 osd
 pci
 piper

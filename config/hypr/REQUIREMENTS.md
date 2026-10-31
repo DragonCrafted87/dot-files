@@ -15,6 +15,7 @@ These scripts implement workstation monitor and sink switching:
 | `scripts/display-profile.sh`                         | `hyprctl eval` monitor rules, idle DPMS, workspace map restore                 |
 | `scripts/display-audio.sh`                           | PipeWire/Pulse default sink and card profile                                   |
 | `scripts/idle-display-off.sh` / `idle-display-on.sh` | Lock/sleep wrappers around `display-profile.sh` idle commands                  |
+| `scripts/idle-display-watch.sh`                      | DRM reconnect watcher; calls `display-profile.sh wake-dpms` while awake        |
 
 Host layouts MUST live in `conf.d/monitors.d/`.
 Audio policy MUST live in `conf.d/audio.d/`. Port and switch metadata
@@ -47,6 +48,8 @@ never in the git-linked `~/.config/hypr` tree.
 | `display-switch.pid`       | `display-switch.sh` watch     | switch start/stop/status                  |
 | `saved-monitor-workspaces` | `display-profile.sh` idle-off | profile idle-on                           |
 | `idle-monitor-disabled`    | `display-profile.sh` idle-off | profile idle-on                           |
+| `idle-blanked`             | `display-profile.sh` idle-off | profile idle-on, `idle-display-watch.sh`  |
+| `idle-display-watch.pid`   | `idle-display-watch.sh`       | watch ensure/stop                         |
 | `apply.lock`               | `display-profile.sh`          | profile only                              |
 
 1. `display-profile.sh` MUST NOT write `display-profile`.
@@ -180,7 +183,19 @@ Applies only when `hosts.d/<host>.conf` defines `SWITCH_PORT` and
 1. Idle-on MUST DPMS remaining outputs on. If idle-off disabled
    `IDLE_MONITOR`, idle-on MUST re-enable that connector from the
    active conf and restore workspaces. It MUST NOT re-keyword every
-   monitor on a DPMS-only wake.
+   monitor on a DPMS-only wake. An output that is enabled and reporting
+   `dpmsStatus` false is not awake yet; idle-on MUST `dpms on` that
+   output until Hyprland reports DPMS on.
+1. idle-off MUST write `idle-blanked` before it takes `apply.lock`.
+   idle-on MUST clear that file only after it holds the lock. While
+   the file exists, a reconnect MUST NOT turn DPMS on.
+1. `idle-display-watch.sh` MUST run for the graphical session. When
+   DRM status for `IDLE_MONITOR` or a `DESK_PORTS` entry becomes
+   `connected` and `idle-blanked` is absent, it MUST call
+   `display-profile.sh wake-dpms` for that port. `wake-dpms` MUST
+   `dpms on` an enabled output that is DPMS off. It MUST re-apply only
+   that port's conf line when the output is missing or disabled. It
+   MUST leave a conf `disable` line disabled.
 
 ## Audio
 

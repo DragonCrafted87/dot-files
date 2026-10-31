@@ -133,6 +133,9 @@ cmd_start() {
     # Source install can leave these disabled if the role rebooted before
     # enable-session-units. Start them once the session target is up.
     systemctl --user start hypridle.service hyprpolkitagent.service || true
+    if [[ -x "${HOME}/.config/hypr/scripts/idle-display-watch.sh" ]]; then
+        "${HOME}/.config/hypr/scripts/idle-display-watch.sh" ensure || true
+    fi
     boinc_gpu_at_login
 }
 
@@ -172,6 +175,9 @@ cmd_stop() {
     # GPU should follow the dark displays.
     if bin="$(boinc_gpu_bin)"; then
         "$bin" idle >/dev/null 2>&1 || true
+    fi
+    if [[ -x "${HOME}/.config/hypr/scripts/idle-display-watch.sh" ]]; then
+        "${HOME}/.config/hypr/scripts/idle-display-watch.sh" stop || true
     fi
     if ! systemctl --user is-active --quiet "$UNIT"; then
         return 0
