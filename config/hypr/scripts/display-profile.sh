@@ -13,6 +13,9 @@ SAVED_WS_FILE="${STATE_DIR}/saved-monitor-workspaces"
 RESTORE_WS_PID_FILE="${STATE_DIR}/restore-ws.pid"
 APPLY_LOCK_FILE="${STATE_DIR}/apply.lock"
 IDLE_DISABLED_FILE="${STATE_DIR}/idle-monitor-disabled"
+# Set for the whole blank, before apply.lock. idle-on clears it only
+# after it holds that lock. idle-display-watch.sh reads the same file.
+IDLE_BLANKED_FILE="${STATE_DIR}/idle-blanked"
 # lua/monitors.lua re-reads this on reload. Eval'd monitor rules are
 # cleared, and this file is how the last layout survives.
 RUNTIME_MONITORS_FILE="${STATE_DIR}/monitors.runtime.conf"
@@ -423,6 +426,42 @@ raise SystemExit(1)
 ' "$mon" 2>/dev/null
 }
 
+# 0 dpms on, 1 enabled but dpms off, 2 missing, 3 disabled.
+# Reads one hyprctl monitors JSON document from stdin.
+classify_monitor_dpms() {
+    local mon="$1"
+    python3 -c '
+import json, sys
+mon = sys.argv[1]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    print(2)
+    raise SystemExit(0)
+if not isinstance(data, list):
+    print(2)
+    raise SystemExit(0)
+for m in data:
+    if m.get("name") != mon:
+        continue
+    if m.get("disabled") is True:
+        print(3)
+        raise SystemExit(0)
+    if m.get("dpmsStatus") is True:
+        print(0)
+    else:
+        print(1)
+    raise SystemExit(0)
+print(2)
+' "$mon"
+}
+
+classify_output() {
+    local mon="$1" code
+    code="$(hyprctl monitors all -j 2>/dev/null | classify_monitor_dpms "$mon" || true)"
+    printf '%s\n' "${code:-2}"
+}
+
 monitor_center() {
     local mon="$1"
     hyprctl monitors -j 2>/dev/null | python3 -c '
@@ -698,7 +737,7 @@ profile_has_other_enabled() {
 }
 
 enable_idle_monitor() {
-    local file spec i
+    local file spec i code
     [[ -n "$IDLE_MONITOR" ]] || return 0
     file="$(current_conf)" || return 1
     spec="$(monitor_spec_from_conf "$file" "$IDLE_MONITOR" || true)"
@@ -707,10 +746,67 @@ enable_idle_monitor() {
     for i in $(seq 1 12); do
         keyword_monitor "$spec"
         dpms on "$IDLE_MONITOR"
-        monitor_is_live "$IDLE_MONITOR" && return 0
+        code="$(classify_output "$IDLE_MONITOR")"
+        [[ "$code" == "0" ]] && return 0
         sleep 0.4
     done
     return 1
+}
+
+mark_idle_blanked() {
+    mkdir -p "$STATE_DIR"
+    printf '1\n' >"$IDLE_BLANKED_FILE"
+}
+
+clear_idle_blanked() {
+    rm -f "$IDLE_BLANKED_FILE"
+}
+
+idle_wake_ports() {
+    local port
+    [[ -n "$IDLE_MONITOR" ]] && printf '%s\n' "$IDLE_MONITOR"
+    for port in $DESK_PORTS; do
+        [[ -n "$port" ]] && printf '%s\n' "$port"
+    done
+}
+
+# One configured output. Already-on is success. A disabled conf line is
+# success and is left disabled. DPMS-off stays a dpms call; a missing or
+# disabled output is re-applied from that one conf line.
+wake_named_locked() {
+    local mon="$1" file spec i code
+    [[ -n "$mon" ]] || return 0
+    file="$(current_conf || true)"
+    spec=""
+    if [[ -n "$file" ]]; then
+        spec="$(monitor_spec_from_conf "$file" "$mon" || true)"
+    fi
+    [[ -n "$spec" ]] || return 0
+    monitor_is_disabled "$spec" && return 0
+    for i in $(seq 1 12); do
+        code="$(classify_output "$mon")"
+        case "$code" in
+            0) return 0 ;;
+            1) dpms on "$mon" ;;
+            *)
+                keyword_monitor "$spec"
+                dpms on "$mon"
+                ;;
+        esac
+        sleep 0.4
+    done
+    code="$(classify_output "$mon")"
+    [[ "$code" == "0" ]]
+}
+
+wake_configured_ports_locked() {
+    local port seen=" "
+    while IFS= read -r port; do
+        [[ -n "$port" ]] || continue
+        [[ "$seen" == *" $port "* ]] && continue
+        seen+="$port "
+        wake_named_locked "$port" || true
+    done < <(idle_wake_ports)
 }
 
 # HDMI (IDLE_MONITOR) can wake itself from DPMS-only, so desk layouts
@@ -737,6 +833,7 @@ idle_off_other() { dpms off; }
 cmd_idle_off() {
     need_hypr
     QUIET=1
+    mark_idle_blanked
     with_apply_lock || return 0
     if [[ -n "$IDLE_MONITOR" ]]; then
         idle_off_idle_monitor
@@ -751,6 +848,7 @@ cmd_idle_on() {
     QUIET=1
     with_apply_lock || return 0
     local file
+    clear_idle_blanked
     file="$(current_conf || true)"
     dpms on
     dpms_desk_ports on
@@ -763,6 +861,7 @@ cmd_idle_on() {
             wait_conf_layout "$file" || true
         fi
     fi
+    wake_configured_ports_locked
     restore_saved_workspaces_now || true
     release_apply_lock
     schedule_workspace_restore
@@ -773,6 +872,22 @@ cmd_idle_on() {
     fi
 }
 
+cmd_wake_dpms() {
+    local mon="${1:-}"
+    if [[ -f "$IDLE_BLANKED_FILE" ]]; then
+        return 0
+    fi
+    need_hypr
+    QUIET=1
+    with_apply_lock || return 0
+    if [[ -n "$mon" ]]; then
+        wake_named_locked "$mon" || true
+    else
+        wake_configured_ports_locked
+    fi
+    release_apply_lock
+}
+
 cmd_status() {
     local file
     file="$(current_conf || true)"
@@ -780,6 +895,11 @@ cmd_status() {
     printf 'saved profile:   %s\n' "$(current_profile)"
     printf 'conf:            %s\n' "${file:-none}"
     printf 'lock:            %s\n' "$APPLY_LOCK_FILE"
+    if [[ -f "$IDLE_BLANKED_FILE" ]]; then
+        printf 'idle blanked:    yes\n'
+    else
+        printf 'idle blanked:    no\n'
+    fi
     if [[ -n "$file" ]]; then
         printf 'monitors:\n'
         monitor_lines "$file" | sed 's/^/  /'
@@ -800,7 +920,7 @@ cmd_list() {
     fi
 }
 
-usage() { echo "Usage: display-profile.sh [apply|idle-off|idle-on|restore-ws|status|list|<profile>]"; }
+usage() { echo "Usage: display-profile.sh [apply|idle-off|idle-on|wake-dpms|restore-ws|status|list|<profile>]"; }
 
 main() {
     local cmd="${1:-apply}"
@@ -809,6 +929,7 @@ main() {
         apply|"") cmd_apply ;;
         idle-off) cmd_idle_off ;;
         idle-on) cmd_idle_on ;;
+        wake-dpms) cmd_wake_dpms "${2:-}" ;;
         restore-ws) cmd_restore_ws ;;
         status) cmd_status ;;
         list) cmd_list ;;

@@ -3,6 +3,7 @@
 # that path rewrites every monitor and can fight HDMI disable/enable.
 
 PROFILE="${HOME}/.config/hypr/scripts/display-profile.sh"
+WATCH="${HOME}/.config/hypr/scripts/idle-display-watch.sh"
 
 WALLPAPER="${HOME}/.config/hypr/scripts/astro-wallpaper.sh"
 
@@ -71,4 +72,8 @@ run_boinc_gpu active
 run_workload_priority active
 if [ -x /usr/local/sbin/htpc-cordon ]; then
     /usr/local/sbin/htpc-cordon active >/dev/null 2>&1 || true
+fi
+
+if [ -x "$WATCH" ]; then
+    "$WATCH" ensure || true
 fi
