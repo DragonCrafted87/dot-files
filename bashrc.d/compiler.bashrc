@@ -5,25 +5,45 @@
 #
 # Add new common flags here instead of copying them into each installer.
 
-export CC="${CC:-clang}"
-export CXX="${CXX:-clang++}"
-export CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-clang}"
-export CMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER:-clang++}"
+# /usr/bin and /sbin come before /usr/local/bin on this host, so a bare
+# clang is the distro compiler. homelab-llvm installs under /usr/local.
+homelab_compiler_bin() {
+    local name="$1"
+    if [[ -x "/usr/local/bin/${name}" ]]; then
+        printf '/usr/local/bin/%s\n' "$name"
+        return 0
+    fi
+    command -v "$name" 2>/dev/null || return 1
+}
 
-if command -v ld.lld >/dev/null 2>&1; then
-    export LD="${LD:-ld.lld}"
+_homelab_cc="$(homelab_compiler_bin clang || true)"
+_homelab_cxx="$(homelab_compiler_bin clang++ || true)"
+export CC="${CC:-${_homelab_cc:-clang}}"
+export CXX="${CXX:-${_homelab_cxx:-clang++}}"
+export CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-$CC}"
+export CMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER:-$CXX}"
+unset _homelab_cc _homelab_cxx
+
+_homelab_ld="$(homelab_compiler_bin ld.lld || true)"
+if [[ -n "$_homelab_ld" ]]; then
+    export LD="${LD:-$_homelab_ld}"
     case " ${LDFLAGS:-} " in
         *" -fuse-ld=lld "*) ;;
         *) export LDFLAGS="${LDFLAGS:+${LDFLAGS} }-fuse-ld=lld" ;;
     esac
 fi
+unset _homelab_ld
 
-command -v llvm-ar >/dev/null 2>&1 && export AR="${AR:-llvm-ar}"
-command -v llvm-ranlib >/dev/null 2>&1 && export RANLIB="${RANLIB:-llvm-ranlib}"
-command -v llvm-nm >/dev/null 2>&1 && export NM="${NM:-llvm-nm}"
-command -v llvm-objcopy >/dev/null 2>&1 && export OBJCOPY="${OBJCOPY:-llvm-objcopy}"
-command -v llvm-objdump >/dev/null 2>&1 && export OBJDUMP="${OBJDUMP:-llvm-objdump}"
-command -v llvm-strip >/dev/null 2>&1 && export STRIP="${STRIP:-llvm-strip}"
+_homelab_tool=""
+for _homelab_tool in AR:llvm-ar RANLIB:llvm-ranlib NM:llvm-nm OBJCOPY:llvm-objcopy OBJDUMP:llvm-objdump STRIP:llvm-strip; do
+    _homelab_var="${_homelab_tool%%:*}"
+    _homelab_bin="$(homelab_compiler_bin "${_homelab_tool#*:}" || true)"
+    if [[ -n "$_homelab_bin" && -z "${!_homelab_var:-}" ]]; then
+        export "${_homelab_var}=${_homelab_bin}"
+    fi
+done
+unset _homelab_tool _homelab_var _homelab_bin
+unset -f homelab_compiler_bin
 
 # Map -march=native to the concrete CPU the selected compiler would use
 # (znver3, alderlake, ...). "native"/"mtune=native" are gcc-style
