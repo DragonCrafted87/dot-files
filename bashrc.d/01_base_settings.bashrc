@@ -80,7 +80,10 @@ if ! is_windows; then
     PATH=$PATH:/usr/local/go/bin
 fi
 PATH=$PATH:$GOPATH/bin
-PATH=$PATH:$BASE_PATH
+# Distro clang and lld live in /sbin, which the base PATH lists before
+# /usr/local/bin. Put the homelab toolchain ahead of that base.
+PATH=$PATH:/usr/local/bin
+PATH=$PATH:${BASE_PATH//:\/usr\/local\/bin/}
 export PATH
 
 export KUBECONFIG=~/.kube/config
